@@ -1,0 +1,257 @@
+import { useWorkspaceActionRegistry } from "@/actionRegistry/workspaceActionRegistry";
+import { CardRowMenuBtn } from "@/components/cardMenus/cardRowMenus";
+import { ButtonHoverInset } from "@/components/menuElements/buttonHoverInset";
+import { SubmitFooter } from "@/components/menuElements/submitFooter";
+import { CommonMenuWrapper } from "@/components/menuElements/menuWrapper";
+import { ActionMenuWrapper } from "@/components/modals/ListActionsMenu";
+import {
+    getClassNamesForWorkspaceColorToken,
+    workspaceBorderColorTokens,
+    workspaceFlatColorTokens,
+    workspaceGradientColorTokens,
+    type ColorToken
+} from "@/domain/colorTokens";
+import { CatalogIcon, iconCatalog, type IconId } from "@/icons/iconCatalog";
+import type { WorkspaceProps } from "@/stores/types";
+import { useWorkspaceStore } from "@/stores/workspaceStore";
+import { forwardRef, useEffect, useMemo, useState } from "react";
+
+type WorkspaceIconEditorProps = {
+    workspaceID: string;
+    onClose: () => void;
+};
+
+export const WorkspaceIconEditor = forwardRef<HTMLDivElement, WorkspaceIconEditorProps>(({ workspaceID, onClose }, ref) => {
+    const workspaceActions = useWorkspaceActionRegistry();
+    const workspace = useWorkspaceStore((state) => state.workspacesById[workspaceID]);
+    const [isSaving, setIsSaving] = useState(false);
+
+    const iconIds = useMemo(() => Object.keys(iconCatalog) as IconId[], []);
+    const workspaceBgTokens = useMemo(() => [...workspaceGradientColorTokens, ...workspaceFlatColorTokens], []);
+    const [selectedIconId, setSelectedIconId] = useState<IconId>("boards");
+    const [iconBgToken, setIconBgToken] = useState<string>("ws_flat_slate");
+    const [iconBorderToken, setIconBorderToken] = useState<string>("ws_border_none");
+
+    useEffect(() => {
+        const iconId = workspace?.Props?.IconID;
+        if (iconId && iconId in iconCatalog) {
+            setSelectedIconId(iconId as IconId);
+        }
+
+        setIconBgToken((workspace?.Props?.IconBg as string | undefined) ?? "ws_flat_slate");
+        setIconBorderToken((workspace?.Props?.IconBorderColor as string | undefined) ?? "ws_border_none");
+    }, [workspace]);
+
+    const resolveToken = (token: string): ColorToken | null => {
+        return workspaceBgTokens.find((item) => item.token === token)
+            || workspaceBorderColorTokens.find((item) => item.token === token)
+            || null;
+    };
+
+    const resolveBorderColor = (tokenOrHex?: string) => {
+        if (!tokenOrHex) return undefined;
+        if (tokenOrHex.startsWith("#")) return tokenOrHex;
+
+        const token = resolveToken(tokenOrHex);
+        const className = token?.className ?? "";
+        const hexMatches = className.match(/#[0-9a-fA-F]{3,8}/g);
+        return hexMatches?.[0];
+    };
+
+    const iconBgTokenClass = getClassNamesForWorkspaceColorToken(iconBgToken);
+    const iconBorderColor = resolveBorderColor(iconBorderToken);
+    const hasBorder = iconBorderToken !== "ws_border_none" && !!iconBorderColor;
+
+    const handleSubmit = async () => {
+        if (!workspaceID) return;
+        try {
+            setIsSaving(true);
+            const props: WorkspaceProps = {
+                IconID: selectedIconId,
+                IconBg: iconBgToken,
+                IconBorderColor: iconBorderToken,
+            };
+            await workspaceActions.patchWorkspaceProps(workspaceID, { Props: props });
+            onClose();
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    return (
+        <CommonMenuWrapper ref={ref}>
+            <div className="flex w-[360px] flex-col gap-3 p-4">
+                <span className="text-lg font-semibold text-neutral-300">Select workspace icon</span>
+
+                <div className="flex w-full items-center justify-center py-2">
+                    <div className={`rounded-2xl p-4 ${hasBorder ? "border-2" : "border-0"} ${iconBgTokenClass}`} style={hasBorder ? { borderColor: iconBorderColor } : undefined}>
+                        <CatalogIcon id={selectedIconId} className="h-8 w-8 text-neutral-200" />
+                    </div>
+                </div>
+
+                <TokenizedColorSelector
+                    label="Icon background"
+                    menuId="workspace-icon-bg-selector"
+                    quickTokens={workspaceBgTokens}
+                    menuGradients={workspaceGradientColorTokens}
+                    menuColors={workspaceFlatColorTokens}
+                    selectedToken={resolveToken(iconBgToken)}
+                    onSelectToken={(color) => setIconBgToken(color.token)}
+                />
+
+                <TokenizedColorSelector
+                    label="Icon border"
+                    menuId="workspace-icon-border-selector"
+                    quickTokens={workspaceBorderColorTokens}
+                    menuGradients={[]}
+                    menuColors={workspaceBorderColorTokens}
+                    selectedToken={resolveToken(iconBorderToken)}
+                    onSelectToken={(color) => setIconBorderToken(color.token)}
+                />
+
+                <div className="grid grid-cols-4 gap-2">
+                    {iconIds.map((iconId) => {
+                        const isSelected = selectedIconId === iconId;
+
+                        return (
+                            <button
+                                key={iconId}
+                                type="button"
+                                onClick={() => setSelectedIconId(iconId)}
+                                disabled={isSaving}
+                                className={`flex h-14 w-full items-center justify-center rounded-lg border transition
+                                    ${isSelected ? "border-neutral-200 bg-neutral-700/50" : "border-neutral-500/40 bg-neutral-800/40 hover:bg-neutral-700/35"}
+                                    ${isSaving ? "opacity-60" : ""}`}
+                                title={iconId}
+                            >
+                                <CatalogIcon id={iconId} className="h-6 w-6 text-neutral-200" />
+                            </button>
+                        );
+                    })}
+                </div>
+
+                <SubmitFooter
+                    show={true}
+                    onCancel={onClose}
+                    onSubmit={handleSubmit}
+                    isSaving={isSaving}
+                    flipButtons={true}
+                    className="!w-full !justify-end"
+                    buttonsClassName="!px-5 !rounded"
+                />
+            </div>
+        </CommonMenuWrapper>
+    );
+});
+
+type TokenizedColorSelectorProps = {
+    label: string;
+    menuId: string;
+    quickTokens: ColorToken[];
+    menuGradients: ColorToken[];
+    menuColors: ColorToken[];
+    selectedToken: ColorToken | null;
+    onSelectToken: (color: ColorToken) => void;
+};
+
+function TokenizedColorSelector({ label, menuId, quickTokens, menuGradients, menuColors, selectedToken, onSelectToken }: TokenizedColorSelectorProps) {
+
+    return (
+        <div className="flex w-full flex-col gap-1">
+            <span className="text-xs text-neutral-400">{label}</span>
+            <div className="grid grid-cols-7 gap-1">
+                {quickTokens.map((token) => {
+                    const isSelected = selectedToken?.token === token.token;
+                    return (
+                        <div
+                            key={token.token}
+                            onClick={() => onSelectToken(token)}
+                            className={`relative h-8 w-full cursor-pointer rounded-[4px] ${token.className} ${isSelected ? "ring-1 ring-neutral-100" : ""}`}
+                        >
+                            <ButtonHoverInset onClick={() => { }} />
+                        </div>
+                    );
+                })}
+
+                <CardRowMenuBtn
+                    customId={menuId}
+                    placement="right"
+                    exclusiveGroup="workspace-icon-editor-submenu"
+                    menuComponent={({ ref, onClose }) => (
+                        <ColorTokenMenu
+                            ref={ref}
+                            title={label}
+                            gradients={menuGradients}
+                            colors={menuColors}
+                            activeColorToken={selectedToken}
+                            onSelectColor={(color) => {
+                                onSelectToken(color);
+                                onClose();
+                            }}
+                            onClose={onClose}
+                        />
+                    )}
+                >
+                    <div className="relative h-8 w-full cursor-pointer rounded-[4px] bg-menubtn flex items-center justify-center text-sm text-neutral-300">
+                        <ButtonHoverInset onClick={() => { }} />
+                        ...
+                    </div>
+                </CardRowMenuBtn>
+            </div>
+        </div>
+    );
+}
+
+type ColorTokenMenuProps = {
+    title: string;
+    gradients: ColorToken[];
+    colors: ColorToken[];
+    activeColorToken: ColorToken | null;
+    onSelectColor: (color: ColorToken) => void;
+    onClose: () => void;
+};
+
+const ColorTokenMenu = forwardRef<HTMLDivElement, ColorTokenMenuProps>(({ title, gradients, colors, activeColorToken, onSelectColor, onClose }, ref) => {
+    const gridClass = "grid grid-cols-3 gap-2";
+    const objClass = "relative h-14 w-full rounded-md cursor-pointer overflow-hidden";
+
+    return (
+        <ActionMenuWrapper
+            Title={title}
+            onClose={onClose}
+            width={300}
+            style={{ paddingTop: "10px", paddingInline: "10px" }}
+            titleStyle={{ color: "rgba(255, 255, 255, 0.7)", fontSize: "14px", fontWeight: 600 }}
+        >
+            <div className="flex flex-col gap-2 mt-2">
+                {gradients.length > 0 && (
+                    <>
+                        <div className="text-left text-sm font-medium text-neutral-200">Gradients</div>
+                        <div className={gridClass}>
+                            {gradients.map((color) => {
+                                const isActive = activeColorToken?.token === color.token;
+                                return (
+                                    <div key={color.token} className={`${objClass} ${color.className} ${isActive ? "ring-1 ring-neutral-100" : ""}`}>
+                                        <ButtonHoverInset onClick={() => onSelectColor(color)} />
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </>
+                )}
+
+                <div className="text-left text-sm font-medium text-neutral-200">Colors</div>
+                <div className={gridClass}>
+                    {colors.map((color) => {
+                        const isActive = activeColorToken?.token === color.token;
+                        return (
+                            <div key={color.token} className={`${objClass} ${color.className} ${isActive ? "ring-1 ring-neutral-100" : ""}`}>
+                                <ButtonHoverInset onClick={() => onSelectColor(color)} />
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+        </ActionMenuWrapper>
+    );
+});

@@ -1,0 +1,32 @@
+import { XMarkIcon } from "@heroicons/react/24/solid";
+import { LabeledButtonPresetA } from "../buttons/labeledButton";
+
+
+type ConfirmDeletionPopoverProps = {
+    onClose?: () => void;
+    onSubmit?: () => void;
+    title?: string;
+    body?: string;
+    theme?: "light" | "dark";
+    submitLabel?: string;
+}
+
+export const ConfirmDeletionPopover = ({ onClose, onSubmit, title, body, theme = "dark", submitLabel }: ConfirmDeletionPopoverProps) => {
+    const isLight = theme === "light"
+
+    return (
+        <div className=" relative flex flex-col justify-center items-start w-[350px] h-fit p-4 gap-4">
+            <XMarkIcon onClick={onClose}
+                className={`h-8 aspect-square p-2 rounded-md absolute top-3 right-3 cursor-pointer ${isLight ? "text-neutral-700 hover:bg-neutral-900/10" : "text-neutral-400 hover:bg-neutral-300/10"}`} />
+            <h2 className={`flex items-center h-8 justify-center text-sm font-bold w-full text-center ${isLight ? "text-neutral-800" : "text-neutral-400"}`}>{title || "Confirm Deletion"}</h2>
+            <p
+                className={`font-inter font-normal text-[15px] tracking-normal leading-6 ${isLight ? "text-neutral-700" : "text-neutral-300"}`}
+            >{body || "Are you sure you want to delete this item? This action cannot be undone."}</p>
+            <LabeledButtonPresetA label={submitLabel ?? "Delete"} onClick={onSubmit ?? (() => { })} className={`${isLight
+                ? "!bg-red-500/20 hover:!bg-red-500/30 text-red-700 border border-red-500/30"
+                : "!bg-[#f87168] hover:!bg-[#f78a82] text-neutral-900"
+                } w-full !h-9 !font-semibold`} />
+
+        </div>
+    )
+}

@@ -1,0 +1,45 @@
+/** @type {import('tailwindcss').Config} */
+export default {
+  content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
+  theme: {
+    fontWeight: {
+      thin: "100",
+      extralight: "200",
+      light: "300",
+      normal: "400",
+      medium: "500",
+      semibold: "600",
+      bold: "700",
+      extrabold: "800",
+      black: "900",
+    },
+    extend: {
+      fontFamily: {
+        sans: ["Inter", "ui-sans-serif", "system-ui"],
+        grotesk: ["'Space Grotesk'", "ui-sans-serif", "system-ui"],
+        helvetica: ["Helvetica", "Arial", "ui-sans-serif", "system-ui"],
+        inter: ["Inter", "ui-sans-serif", "system-ui"],
+        manrope: ["Manrope", "ui-sans-serif", "system-ui"],
+      },
+      colors: {
+        main: "var(--color-main)",
+        surface: "var(--color-surface)",
+        menu: "var(--color-menu)",
+        menusec: "var(--color-menu-secondary)",
+        menubtn: "var(--color-menu-buttons)",
+        text: "var(--color-text)",
+        textaccent: "var(--color-text-accent)",
+        muted: "var(--color-muted)",
+        accent: "var(--color-accent)",
+        accentdark: "var(--color-text-accent-dark)",
+        active: "var(--color-active)",
+        border: "var(--color-border)",
+        done: "var(--color-done)",
+        icondefault: "var(--color-icon-default)",
+        danger: "var(--color-danger)",
+        listbgdefault: "var(--color-list-bg-default)",
+      },
+    },
+  },
+  plugins: [],
+};

@@ -1,0 +1,228 @@
+package models
+
+import (
+	"fmt"
+
+	"gorm.io/gorm"
+)
+
+type SetupRepo struct {
+	db *gorm.DB
+}
+
+func NewSetupRepo(db *gorm.DB) *SetupRepo {
+	return &SetupRepo{db:db}
+}
+
+func insertCardInList(db *gorm.DB, card *Card, listID uint ) (error) {
+
+	
+
+	var dblist List
+	if err := db.Table("lists").Where("lists.id = ?", listID).First(&dblist).Error; err != nil {
+		return err
+	}
+
+	if err := db.Table("cards").Where("cards.id = ?", card.ID).FirstOrCreate(card).Error; err != nil {
+		return err
+	}
+
+
+	listcard := ListCard{
+		ListID: dblist.ID,
+		CardID: card.ID,
+	}
+
+	if err := db.Create(&listcard).Error; err != nil {
+		return err
+	}
+	fmt.Println("Successfully created card and list-card relationship")
+	return nil
+
+}
+
+func deleteCardFromList( db *gorm.DB, cardID uint, listID uint) error{
+
+	if err:= db.Table("list_cards lc").Where("lc.list_id = ? AND lc.card_id= ?", listID, cardID).Delete(&ListCard{}).Error; err != nil {
+		return err
+	}
+return nil
+}
+
+func deleteCardFromAllLists(db *gorm.DB, cardID uint) error{
+
+	if err:= db.Table("list_cards lc").Where("lc.card_id = ?", cardID).Delete(&ListCard{}).Error; err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *SetupRepo)createBoard(db *gorm.DB, board *Board) error {
+	if err := db.Create(board).Error; err != nil {
+		return err
+	}
+	return nil
+}
+func (r *SetupRepo)LinkUserToBoardWithRole( boardID uint, userID uint, role string) error {
+	return r.linkUserToBoardWithRole(r.db, boardID, userID, role)
+}
+
+func (r *SetupRepo)linkUserToBoardWithRole(db *gorm.DB, boardID uint, userID uint, role string) error {
+	link := UserBoard{
+		UserID: userID,
+		BoardID: boardID,
+		Role: role,
+	}
+	if err := db.Create(&link).Error; err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *SetupRepo)GetUserRole(userID, boardID uint) (string, error) {
+	return r.getUserRole(r.db, userID, boardID)
+}
+
+
+func (r *SetupRepo)getUserRole(db *gorm.DB, userID, boardID uint) (string, error) {
+	var userboard UserBoard
+	if err := db.Table("user_boards ub").
+	Where("ub.user_id = ? AND ub.board_id = ?", userID, boardID).
+	First(&userboard).Error; err != nil {
+		return "", err
+
+	}
+	return userboard.Role, nil
+
+}
+
+func (r *SetupRepo) HasMinimumRoleInBoardOfList(userID, listID uint, minroles []string) (bool,error) {
+	var badBoards []uint
+	if err:= r.db.Table("board_lists bl").
+	Select("bl.board_id").
+	Joins("LEFT JOIN user_boards ub ON ub.board_id = bl.board_id AND ub.user_id = ? AND ub.role IN ?", userID, minroles).
+	Where("bl.list_id = ?", listID).
+	Where("ub.user_id IS NULL").
+	Find(&badBoards).Error; err != nil {
+		return false,err
+	}
+	if len(badBoards) > 0 {
+		return false, nil
+	} else {
+		return true, nil
+	}
+}
+
+
+func (r *SetupRepo) LinkCardToList(cardID, listID uint) error {
+	return r.linkCardToList(r.db, cardID, listID)
+}
+
+func (r *SetupRepo) linkCardToList(db *gorm.DB, cardID, listID uint) error{
+	listcard := &ListCard{
+		ListID: listID,
+		CardID: cardID,
+	}
+	if err := db.Create(listcard).Error; err != nil {
+		return err
+	}
+	return nil
+}
+
+
+func (r *SetupRepo)CreateList(db *gorm.DB, newList *List) error{
+	if err:= db.Create(newList).Error; err !=  nil {
+		return err
+	}
+	return nil
+}
+
+func (r *SetupRepo)linkListToBoard(db *gorm.DB, listID uint, boardID uint) error {
+	link := BoardList{
+		BoardID: boardID,
+		ListID: listID,
+	}
+	if err:= db.Create(&link).Error; err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *SetupRepo)removeListFromBoard(db *gorm.DB, listID, boardID uint) error {
+	if err := db.Table("board_lists bl").Where("bl.list_id = ? AND bl.board_id=?", listID, boardID).Delete(&BoardList{}).Error; err != nil {
+		return err
+
+	}
+	return nil
+}
+
+
+func(r *SetupRepo) CreateBoardWithSetup_TX( board *Board, userId uint, role string, listIdA, listIdB uint) error {
+
+	err := r.db.Transaction(func(tx *gorm.DB) error {
+		if err:= r.createBoard(tx, board); err!= nil {
+			return err
+		}
+
+		if err := r.linkUserToBoardWithRole(tx, board.ID, userId, role); err != nil {
+			return err
+		}
+
+		if err := r.linkListToBoard(tx, listIdA ,board.ID); err != nil {
+			return err
+
+		}
+		
+		if err := r.linkListToBoard(tx, listIdB,board.ID); err != nil {
+			return err
+
+		}
+
+		return nil
+
+	})
+
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r * SetupRepo) MoveListToBoardFromBoard(listID, fromBoardID, toBoardID uint) error {
+	err:= r.db.Transaction(func(tx *gorm.DB) error {
+
+		if err:= r.removeListFromBoard(tx, listID, fromBoardID); err != nil {
+			return err
+		}
+
+		if err:= r.linkListToBoard(tx, listID, toBoardID); err != nil {
+			return err
+		}
+
+
+		return nil
+	})
+	if err != nil{
+		return err
+	}
+return nil
+}
+
+func (r* SetupRepo) CreateListAndLinkToBoard(list *List, boardID uint) error {
+	err := r.db.Transaction(func(tx *gorm.DB) error {
+
+		if err:= r.CreateList(tx, list); err != nil {
+			return err
+		}
+
+		if err:= r.linkListToBoard(tx, list.ID, boardID); err != nil {
+			return err
+		}
+		return nil
+
+	})
+	if err!= nil {
+		return err
+	}
+	return nil
+}
