@@ -520,6 +520,43 @@ func (r *GormEventRepository) ResolveBoardConsumersForRootListCard(ctx context.C
 	return result, nil
 }
 
+func (r *GormEventRepository) ResolveBoardConsumersForSourceBoardMirrors(ctx context.Context, sourceBoardID uuid.UUID) ([]uuid.UUID, error) {
+	if sourceBoardID == uuid.Nil {
+		return []uuid.UUID{}, nil
+	}
+
+	result := make([]uuid.UUID, 0)
+	if err := r.db.WithContext(ctx).
+		Table("board_lists bl").
+		Distinct("bl.board_id").
+		Joins("JOIN board_lists root_bl ON root_bl.id = bl.root_id").
+		Where("root_bl.board_id = ?", sourceBoardID).
+		Where("bl.deleted_at IS NULL").
+		Where("root_bl.deleted_at IS NULL").
+		Find(&result).Error; err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func (r *GormEventRepository) GetBoardsByIDs(ctx context.Context, boardIDs []uuid.UUID) ([]models.Board, error) {
+	if len(boardIDs) == 0 {
+		return []models.Board{}, nil
+	}
+
+	rows := make([]models.Board, 0, len(boardIDs))
+	if err := r.db.WithContext(ctx).
+		Table("boards").
+		Where("id IN ?", boardIDs).
+		Where("deleted_at IS NULL").
+		Find(&rows).Error; err != nil {
+		return nil, err
+	}
+
+	return rows, nil
+}
+
 func (r *GormEventRepository) ResolveInboxUserConsumersForRootListCard(ctx context.Context, rootListCardID uuid.UUID) ([]uuid.UUID, error) {
 	if rootListCardID == uuid.Nil {
 		return []uuid.UUID{}, nil

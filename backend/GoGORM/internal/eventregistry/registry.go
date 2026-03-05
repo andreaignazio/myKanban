@@ -40,7 +40,9 @@ type EventRepository interface {
 	GetUserActivityPaginated(ctx context.Context, actorUserID uuid.UUID, limit int, cursor *dto.AuditCursor) (*dto.AuditPage, error)
 	GetAuditEntitiesDetails(ctx context.Context, entityIDsByType map[string][]uuid.UUID) (AuditEntityRows, error)
 	GetAffectedBoardIDsForTargets(ctx context.Context, targetIDsByEntity map[string][]uuid.UUID) ([]uuid.UUID, error)
+	ResolveBoardConsumersForSourceBoardMirrors(ctx context.Context, sourceBoardID uuid.UUID) ([]uuid.UUID, error)
 	ResolveBoardConsumersForRootListCard(ctx context.Context, rootListCardID, sourceBoardID, targetBoardID uuid.UUID) ([]uuid.UUID, error)
+	GetBoardsByIDs(ctx context.Context, boardIDs []uuid.UUID) ([]models.Board, error)
 	ResolveInboxUserConsumersForRootListCard(ctx context.Context, rootListCardID uuid.UUID) ([]uuid.UUID, error)
 	ResolveInboxCardIDsForUserAndRootListCard(ctx context.Context, userID, rootListCardID uuid.UUID) ([]uuid.UUID, error)
 	GetExternalRootRefsByIDs(ctx context.Context, rootIDs []uuid.UUID) ([]models.ExternalRootRefRow, error)
@@ -204,6 +206,28 @@ func (s *EventRegistryService) Emit(ctx context.Context, tx *gorm.DB, event Doma
 			affectedBoardSet[*event.BoardID] = struct{}{}
 			affectedBoardIDs = append(affectedBoardIDs, *event.BoardID)
 		}
+	}
+
+	if event.Type == EventBoardPatched && event.BoardID != nil {
+		mirrorConsumerBoardIDs, err := s.repo.ResolveBoardConsumersForSourceBoardMirrors(ctx, *event.BoardID)
+		if err != nil {
+			fmt.Println("Error-11c: failed to resolve mirror consumer boards for board.patched:", err)
+			return err
+		}
+		for _, boardID := range mirrorConsumerBoardIDs {
+			if boardID == uuid.Nil {
+				continue
+			}
+			if _, exists := affectedBoardSet[boardID]; exists {
+				continue
+			}
+			affectedBoardSet[boardID] = struct{}{}
+			affectedBoardIDs = append(affectedBoardIDs, boardID)
+		}
+	}
+
+	if (event.Type == EventCardMirrored || event.Type == EventCardMirroredTarget || event.Type == EventCardMirroredSource) && event.BoardID != nil {
+		affectedBoardIDs = []uuid.UUID{*event.BoardID}
 	}
 
 	usersToBeNotified, err := s.repo.GetUsersToBeNotifiedFlatSingleQuery(ctx, targetIDsByEntity)
@@ -388,8 +412,16 @@ func (s *EventRegistryService) EmitCrossBoardMove(ctx context.Context, req Cross
 		req.OccurredAt = time.Now()
 	}
 
-	if req.RootListCardID == uuid.Nil || req.SourceBoardID == uuid.Nil || req.TargetBoardID == uuid.Nil {
+	if req.SourceBoardID == uuid.Nil || req.TargetBoardID == uuid.Nil {
 		return fmt.Errorf("event registry cross-board move: invalid identifiers")
+	}
+
+	effectiveRootListCardID := req.RootListCardID
+	if effectiveRootListCardID == uuid.Nil {
+		effectiveRootListCardID = req.MovedListCardID
+	}
+	if effectiveRootListCardID == uuid.Nil {
+		return fmt.Errorf("event registry cross-board move: missing root list card identifier")
 	}
 
 	if req.WorkspaceID == nil {
@@ -403,14 +435,24 @@ func (s *EventRegistryService) EmitCrossBoardMove(ctx context.Context, req Cross
 		req.WorkspaceID = &workspaceID
 	}
 
-	boardConsumers, err := s.repo.ResolveBoardConsumersForRootListCard(ctx, req.RootListCardID, req.SourceBoardID, req.TargetBoardID)
+	boardConsumers, err := s.repo.ResolveBoardConsumersForRootListCard(ctx, effectiveRootListCardID, req.SourceBoardID, req.TargetBoardID)
 	if err != nil {
 		return err
 	}
 
-	externalRootRows, err := s.repo.GetExternalRootRefsByIDs(ctx, []uuid.UUID{req.RootListCardID})
+	externalRootRows, err := s.repo.GetExternalRootRefsByIDs(ctx, []uuid.UUID{effectiveRootListCardID})
 	if err != nil {
 		return err
+	}
+
+	boardsRows, err := s.repo.GetBoardsByIDs(ctx, []uuid.UUID{req.SourceBoardID, req.TargetBoardID})
+	if err != nil {
+		return err
+	}
+	boardsPayload := make(map[uuid.UUID]dto.BoardResponse, len(boardsRows))
+	for i := range boardsRows {
+		boardRow := boardsRows[i]
+		boardsPayload[boardRow.ID] = dto.BoardToResponse(&boardRow)
 	}
 
 	externalRootsByID := make(map[uuid.UUID]dto.ExternalRootRefResponse)
@@ -440,10 +482,11 @@ func (s *EventRegistryService) EmitCrossBoardMove(ctx context.Context, req Cross
 		}
 
 		payload := CrossBoardMoveBoardPayload{
-			RootListCardID:      req.RootListCardID.String(),
+			RootListCardID:      effectiveRootListCardID.String(),
 			MovedListCardID:     req.MovedListCardID.String(),
 			CardID:              req.CardID.String(),
 			Cards:               cards,
+			Boards:              boardsPayload,
 			SourceBoardID:       req.SourceBoardID.String(),
 			TargetBoardID:       req.TargetBoardID.String(),
 			FromListID:          req.SourceListID.String(),
@@ -481,7 +524,7 @@ func (s *EventRegistryService) EmitCrossBoardMove(ctx context.Context, req Cross
 		})
 	}
 
-	inboxUsers, err := s.repo.ResolveInboxUserConsumersForRootListCard(ctx, req.RootListCardID)
+	inboxUsers, err := s.repo.ResolveInboxUserConsumersForRootListCard(ctx, effectiveRootListCardID)
 	if err != nil {
 		return err
 	}
@@ -490,13 +533,13 @@ func (s *EventRegistryService) EmitCrossBoardMove(ctx context.Context, req Cross
 		if userID == uuid.Nil {
 			continue
 		}
-		affectedInboxCardIDs, err := s.repo.ResolveInboxCardIDsForUserAndRootListCard(ctx, userID, req.RootListCardID)
+		affectedInboxCardIDs, err := s.repo.ResolveInboxCardIDsForUserAndRootListCard(ctx, userID, effectiveRootListCardID)
 		if err != nil {
 			return err
 		}
 
 		payload := ws.InboxRootCardMovedPayload{
-			RootListCardID:       req.RootListCardID,
+			RootListCardID:       effectiveRootListCardID,
 			CardID:               req.CardID,
 			SourceBoardID:        req.SourceBoardID,
 			TargetBoardID:        req.TargetBoardID,

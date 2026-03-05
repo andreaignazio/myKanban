@@ -115,8 +115,8 @@ export default function AppLayout() {
             exclusiveGroup: "toast-notifications",
             opts: {
                 closeOnMouseLeave: false,
-                closeOnClickOutside: true,
-                closeOnEscape: true,
+                closeOnClickOutside: false,
+                closeOnEscape: false,
                 lockBackdrop: false,
             },
             position: {

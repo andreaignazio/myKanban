@@ -91,6 +91,36 @@ function uniqueIds(ids: string[]): string[] {
     return Array.from(new Set(ids));
 }
 
+function withDerivedMirrorsForCardIDs(
+    listCardById: Record<string, ListCard>,
+    cardIDs: string[]
+): Record<string, ListCard> {
+    if (cardIDs.length === 0) return listCardById
+
+    const uniqueCardIDs = Array.from(new Set(cardIDs.filter(Boolean)))
+    if (uniqueCardIDs.length === 0) return listCardById
+
+    const next = { ...listCardById }
+
+    for (const cardID of uniqueCardIDs) {
+        const instances = Object.values(next).filter((lc) => lc.CardID === cardID)
+        if (instances.length === 0) continue
+
+        for (const instance of instances) {
+            const mirrors = instances
+                .filter((candidate) => candidate.ID !== instance.ID)
+                .map((candidate) => candidate.ID)
+
+            next[instance.ID] = {
+                ...instance,
+                Mirrors: mirrors,
+            }
+        }
+    }
+
+    return next
+}
+
 type BoardDetailStore = {
     OpCounter: number
     processedEventKeys: string[]
@@ -198,7 +228,10 @@ export const useBoardDetailStore = create<BoardDetailStore>((set, get) => ({
         // console.log("Applying board detail patch:", payload)
         useListsStore.getState().mergeListsPatch(payload.Lists)
         useCardsStore.getState().mergeCardsPatch(payload.Cards)
-        useBoardsStore.getState().mergeBoardsPatch({ [payload.Board.ID]: payload.Board })
+        useBoardsStore.getState().mergeBoardsPatch({
+            ...(payload.Boards ?? {}),
+            [payload.Board.ID]: payload.Board,
+        })
         useBoardsStore.getState().mergeUserBoardRelation(payload.UserBoardRelation)
         useLabelsStore.getState().replaceBoardLabelsPatch(payload.Board.ID, payload.BoardLabels, payload.CardLabelLinks)
         useBoardMembersStore.getState().mergeBoardMembers(payload.Board.ID, payload.UserBoardRelations)
@@ -272,10 +305,11 @@ export const useBoardDetailStore = create<BoardDetailStore>((set, get) => ({
         const eventType = payload?.Type
         const correlationID = payload?.CorrelationID
         const eventID = payload?.ID
+        const eventBoardID = payload?.BoardID
 
         const dedupeKey =
             (typeof correlationID === "string" && correlationID.trim() !== "" && typeof eventType === "string" && eventType.trim() !== "")
-                ? `${correlationID}::${eventType}`
+                ? `${correlationID}::${eventType}::${typeof eventBoardID === "string" ? eventBoardID : ""}`
                 : (typeof eventID === "string" && eventID.trim() !== "" ? `id::${eventID}` : null)
 
         const processedEventKeys = get().processedEventKeys
@@ -294,7 +328,10 @@ export const useBoardDetailStore = create<BoardDetailStore>((set, get) => ({
     applyEventEntitiesPatch: (patch: BoardDetailPatch) => {
         useCardsStore.getState().mergeCardsPatch(patch.Cards)
         useListsStore.getState().mergeListsPatch(patch.Lists)
-        useBoardsStore.getState().mergeBoardsPatch({ [patch.Board.ID]: patch.Board })
+        useBoardsStore.getState().mergeBoardsPatch({
+            ...(patch.Boards ?? {}),
+            [patch.Board.ID]: patch.Board,
+        })
     },
     async applyEventDelta(payloadData: any) {
         let payload = payloadData as DeltaPayload
@@ -422,7 +459,9 @@ export const useBoardDetailStore = create<BoardDetailStore>((set, get) => ({
                 await get().applyDetatchCardList(patch, false)
                 break
             }
-            case "card.mirrored": {
+            case "card.mirrored":
+            case "card.mirrored.target":
+            case "card.mirrored.source": {
                 get().applyMergeListCards(patch)
                 break
             }
@@ -436,6 +475,9 @@ export const useBoardDetailStore = create<BoardDetailStore>((set, get) => ({
     applyListCardCrossBoardMove(payload) {
         if (payload.Cards) {
             useCardsStore.getState().mergeCardsPatch(payload.Cards)
+        }
+        if (payload.Boards) {
+            useBoardsStore.getState().mergeBoardsPatch(payload.Boards)
         }
         const fromListcards = payload.FromListCards ?? []
         const fromIds = fromListcards.map((lc) => lc.ID) ?? []
@@ -751,6 +793,14 @@ export const useBoardDetailStore = create<BoardDetailStore>((set, get) => ({
                 })
             }
 
+            const affectedCardIDs = [
+                listCardPatch?.CardID,
+                ...(fromListCards?.map((lc) => lc.CardID) ?? []),
+                ...(toListCards?.map((lc) => lc.CardID) ?? []),
+            ].filter((id): id is string => !!id)
+
+            nextListCardById = withDerivedMirrorsForCardIDs(nextListCardById, affectedCardIDs)
+
             set((state) => ({
                 listCardById: nextListCardById,
                 listCardIdsByListId: nextListCardIdsByListId,
@@ -759,10 +809,14 @@ export const useBoardDetailStore = create<BoardDetailStore>((set, get) => ({
 
         }
         else {
-            const listCardById = get().listCardById
-            listCardById[listCardPatch.ID] = listCardPatch
+            const currentListCardById = get().listCardById
+            const nextListCardById = {
+                ...currentListCardById,
+                [listCardPatch.ID]: listCardPatch,
+            }
+            const hydratedListCardById = withDerivedMirrorsForCardIDs(nextListCardById, [listCardPatch.CardID])
             set(() => ({
-                listCardById: listCardById
+                listCardById: hydratedListCardById
             }))
         }
 
@@ -931,6 +985,13 @@ export const useBoardDetailStore = create<BoardDetailStore>((set, get) => ({
         }))
     },
     applyMergeListCards: (payload: BoardDetailPatch) => {
+
+        if (payload.Boards) {
+            useBoardsStore.getState().mergeBoardsPatch(payload.Boards)
+        }
+        if (payload.ExternalRootsByID) {
+            useExternalRefStore.getState().mergeExternalRootRefs(payload.ExternalRootsByID)
+        }
 
         const listCardById = payload.ListCardRelations.reduce((acc, lc) => {
             acc[lc.ID] = lc

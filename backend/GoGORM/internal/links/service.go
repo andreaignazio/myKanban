@@ -1434,6 +1434,34 @@ func (s *LinksService) GetUserBoardDetail(ctx context.Context, userID, boardID u
 		}
 	}
 
+	boardsPayload := map[uuid.UUID]dto.BoardResponse{
+		board.ID: dto.BoardToResponse(board),
+	}
+
+	externalBoardIDSet := make(map[uuid.UUID]struct{})
+	externalBoardIDs := make([]uuid.UUID, 0, len(externalRootsByID))
+	for _, externalRef := range externalRootsByID {
+		if externalRef.BoardID == uuid.Nil || externalRef.BoardID == board.ID {
+			continue
+		}
+		if _, exists := externalBoardIDSet[externalRef.BoardID]; exists {
+			continue
+		}
+		externalBoardIDSet[externalRef.BoardID] = struct{}{}
+		externalBoardIDs = append(externalBoardIDs, externalRef.BoardID)
+	}
+
+	if len(externalBoardIDs) > 0 {
+		externalBoards, err := s.BoardRepo.GetBoardsByIDs(ctx, externalBoardIDs, includeDeleted)
+		if err != nil {
+			return nil, domainerr.MapRepoErr(err, true)
+		}
+		for i := range externalBoards {
+			externalBoard := externalBoards[i]
+			boardsPayload[externalBoard.ID] = dto.BoardToResponse(&externalBoard)
+		}
+	}
+
 	lists, err := s.ListRepo.GetUserLists(ctx, userID, includeDeleted)
 	if err != nil {
 		return nil, domainerr.MapRepoErr(err, false)
@@ -1576,6 +1604,7 @@ func (s *LinksService) GetUserBoardDetail(ctx context.Context, userID, boardID u
 	response := &dto.BoardDetailResponse{
 		VisibilityRole:          roleString,
 		Board:                   dto.BoardToResponse(board),
+		Boards:                  boardsPayload,
 		UserBoardRelation:       dto.UserBoardToResponse(userBoard),
 		Lists:                   listsByID,
 		Cards:                   cardsByID,

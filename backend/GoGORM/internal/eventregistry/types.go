@@ -61,6 +61,7 @@ type CrossBoardMoveBoardPayload struct {
 	MovedListCardID     string                                    `json:"MovedListCardID"`
 	CardID              string                                    `json:"CardID"`
 	Cards               map[uuid.UUID]dto.CardResponse            `json:"Cards"`
+	Boards              map[uuid.UUID]dto.BoardResponse           `json:"Boards"`
 	SourceBoardID       string                                    `json:"SourceBoardID"`
 	TargetBoardID       string                                    `json:"TargetBoardID"`
 	FromListID          string                                    `json:"FromListID"`

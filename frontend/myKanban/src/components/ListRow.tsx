@@ -50,22 +50,24 @@ export function ListRow({ boardID: boardID, boardListID: boardListID, index: ind
                 <div
                     {...provided.draggableProps}
                     ref={provided.innerRef}
-                    className={`group relative shrink-0 h-full min-h-0 select-none w-[280px] mr-4`}
+                    className={`relative shrink-0 h-full min-h-0 select-none w-[280px] mr-4`}
                     style={{
                         ...provided.draggableProps.style,
                         color: listTextColor,
                     }}>
-                    {false && <div className=" z-10 absolute -top-4 left-2 border-2
-                    rounded-lg bg-slate-500/50
-                     border-slate-400 p-1 text-xs text-slate-200">
-                        READONLY</div>}
-                    <div className={`relative ${isReadonly
+
+                    <div className={`relative group/readonly ${isReadonly
                         ? "border-2 border-fuchsia-400/50 pt-1 hover:pt-6  bg-fuchsia-500/50"
                         : " "}
                      transition-all ease-in-out duration-300
-                     rounded-xl  backdrop-blur-lg `}>
+                     rounded-xl  `}>
 
-                        <div className="absolute top-1 left-2 text-xs opacity-0 group-hover:opacity-40  ">READONLY</div>
+                        {isReadonly && (
+                            <div className="pointer-events-none absolute top-1 left-2 text-xs opacity-0 transition-opacity duration-200 group-hover/readonly:opacity-40">
+                                READONLY
+                            </div>
+                        )}
+
                         <div
                             {...provided.dragHandleProps}
                             className={` relative w-full bg-[#101204] max-h-full min-h-0 flex flex-col overflow-hidden
@@ -75,16 +77,18 @@ export function ListRow({ boardID: boardID, boardListID: boardListID, index: ind
                                 color: listTextColor,
                             }}>
 
-                            <ListHeader
-                                boardListID={boardListID}
-                                listID={listID}
-                                list={list}
-                                boardID={boardID}
-                                listTextColor={listTextColor}
-                                hasListTheme={hasListTheme}
-                                showRootBadge={isRootBoardList}
-                                isReadonly={isReadonly}
-                            />
+                            <div className="relative group/list-header">
+                                <ListHeader
+                                    boardListID={boardListID}
+                                    listID={listID}
+                                    list={list}
+                                    boardID={boardID}
+                                    listTextColor={listTextColor}
+                                    hasListTheme={hasListTheme}
+                                    showRootBadge={isRootBoardList}
+                                    isReadonly={isReadonly}
+                                />
+                            </div>
 
                             <Droppable droppableId={boardListID} type="card" isDropDisabled={isReadonly}>
                                 {(provided) => (
@@ -302,7 +306,7 @@ const ListHeader = ({
                 className={`h-full rounded-md px-2 bg-transparent !m-0 
             cursor-pointer transition-colors duration-150
             flex items-center justify-center  !gap-0
-            ${isListWatched ? "opacity-100" : "opacity-0 group-hover:opacity-100"} `}>
+            ${isListWatched ? "opacity-100" : "opacity-0 group-hover/list-header:opacity-100"} `}>
 
                 <div
                     className="w-full h-full flex items-center justify-center"

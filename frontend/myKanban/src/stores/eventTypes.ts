@@ -33,7 +33,9 @@ export type CardCommentEventTypes =
 export type CardEventTypes =
     | "card.created"
     | "card.patched"
-    | "card.mirrored";
+    | "card.mirrored"
+    | "card.mirrored.target"
+    | "card.mirrored.source";
 
 export type ListEventTypes =
     | "list.patched"

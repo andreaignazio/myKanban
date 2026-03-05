@@ -39,6 +39,17 @@ type CardRowProps = {
     rootListCardId?: string
 }
 
+function getStableIndexFromString(value: string, length: number): number {
+    if (length <= 0) return 0
+
+    let hash = 0
+    for (let index = 0; index < value.length; index++) {
+        hash = (hash * 31 + value.charCodeAt(index)) >>> 0
+    }
+
+    return hash % length
+}
+
 export const CardRow = ({ boardID, listId, listCardID: listCardID, cardId, index, isDragDisabled = false, source = "board", inboxCardId, rootListCardId }: CardRowProps) => {
 
     const isInbox = source === "inbox"
@@ -48,7 +59,9 @@ export const CardRow = ({ boardID, listId, listCardID: listCardID, cardId, index
     const cardsStore = useCardsStore()
 
     const listCardsById = useBoardDetailStore((state) => state.listCardById)
+    const isListCardInBoard = useBoardDetailStore((state) => state.isListCardInBoard)
     const listcard = listCardsById[listCardID ?? ""]
+    const rootsByRootId = useExternalRefStore((state) => state.rootsByRootId)
 
     const navigate = useNavigate()
 
@@ -90,6 +103,26 @@ export const CardRow = ({ boardID, listId, listCardID: listCardID, cardId, index
 
 
     const mode: CardRowMode = hasCover ? (isDetailed ? "detailed" : "compact") : "default"
+
+    const effectiveListCardID = listcard?.ID ?? listCardID ?? rootListCardId ?? ""
+    const resolvedRootListCardID = source === "inbox-mirror"
+        ? (rootListCardId ?? effectiveListCardID)
+        : (listcard?.RootID ?? rootListCardId ?? effectiveListCardID)
+    const isMirrorCard = !!effectiveListCardID && !!resolvedRootListCardID && effectiveListCardID !== resolvedRootListCardID
+    const externalRoot = resolvedRootListCardID ? rootsByRootId[resolvedRootListCardID] : undefined
+    const rootIsInCurrentBoard = isMirrorCard && !!boardId && !!resolvedRootListCardID
+        ? isListCardInBoard(resolvedRootListCardID, boardId)
+        : false
+    const rootBoardID = isMirrorCard
+        ? (rootIsInCurrentBoard ? (boardId ?? "") : (externalRoot?.BoardID ?? ""))
+        : ""
+    const rootBoard = useBoardsStore((state) => rootBoardID ? state.boardsById[rootBoardID] : undefined)
+    const rootBoardBackgroundType = rootBoard?.Props?.Background?.Type ?? null
+    const rootBoardBgImage = rootBoardBackgroundType === "image" ? rootBoard?.Props?.Background?.Image?.Url : undefined
+    const rootBoardBgColorToken = rootBoardBackgroundType === "color" ? rootBoard?.Props?.Background?.Color?.Token : undefined
+    const rootBoardBgColorClass = rootBoardBgColorToken ? getClassNamesForColorToken(rootBoardBgColorToken) : undefined
+    const fallbackIndex = getStableIndexFromString(rootBoard?.ID ?? rootBoardID ?? "fallback", gradientColorTokens.length)
+    const rootBoardFallbackGradientClass = gradientColorTokens[fallbackIndex]?.className
 
 
     const done = card?.Done
@@ -179,74 +212,94 @@ export const CardRow = ({ boardID, listId, listCardID: listCardID, cardId, index
             }}
             onClick={() => openCard(cardID!)}
             data-list-card-id={listCardID}
-            className="relative -mt-2 pt-2 "
+            className="relative -mt-2 pt-2  "
         >
 
             <Draggable draggableId={listCardID ?? inboxCardId ?? ""} index={index} isDragDisabled={isDragDisabled}>
-                {(provided) => (
-                    <div
-                        {...provided.draggableProps}
-                        {...provided.dragHandleProps}
-                        ref={provided.innerRef}
-                        className="flex flex-col pb-2">
+                {(provided, snapshot) => {
+                    const draggableNode = (
+                        <div
+                            {...provided.draggableProps}
+                            {...provided.dragHandleProps}
+                            ref={provided.innerRef}
+                            className="flex flex-col pb-2"
+                            style={{
+                                ...provided.draggableProps.style,
+                                zIndex: snapshot.isDragging ? 9999 : undefined,
+                            }}>
 
 
-                        <CardRowCoverWrapper mode={mode}
-                            cardColor={cardColor}
-                            cardCoverURL={cardCoverURL} ref={cardRowRef}>
+                            <CardRowCoverWrapper mode={mode}
+                                cardColor={cardColor}
+                                cardCoverURL={cardCoverURL}
+                                showMirrorBackdrop={isMirrorCard}
+                                mirrorBackdropBackgroundType={rootBoardBackgroundType}
+                                mirrorBackdropBgImage={rootBoardBgImage}
+                                mirrorBackdropBgColorClass={rootBoardBgColorClass}
+                                mirrorBackdropFallbackGradientClass={rootBoardFallbackGradientClass}
+                                ref={cardRowRef}>
 
-                            {mode === "detailed" && (
-                                <Mirrors
-                                    listcardID={listcard?.ID ?? rootListCardId ?? ""}
-                                    mode={source}
-                                    placement="cover"
-                                />
-                            )}
 
-                            <div className="flex flex-col ">
+                                {mode === "detailed" && (
+                                    <Mirrors
+                                        listcardID={listcard?.ID ?? rootListCardId ?? ""}
+                                        mode={source}
+                                        placement="cover"
+                                    />
+                                )}
 
-                                {mode !== "detailed" && <Mirrors listcardID={listcard?.ID ?? rootListCardId ?? ""} mode={source} />}
+                                <div className="flex flex-col ">
 
-                                <CardFieldsLabels hasLabels={cardHasLabels} cardID={cardID}
-                                    boardID={boardId} mode={source}
-                                />
+                                    {mode !== "detailed" && <Mirrors listcardID={listcard?.ID ?? rootListCardId ?? ""} mode={source} />}
 
-                                <CardRowTitle
-                                    minHeight={rowHeight}
-                                    title={title || ""} done={done}
-                                    editMode={editMode} setDone={handleDoneToggle} />
-                            </div>
+                                    <CardFieldsLabels hasLabels={cardHasLabels} cardID={cardID}
+                                        boardID={boardId} mode={source}
+                                    />
 
-                            <CardRowFields cardID={cardID!} />
+                                    <CardRowTitle
+                                        minHeight={rowHeight}
+                                        title={title || ""} done={done}
+                                        editMode={editMode} setDone={handleDoneToggle} />
+                                </div>
 
-                            <div className="absolute top-[14px] right-[11px] 
+                                <CardRowFields cardID={cardID!} />
+
+                                <div className="absolute top-[14px] right-[11px] 
                             flex flex-row gap-2
                              z-10 opacity-0 group-hover:opacity-100 transition-all duration-200">
 
-                                <ArchiveIcon className="w-5 h-5 text-neutral-300 cursor-pointer "
-                                    onClickCapture={(e) => {
-                                        e.stopPropagation()
-                                        if (isInbox) {
-                                            handleRemoveInboxCard(e)
-                                        } else {
-                                            handleRemoveCard(e)
-                                        }
-                                    }}
+                                    <ArchiveIcon className="w-5 h-5 text-neutral-300 cursor-pointer "
+                                        onClickCapture={(e) => {
+                                            e.stopPropagation()
+                                            if (isInbox) {
+                                                handleRemoveInboxCard(e)
+                                            } else {
+                                                handleRemoveCard(e)
+                                            }
+                                        }}
 
-                                />
+                                    />
 
-                                <SquarePenIcon className="w-5 h-5 text-neutral-300 cursor-pointer"
-                                    onClickCapture={(e) => {
-                                        e.stopPropagation()
-                                        handleCardEditMode()
-                                    }}
-                                />
+                                    <SquarePenIcon className="w-5 h-5 text-neutral-300 cursor-pointer"
+                                        onClickCapture={(e) => {
+                                            e.stopPropagation()
+                                            handleCardEditMode()
+                                        }}
+                                    />
 
 
-                            </div>
-                        </CardRowCoverWrapper>
-                    </div>
-                )}
+                                </div>
+
+                            </CardRowCoverWrapper>
+                        </div>
+                    )
+
+                    if (snapshot.isDragging) {
+                        return createPortal(draggableNode, document.body)
+                    }
+
+                    return draggableNode
+                }}
             </Draggable>
             <div>
                 {editMode === true && <LabeledButtonPresetBSubmit label="Save" onClick={() => { }} />}
@@ -280,6 +333,9 @@ import { CardEditMenu } from "./modals/cardEditMenu"
 import { useBuildPublicURL } from "@/hooks/useBuildPublicURL"
 import { useCardActionRegistry } from "@/actionRegistry/cardActionRegistry"
 import { CardRowCoverWrapper } from "./cardRowElements/CardRowCoverWrapper"
+import { useExternalRefStore } from "@/stores/externaRefStore"
+import { useBoardsStore } from "@/stores/boardsStore"
+import { getClassNamesForColorToken, gradientColorTokens } from "@/domain/colorTokens"
 
 
 

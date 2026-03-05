@@ -31,6 +31,8 @@ const (
 	EventCardCommentEdited        DomainEventType = "card.comment.edited"
 	EventListPatched              DomainEventType = "list.patched"
 	EventCardMirrored             DomainEventType = "card.mirrored"
+	EventCardMirroredTarget       DomainEventType = "card.mirrored.target"
+	EventCardMirroredSource       DomainEventType = "card.mirrored.source"
 	EventListCardCrossBoardMoved  DomainEventType = "listcard.crossboard.moved"
 	EventInboxRootCardMoved       DomainEventType = "inbox.rootcard.moved"
 	EventWorkspaceBoardCreated    DomainEventType = "workspace.board.created"
@@ -111,6 +113,8 @@ func (e DomainEventType) IsValidEventType() bool {
 		EventCardCommentEdited,
 		EventListPatched,
 		EventCardMirrored,
+		EventCardMirroredTarget,
+		EventCardMirroredSource,
 		EventListCardCrossBoardMoved,
 		EventInboxRootCardMoved,
 		EventWorkspaceBoardCreated,
@@ -191,6 +195,8 @@ func (e DomainEventType) IsBoardCoreToastEvent() bool {
 		EventCardCommentEdited,
 		EventListPatched,
 		EventCardMirrored,
+		EventCardMirroredTarget,
+		EventCardMirroredSource,
 		EventListCardCrossBoardMoved,
 		EventInboxRootCardMoved,
 		EventWorkspaceBoardCreated,

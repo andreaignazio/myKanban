@@ -35,6 +35,8 @@ func buildHandlers(auditRepo auditcontext.Reader) map[DomainEventType]EventHandl
 		EventCardCommentEdited:                  NewCardCommentEditedHandler(auditRepo),
 		EventListPatched:                        NewListPatchedHandler(auditRepo),
 		EventCardMirrored:                       NewCardMirrorHandler(auditRepo),
+		EventCardMirroredTarget:                 NewCardMirrorHandler(auditRepo),
+		EventCardMirroredSource:                 NewCardMirrorHandler(auditRepo),
 		EventWorkspaceBoardCreated:              NewWorkspaceBoardCreatedHandler(auditRepo),
 		EventWorkspaceBoardClosed:               NewWorkspaceBoardClosedHandler(auditRepo),
 		EventWorkspaceBoardRestored:             NewWorkspaceBoardRestoredHandler(auditRepo),

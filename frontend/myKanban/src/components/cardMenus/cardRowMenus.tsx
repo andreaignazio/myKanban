@@ -34,12 +34,13 @@ export type CardRowMenuBtnProps = {
     disableClick?: boolean;
     desiredBackdropOpacity?: number;
     exclusiveGroup?: string;
+    wrapperClassName?: string;
 }
 
 export const CardRowMenuBtn = forwardRef<HTMLDivElement, CardRowMenuBtnProps>(({ cardID, menuComponent, renderType = "anchored",
     label, icon, showLabelWhenCompact, customId, btnVariant = "default", className, style,
     shouldHideBtn, children, onButtonClick, placement,
-    customAnchorRef, offset, disableClick, desiredBackdropOpacity, exclusiveGroup }, ref) => {
+    customAnchorRef, offset, disableClick, desiredBackdropOpacity, exclusiveGroup, wrapperClassName }, ref) => {
     const openOverlay = useOverlayStore((state) => state.open);
     const onMenuClose = useOverlayStore((state) => state.close);
 
@@ -89,11 +90,12 @@ export const CardRowMenuBtn = forwardRef<HTMLDivElement, CardRowMenuBtnProps>(({
     return (
         <>
             {children && (
-                <div
+                <div className={wrapperClassName}
                     data-entry-menu-btn="true"
                     onPointerDownCapture={(e) => e.stopPropagation()}
                     onClick={(e) => {
                         if (disableClick) return;
+                        e.stopPropagation();
                         handleOpenCardActionModal()
                     }}
                     ref={btnRef}>
@@ -102,6 +104,7 @@ export const CardRowMenuBtn = forwardRef<HTMLDivElement, CardRowMenuBtnProps>(({
 
             )}
             {!children && <div
+
                 data-entry-menu-btn="true"
                 data-btn-id={label}
                 onPointerDownCapture={(e) => e.stopPropagation()}
@@ -117,7 +120,7 @@ export const CardRowMenuBtn = forwardRef<HTMLDivElement, CardRowMenuBtnProps>(({
                     border border-gray-500/30 px-2
                     p-1 flex items-center justify-center
                     hover:bg-neutral-700/25 cursor-pointer
-                    text-neutral-300 
+                    text-neutral-300 ${wrapperClassName}
                      ${className}`}>
                 {icon ? icon : <PhotoIcon className="w-4 aspect-square text-white" />}
 

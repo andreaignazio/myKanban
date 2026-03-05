@@ -871,6 +871,7 @@ export type CrossBoardMoveBoardPayload = {
     MovedListCardID: string
     CardID: string
     Cards?: Record<string, Card>
+    Boards?: Record<string, Board>
     SourceBoardID: string
     TargetBoardID: string
     FromListID: string

@@ -1,4 +1,5 @@
-﻿import { create } from "zustand"
+﻿import type { OverlayExclusiveGroup } from "@/domain/overlayExclusiveGroups"
+import { create } from "zustand"
 
 export type OverlayState = {
     stack: OverlayDescriptor[]
@@ -43,7 +44,7 @@ export type OverlayDescriptor = {
     position?: OverlayPositionOptions
     renderType?: "livePoint" | "anchored" | "virtual"
     zIndex?: number
-    exclusiveGroup?: string // Only one overlay with the same exclusiveGroup can be open at a time
+    exclusiveGroup?: OverlayExclusiveGroup  // Only one overlay with the same exclusiveGroup can be open at a time
     desiredBackdropOpacity?: number // 0 to 1, only applicable if lockBackdrop is true
     // Add more properties as needed, e.g., position, content, etc.
 }

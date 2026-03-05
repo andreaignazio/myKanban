@@ -2,6 +2,7 @@ import { getClassNamesForColorToken } from "@/domain/colorTokens";
 import { useBoardsStore } from "@/stores/boardsStore";
 import type { Board } from "@/stores/types";
 import { useShallow } from "zustand/shallow";
+import { useImageAverageColor } from "./useImageAverageColor";
 
 type UseBoardBackgroundParams = {
     boardId?: string;
@@ -22,6 +23,19 @@ export function useBoardBackground({ boardId, board, fallbackBackgroundUrl = DEF
     const backgroundColorClassName = backgroundColorToken ? getClassNamesForColorToken(backgroundColorToken) : "";
     const resolvedBackgroundUrl = backgroundImageUrl ?? fallbackBackgroundUrl;
 
+    const { averageColor: imageAverageColor } = useImageAverageColor(
+        backgroundType === "image" ? backgroundImageUrl : null
+    );
+
+    // Always a hex string — first hex extracted from className for color tokens, average color for images
+    const colorTokenHex = backgroundColorClassName
+        ? (backgroundColorClassName.match(/#([0-9a-fA-F]{6})/)?.[0] ?? null)
+        : null;
+    const resolvedColor: string | null =
+        backgroundType === "color" ? colorTokenHex :
+            backgroundType === "image" ? imageAverageColor :
+                null;
+
     return {
         boardBackground,
         backgroundType,
@@ -29,5 +43,10 @@ export function useBoardBackground({ boardId, board, fallbackBackgroundUrl = DEF
         backgroundColorToken,
         backgroundColorClassName,
         resolvedBackgroundUrl,
+        resolvedColor,
     };
+}
+
+export function useBoardBg() {
+    return { useBoardBackground };
 }

@@ -106,6 +106,10 @@ func (h *ListCardsHandler) CreateCardInList(c *gin.Context) {
 		Card:     dto.CardToResponse(newCard),
 		ListCard: dto.ListCardToResponse(newListcard),
 	}
+	hydratedCreated, err := h.ListCardsService.HydrateListCardResponseMirrors(ctx, []dto.ListCardResponse{createCardResponse.ListCard})
+	if err == nil && len(hydratedCreated) > 0 {
+		createCardResponse.ListCard = hydratedCreated[0]
+	}
 	c.JSON(http.StatusCreated, createCardResponse)
 
 }
@@ -192,6 +196,19 @@ func (h *ListCardsHandler) CrossMoveCard(c *gin.Context) {
 	}
 	if sourceListCard != nil {
 		res.DetatchedListCard = mappingListCardToResponse(sourceListCard)
+	}
+	hydrateInput := []dto.ListCardResponse{res.TargetListCard}
+	if res.DetatchedListCard != nil {
+		hydrateInput = append(hydrateInput, *res.DetatchedListCard)
+	}
+	hydratedMoveResponse, hydrateErr := h.ListCardsService.HydrateListCardResponseMirrors(ctx, hydrateInput)
+	if hydrateErr == nil {
+		if len(hydratedMoveResponse) > 0 {
+			res.TargetListCard = hydratedMoveResponse[0]
+		}
+		if res.DetatchedListCard != nil && len(hydratedMoveResponse) > 1 {
+			res.DetatchedListCard = &hydratedMoveResponse[1]
+		}
 	}
 	c.JSON(http.StatusOK, res)
 }
@@ -280,6 +297,14 @@ func (h *ListCardsHandler) BulkCrossMoveCards(c *gin.Context) {
 		MovedListCards:     movedListCardsResponse,
 		DetatchedListCards: deletedListCardsResponse,
 	}
+	hydratedMoved, hydrateMovedErr := h.ListCardsService.HydrateListCardResponseMirrors(ctx, res.MovedListCards)
+	if hydrateMovedErr == nil {
+		res.MovedListCards = hydratedMoved
+	}
+	hydratedDetatched, hydrateDetatchedErr := h.ListCardsService.HydrateListCardResponseMirrors(ctx, res.DetatchedListCards)
+	if hydrateDetatchedErr == nil {
+		res.DetatchedListCards = hydratedDetatched
+	}
 	c.JSON(http.StatusOK, res)
 }
 
@@ -349,6 +374,10 @@ func (h *ListCardsHandler) BulkMoveListCardsInBoard(c *gin.Context) {
 	res := BulkMoveListCardsInBoardResponse{MovedListCards: make([]dto.ListCardResponse, 0, len(movedListCards))}
 	for i := range movedListCards {
 		res.MovedListCards = append(res.MovedListCards, dto.ListCardToResponse(&movedListCards[i]))
+	}
+	hydratedBulkMoved, hydrateErr := h.ListCardsService.HydrateListCardResponseMirrors(ctx, res.MovedListCards)
+	if hydrateErr == nil {
+		res.MovedListCards = hydratedBulkMoved
 	}
 
 	c.JSON(http.StatusOK, res)
@@ -482,6 +511,10 @@ func (h *ListCardsHandler) GetListCardsByListId(c *gin.Context) {
 	res := make([]dto.ListCardResponse, 0, len(listCards))
 	for _, listCard := range listCards {
 		res = append(res, *mappingListCardToResponse(&listCard))
+	}
+	hydratedListCards, hydrateErr := h.ListCardsService.HydrateListCardResponseMirrors(ctx, res)
+	if hydrateErr == nil {
+		res = hydratedListCards
 	}
 	c.JSON(http.StatusOK, res)
 }
