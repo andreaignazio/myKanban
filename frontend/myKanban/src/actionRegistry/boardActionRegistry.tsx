@@ -27,9 +27,7 @@ export function useBoardActionRegistry() {
     }
 
     function setBoardVisibility(boardID: string, visibility: string) {
-        return boardsStore.patchBoard(boardID, {
-            Visibility: visibility,
-        });
+        return boardsStore.patchBoard(boardID, { Visibility: visibility }, "board:edit:visibility");
     }
 
     function setBoardBackgroundColor(boardID: string, colorToken: string) {
@@ -37,15 +35,11 @@ export function useBoardActionRegistry() {
             Props: {
                 Background: {
                     Type: "color",
-                    Color: {
-                        Token: colorToken,
-                    },
-                    Image: {
-                        Url: "",
-                    },
+                    Color: { Token: colorToken },
+                    Image: { Url: "" },
                 },
             },
-        });
+        }, "board:edit:background:color");
     }
 
     function setBoardBackgroundImage(boardID: string, imageUrl: string) {
@@ -53,23 +47,15 @@ export function useBoardActionRegistry() {
             Props: {
                 Background: {
                     Type: "image",
-                    Image: {
-                        Url: imageUrl,
-                    },
-                    Color: {
-                        Token: "",
-                    },
+                    Image: { Url: imageUrl },
+                    Color: { Token: "" },
                 },
             },
-        });
+        }, "board:edit:background:image");
     }
 
     function setBoardStarred(boardID: string, starred: boolean) {
-        return boardsStore.patchMyUserBoardProps(boardID, {
-            Props: {
-                Starred: starred,
-            },
-        });
+        return boardsStore.patchMyUserBoardProps(boardID, { Props: { Starred: starred } }, "userboard:edit:starred");
     }
 
 
@@ -83,6 +69,31 @@ export function useBoardActionRegistry() {
 
     function leaveBoard(boardID: string, currentUserID: string) {
         return boardMembersStore.deleteBoardMember(boardID, currentUserID);
+    }
+
+    function leaveBoardWithConfirmation(
+        boardID: string,
+        currentUserID: string,
+        anchorRef?: React.RefObject<HTMLElement | null>,
+        onBeforeSubmit?: () => void
+    ) {
+        const data: DomainModalData = {
+            componentent: (onClose) => (
+                <ConfirmDeletionPopover
+                    onClose={onClose}
+                    onSubmit={() => {
+                        onBeforeSubmit?.();
+                        void leaveBoard(boardID, currentUserID);
+                        onClose();
+                    }}
+                    title="Leave board?"
+                    body="You will lose access to this board until invited again."
+                    submitLabel="Leave board"
+                />
+            ),
+            anchorRef: anchorRef ?? null,
+        }
+        useUiStore.getState().setDomainModalOpen(true, data)
     }
 
     function createBoardLabel(boardID: string, title: string, color: string) {
@@ -109,7 +120,7 @@ export function useBoardActionRegistry() {
         return labelStore.removeCardLabel(boardID, cardID, labelID);
     }
     function closeBoard(workspaceID: string, boardID: string) {
-        return boardsStore.closeBoardInWorkspace(workspaceID, boardID);
+        return boardsStore.closeBoardInWorkspace(workspaceID, boardID, "board:close");
     }
 
     const closeAllOverlays = useOverlayStore((state) => state.closeAll);
@@ -160,6 +171,7 @@ export function useBoardActionRegistry() {
         setBoardMemberRole,
         deleteBoardMember,
         leaveBoard,
+        leaveBoardWithConfirmation,
         createBoardLabel,
         updateBoardLabel,
         deleteBoardLabel,

@@ -4,20 +4,21 @@ import { createPortal } from "react-dom";
 import { ChevronDownIcon } from "@heroicons/react/24/outline";
 import { XMarkIcon } from "@heroicons/react/24/solid";
 
-import { AsyncActionOverlay } from "@/components/modals/AsyncActionOverlay";
 import { LabeledButtonCustom } from "@/components/buttons/labeledButton";
 import { CustomDropDown, type MenuItem } from "@/components/menuElements/CustomDropDown";
 import { UserRoleBadgeSelector } from "@/components/badges/RoleBadge";
 import { BoardMembersSubMenu } from "@/components/modals/BoardMembersSubMenu";
 import type { BoardRole } from "@/hooks/useCurrentBoardRole";
 import { useCurrentBoardRole } from "@/hooks/useCurrentBoardRole";
-import { useAsyncActionOverlay } from "@/hooks/useAsyncActionOverlay";
 import { useShareOffersStore, type CreateShareOfferPayload } from "@/stores/shareOffersStore";
+import { useAsyncRequestStore } from "@/stores/asyncRequestStore";
 import { useShareLinksStore } from "@/stores/shareLinksStore";
 import type { CreateShareLinkRequest } from "@/stores/types";
 import { useShareUserSearch } from "@/hooks/useShareUserSearch";
 import { SelectedUserChip } from "@/components/modals/shareBoard/SelectedUserChip";
 import { ShareLinkSection } from "@/components/modals/shareBoard/ShareLinkSection";
+import { CommonMenuWrapper } from "@/components/menuElements/menuWrapper";
+import { AsyncRequestOverlayA } from "../asyncRequestHandlers/asyncRequestOverlayA";
 
 type BoardShareModalProps = {
     targetID: string;
@@ -29,10 +30,7 @@ export const BoardShareModal = forwardRef<HTMLDivElement, BoardShareModalProps>(
     const { isAdminOrOwner } = useCurrentBoardRole(targetID);
 
     const createBoardShareOffer = useShareOffersStore((state) => state.createBoardShareOffer);
-    const getIsSuccess = useShareOffersStore((state) => state.getIsSuccess);
     const createShareLink = useShareLinksStore((state) => state.createShareLink);
-
-    const { status: asyncOverlayStatus, isActive: isAsyncOverlayActive, reset: resetAsyncOverlay, runWithOverlay } = useAsyncActionOverlay();
 
     const {
         inputRef,
@@ -62,7 +60,6 @@ export const BoardShareModal = forwardRef<HTMLDivElement, BoardShareModalProps>(
     const memberDropdownRoles = roles.filter((item) => item.id !== "owner");
 
     const resetState = () => {
-        resetAsyncOverlay();
         resetSearch();
         setRole("Viewer");
         setPublicShareLink(null);
@@ -84,16 +81,12 @@ export const BoardShareModal = forwardRef<HTMLDivElement, BoardShareModalProps>(
             Message: "",
         };
 
-        await runWithOverlay(
-            () => createBoardShareOffer(payload, targetID),
-            {
-                settleDelayMs: 1000,
-                evaluateSuccess: () => Boolean(getIsSuccess()),
-                successDurationMs: 1500,
-                errorDurationMs: 1000,
-                onSuccess: handleClose,
-            }
-        );
+        await createBoardShareOffer(payload, targetID);
+
+        const isSuccess = useAsyncRequestStore.getState().requestsByKey["board:shareoffer:create"]?.isSuccessful;
+        if (isSuccess) {
+            setTimeout(handleClose, 1500);
+        }
     };
 
     const handleCreateShareLink = async () => {
@@ -181,19 +174,23 @@ export const BoardShareModal = forwardRef<HTMLDivElement, BoardShareModalProps>(
     );
 
     return (
-        <div ref={ref} className="theme-dark">
-            <div
+        <>
+            <CommonMenuWrapper
+                requestGroups={[
+                    { requestKey: ["board:member:edit:role", "board:member:delete", "board:sharelink:create", "board:sharelink:revoke"], maxErrorMs: 2000 },
+                    { requestKey: ["board:member:fetch"], show: ["error"], maxErrorMs: 3000 },
+                ]}
+
+                ref={ref}
                 style={style}
-                className="theme-dark bg-menu w-[600px]
-                 h-fit rounded-2xl shadow-lg
-                  shadow-black relative overflow-hidden pt-4 text-white p-4 pb-4 px-9"
+                className="flex-col w-[600px] min-h-[200px] h-fit !rounded-2xl pt-4 p-4 pb-4 px-9"
             >
-                <AsyncActionOverlay
-                    isActive={isAsyncOverlayActive}
-                    status={asyncOverlayStatus}
-                    loadingText="Sending share offer..."
-                    successText="Share offer sent successfully!"
-                    errorText="Share offer sent failed!"
+                <AsyncRequestOverlayA
+                    requestKey={["board:shareoffer:create"]}
+                />
+                <AsyncRequestOverlayA
+                    requestKey={["board:member:fetch"]}
+                    show={["error"]}
                 />
 
                 <div className="w-full relative min-h-0 flex flex-col gap-2 overflow-hidden">
@@ -214,7 +211,7 @@ export const BoardShareModal = forwardRef<HTMLDivElement, BoardShareModalProps>(
                         />
                     </div>
                 </div>
-            </div>
+            </CommonMenuWrapper>
 
             {createPortal(
                 <div
@@ -222,6 +219,6 @@ export const BoardShareModal = forwardRef<HTMLDivElement, BoardShareModalProps>(
                     onClick={handleClose}
                 />, document.body
             )}
-        </div>
+        </>
     );
 });

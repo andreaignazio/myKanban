@@ -331,6 +331,10 @@ export const CreateBoardLabelMenu = forwardRef<HTMLDivElement, CreateBoardLabelM
     const handleUpdateLabel = () => {
         if (labelId) {
             updateBoardLabel(boardId, labelId, titleInput, activeColor)
+                .then(() => {
+                    // console.log("Label updated successfully");
+                    onSelect?.();
+                })
         }
     }
 

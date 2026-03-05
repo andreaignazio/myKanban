@@ -3,6 +3,7 @@ import type { BoardEvent, BoardLabel, CardLabelLink, CreateBoardLabelRequest, Pa
 import { api } from '@/api/api';
 import type { EventPayloadEnvelope } from './audittypes';
 import type { BoardDetailPatch } from './boardDetailStore';
+import { useAsyncRequestStore, useAsyncKey } from './asyncRequestStore';
 
 
 type useLabelsStoreState = {
@@ -201,42 +202,39 @@ export const useLabelsStore = create<useLabelsStoreState>((set, get) => ({
     }),
 
     createBoardLabel: async (boardId, payload: CreateBoardLabelRequest) => {
-        try {
-            // console.log("Creating board label with payload:", payload);
-            await api.post(`/boards/${boardId}/labels`, payload);
-        } catch (error) {
-            // console.error("Failed to create board label:", error);
-        }
+        await useAsyncRequestStore.getState().execute(
+            "board:label:create",
+            () => api.post(`/boards/${boardId}/labels`, payload),
+            { successResetDelayMs: 2000 }
+        );
     },
     updateBoardLabel: async (boardId: string, labelId: string, payload: PatchBoardLabelRequest) => {
-        try {
-            // console.log("Updating board label with payload:", payload, "for labelId:", labelId);
-            await api.patch(`/boards/${boardId}/labels/${labelId}`, payload);
-        } catch (error) {
-            // console.error("Failed to update board label:", error);
-        }
+        await useAsyncRequestStore.getState().execute(
+            useAsyncKey("board:label:edit", labelId),
+            () => api.patch(`/boards/${boardId}/labels/${labelId}`, payload),
+            { successResetDelayMs: 1500 }
+        );
     },
     deleteBoardLabel: async (boardId: string, labelId: string) => {
-        try {
-            await api.delete(`/boards/${boardId}/labels/${labelId}`);
-        } catch (error) {
-            // console.error("Failed to delete board label:", error);
-        }
+        await useAsyncRequestStore.getState().execute(
+            useAsyncKey("board:label:delete", labelId),
+            () => api.delete(`/boards/${boardId}/labels/${labelId}`),
+            { successResetDelayMs: 1500 }
+        );
     },
     addCardLabel: async (boardId: string, cardId: string, labelId: string) => {
-        try {
-            "/:boardID/cards/:cardID/labels/:labelID"
-            await api.post(`/boards/${boardId}/cards/${cardId}/labels/${labelId}`);
-        } catch (error) {
-            // console.error("Failed to add card label:", error);
-        }
+        await useAsyncRequestStore.getState().execute(
+            useAsyncKey("card:label:add", labelId),
+            () => api.post(`/boards/${boardId}/cards/${cardId}/labels/${labelId}`),
+            { successResetDelayMs: 1000 }
+        );
     },
     removeCardLabel: async (boardId: string, cardId: string, labelId: string) => {
-        try {
-            await api.delete(`/boards/${boardId}/cards/${cardId}/labels/${labelId}`);
-        } catch (error) {
-            // console.error("Failed to remove card label:", error);
-        }
+        await useAsyncRequestStore.getState().execute(
+            useAsyncKey("card:label:remove", labelId),
+            () => api.delete(`/boards/${boardId}/cards/${cardId}/labels/${labelId}`),
+            { successResetDelayMs: 1000 }
+        );
     },
     applyLabelEvent: (evt: BoardEvent) => {
         // console.log("Applying label event:", evt);

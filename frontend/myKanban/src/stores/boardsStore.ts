@@ -7,6 +7,8 @@ import type { BoardDetailPatch } from "./boardDetailStore";
 import type { ShareOffer } from "./shareOfferTypes";
 import { useCacheStore } from "./cacheStore";
 import { useSortByPosition } from "@/hooks/useSortByPosition";
+import { useAsyncRequestStore } from "./asyncRequestStore";
+import type { AsyncRequestKey } from "./asyncRequestTypes";
 
 const { sortByPosition } = useSortByPosition();
 export type UserBoardData = {
@@ -64,8 +66,8 @@ export type BoardsStore = {
     getPendingAccessRequestCountByBoardId: (boardId: string) => number;
     updatePendingAccessRequestCountByBoardId: (boardId: string, count: number, mode: "increment" | "decrement" | "set") => void;
     createBoardInWorkspace: (workspaceId: string, payload: CreateBoardRequest) => Promise<void>;
-    patchBoard: (boardId: string, payload: { Name?: string; Visibility?: string; Props?: Record<string, unknown> }) => Promise<void>;
-    patchMyUserBoardProps: (boardId: string, payload: PatchUserBoardPropsRequest) => Promise<void>;
+    patchBoard: (boardId: string, payload: { Name?: string; Visibility?: string; Props?: Record<string, unknown> }, asyncKey?: AsyncRequestKey) => Promise<void>;
+    patchMyUserBoardProps: (boardId: string, payload: PatchUserBoardPropsRequest, asyncKey?: AsyncRequestKey) => Promise<void>;
     applyCrateBoard: (data: UserBoardData) => void;
 
     mergeBoardsPatch: (payload: Record<string, Partial<Board>>) => void;
@@ -76,7 +78,7 @@ export type BoardsStore = {
     findWorkspaceIdByBoardId: (boardId: string) => string | undefined;
     mergeBoardsInWorkspace: (workspaceID: string, boards: Record<string, Board>) => void;
     applyOptimisticCloseBoard: (workspaceId: string, boardId: string) => void;
-    closeBoardInWorkspace: (workspaceId: string, boardId: string) => Promise<void>;
+    closeBoardInWorkspace: (workspaceId: string, boardId: string, asyncKey?: AsyncRequestKey) => Promise<void>;
     restoreBoardInWorkspace: (workspaceId: string, boardId: string) => Promise<void>;
     purgeBoardInWorkspace: (workspaceId: string, boardId: string) => Promise<void>;
     getClosedBoardsInWorkspace: (workspaceId: string) => Promise<void>;
@@ -317,16 +319,19 @@ export const useBoardsStore = create<BoardsStore>((set, get) => ({
             set({ isSendingRequest: false });
         }
     },
-    patchBoard: async (boardId: string, payload: { Name?: string; Visibility?: string; Props?: Record<string, unknown> }) => {
-        try {
+    patchBoard: async (boardId, payload, asyncKey?) => {
+        const run = async () => {
             const response = await api.patch(`/boards/${boardId}`, payload);
             const board = response.data as Board;
             get().mergeBoardsPatch({ [board.ID]: board });
-        } catch (error) {
-            throw error;
+        };
+        if (asyncKey) {
+            await useAsyncRequestStore.getState().execute(asyncKey, run, { successResetDelayMs: 2000 });
+        } else {
+            await run();
         }
     },
-    patchMyUserBoardProps: async (boardId: string, payload: PatchUserBoardPropsRequest) => {
+    patchMyUserBoardProps: async (boardId, payload, asyncKey?) => {
         const prev = get().userBoardsById[boardId];
         if (!prev) return;
 
@@ -340,13 +345,24 @@ export const useBoardsStore = create<BoardsStore>((set, get) => ({
 
         get().mergeUserBoardPatch({ [boardId]: optimistic });
 
-        try {
+        const run = async () => {
             const response = await api.patch(`/boards/${boardId}/me/props`, payload);
             const updated = response.data as UserBoard;
             get().mergeUserBoardPatch({ [boardId]: updated });
-        } catch (error) {
-            get().mergeUserBoardPatch({ [boardId]: prev });
-            throw error;
+        };
+
+        if (asyncKey) {
+            await useAsyncRequestStore.getState().execute(asyncKey, run, {
+                onError: () => get().mergeUserBoardPatch({ [boardId]: prev }),
+                successResetDelayMs: 1500,
+            });
+        } else {
+            try {
+                await run();
+            } catch (error) {
+                get().mergeUserBoardPatch({ [boardId]: prev });
+                throw error;
+            }
         }
     },
     applyCrateBoard: (data: UserBoardData) => {
@@ -433,13 +449,15 @@ export const useBoardsStore = create<BoardsStore>((set, get) => ({
 
     },
 
-    closeBoardInWorkspace: async (workspaceId: string, boardId: string) => {
-        try {
+    closeBoardInWorkspace: async (workspaceId, boardId, asyncKey?) => {
+        const run = async () => {
             await api.delete(`/workspaces/${workspaceId}/boards/${boardId}`);
             get().applyOptimisticCloseBoard(workspaceId, boardId);
-        } catch (error) {
-            // console.error("Error closing board in workspace", workspaceId, boardId, error);
-            throw error;
+        };
+        if (asyncKey) {
+            await useAsyncRequestStore.getState().execute(asyncKey, run, { successResetDelayMs: 2000 });
+        } else {
+            await run();
         }
     },
     applyOptimisticCloseBoard: (workspaceId: string, boardId: string) => {

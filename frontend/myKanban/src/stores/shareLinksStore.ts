@@ -15,6 +15,7 @@ import { useWorkspaceStore } from "./workspaceStore";
 import { useBoardMembersStore } from "./boardMembersStore";
 import { useWsMembersStore } from "./wsMembersStore";
 import { useUserStore } from "./userStore";
+import { useAsyncRequestStore, useAsyncKey } from "./asyncRequestStore";
 
 
 
@@ -60,29 +61,33 @@ export const useShareLinksStore = create<ShareLinksState>((set, get) => ({
         return shareLink ? shareLink.Token : null
     },
     createShareLink: async (payload) => {
-        try {
-            const response = await api.post("/sharelinks", payload);
-            set((state) => {
-                const shareLink = response.data as PublicShareLink;
-                const targetId = shareLink.TargetID;
-                const existingIds = state.shareLinkIdsByTargetId[targetId] || [];
-                return {
-                    shareLinkIdsByTargetId: {
-                        ...state.shareLinkIdsByTargetId,
-                        [targetId]: [...existingIds, shareLink.ID],
-                    },
-                    shareLinksById: {
-                        ...state.shareLinksById,
-                        [shareLink.ID]: shareLink,
-                    },
-                };
-            });
 
-            return buildUrlFromToken(response.data.Token);
-        } catch (error) {
-            // console.error("Error creating share link:", error);
-            throw error;
-        }
+        const response = await useAsyncRequestStore.getState().execute(
+            "board:sharelink:create",
+            () => api.post(`/sharelinks`, payload),
+            {
+                successResetDelayMs: 2000,
+                onSuccess(response) {
+                    set((state) => {
+                        const shareLink = response.data as PublicShareLink;
+                        const targetId = shareLink.TargetID;
+                        const existingIds = state.shareLinkIdsByTargetId[targetId] || [];
+                        return {
+                            shareLinkIdsByTargetId: {
+                                ...state.shareLinkIdsByTargetId,
+                                [targetId]: [...existingIds, shareLink.ID],
+                            },
+                            shareLinksById: {
+                                ...state.shareLinksById,
+                                [shareLink.ID]: shareLink,
+                            },
+                        };
+                    });
+                },
+            });
+        return buildUrlFromToken(response?.data.Token);
+
+
     },
     fetchShareLinksByTargetId: async (targetId) => {
         try {
@@ -112,13 +117,20 @@ export const useShareLinksStore = create<ShareLinksState>((set, get) => ({
         }
     },
     revokeShareLink: async (shareLinkID) => {
-        try {
-            const token = get().getTokenById(shareLinkID)
-            await api.post(`/sharelinks/${token}/revoke`)
-        } catch (error) {
-            // console.error("Error revoking share link:", error);
-            throw error;
+        const handleRevoke = async () => {
+            const token = get().getTokenById(shareLinkID);
+            if (!token) throw new Error("Share link not found");
+            await api.post(`/sharelinks/${token}/revoke`);
         }
+
+        await useAsyncRequestStore.getState().execute(
+            useAsyncKey("board:sharelink:revoke", shareLinkID),
+            () => handleRevoke(),
+            {
+                successResetDelayMs: 2000,
+            }
+        );
+
     },
     fetchShareLinkPublicPreviewByToken: async (token) => {
         try {

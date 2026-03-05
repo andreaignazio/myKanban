@@ -118,6 +118,7 @@ export default function AppLayout() {
                 closeOnClickOutside: false,
                 closeOnEscape: false,
                 lockBackdrop: false,
+                passthrough: true,
             },
             position: {
                 virtual: "viewport-bottom-right",

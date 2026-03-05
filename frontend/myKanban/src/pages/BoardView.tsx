@@ -1,4 +1,4 @@
-﻿import { forwardRef, useRef, useEffect, useState } from "react";
+﻿import { forwardRef, useRef, useEffect, useMemo, useState } from "react";
 import { ListRow } from "../components/ListRow";
 import { useBoardDetailStore } from "@/stores/boardDetailStore";
 import { Outlet, useParams } from "react-router-dom";
@@ -35,11 +35,50 @@ import { ListContainer } from "./BoardView/ListContainer";
 import { useBoardBackground } from "@/hooks/useBoardBackground";
 import { useIsOverlayActive } from "@/hooks/useIsOverlayActive";
 import { InboxView } from "./Inbox/InboxView";
+import { useSmoothBoardBackground, type BoardBackgroundSpec } from "@/hooks/useSmoothBoardBackground";
 
 
 const EMPTY_LIST_IDS: string[] = []
 
 const PADDING_X = 8
+
+function BoardBackgroundLayer({ spec }: { spec: BoardBackgroundSpec }) {
+    if (spec.kind === "color") {
+        return (
+            <div
+                className={`absolute inset-0 ${spec.className}`.trim()}
+                style={!spec.className ? { backgroundColor: spec.colorToken ?? "#0f172a" } : undefined}
+            />
+        )
+    }
+
+    return (
+        <div
+            className="absolute inset-0 bg-center bg-cover"
+            style={{ backgroundImage: `url('${spec.url}')` }}
+        />
+    )
+}
+
+function BoardBackgroundTransition({ target }: { target: BoardBackgroundSpec }) {
+    const { activeBackground, incomingBackground, incomingVisible } = useSmoothBoardBackground(target, {
+        transitionMs: 320,
+        frameDelayMs: 16,
+    })
+
+    return (
+        <div className="absolute inset-0 -z-10 pointer-events-none">
+            <div className="absolute inset-0 opacity-100 transition-opacity duration-300 ease-out">
+                <BoardBackgroundLayer spec={activeBackground} />
+            </div>
+            {incomingBackground && (
+                <div className={`absolute inset-0 transition-opacity duration-300 ease-out ${incomingVisible ? "opacity-100" : "opacity-0"}`}>
+                    <BoardBackgroundLayer spec={incomingBackground} />
+                </div>
+            )}
+        </div>
+    )
+}
 
 export default function BoardView() {
 
@@ -64,6 +103,20 @@ export default function BoardView() {
 
 
     const { backgroundType, backgroundColorToken, backgroundColorClassName, resolvedBackgroundUrl } = useBoardBackground({ board })
+    const targetBackground = useMemo<BoardBackgroundSpec>(() => {
+        if (backgroundType === "color" && backgroundColorToken) {
+            return {
+                kind: "color",
+                className: backgroundColorClassName,
+                colorToken: backgroundColorToken,
+            }
+        }
+
+        return {
+            kind: "image",
+            url: resolvedBackgroundUrl,
+        }
+    }, [backgroundType, backgroundColorToken, backgroundColorClassName, resolvedBackgroundUrl])
 
 
     //useBoardWebSocket(workspaceId ?? "", boardId ?? null)
@@ -217,18 +270,8 @@ export default function BoardView() {
                     <div className={`flex-shrink-0 h-full transition-all 
                     ${isInboxActive ? ` rounded-2xl overflow-hidden` : ""} w-full`}>
                         <div className={`relative w-full h-full min-h-0 flex flex-col`}>
-                            <div className={`absolute inset-0 -z-10 transition-all ${isInboxActive ? `bottom-[${bottomPX}]` : ""} `}>
-                                {backgroundType === "color" && backgroundColorToken ? (
-                                    <div
-                                        className={`h-full w-full ${backgroundColorClassName}`.trim()}
-                                        style={!backgroundColorClassName ? { backgroundColor: backgroundColorToken } : undefined}
-                                    />
-                                ) : (
-                                    <div
-                                        className="h-full w-full bg-center bg-cover"
-                                        style={{ backgroundImage: `url('${resolvedBackgroundUrl}')` }}
-                                    />
-                                )}
+                            <div className={`absolute inset-0 transition-all ${isInboxActive ? `bottom-[${bottomPX}]` : ""} `}>
+                                <BoardBackgroundTransition target={targetBackground} />
                             </div>
 
                             <BoardViewTopBar board={board} backgroundType={backgroundType} />

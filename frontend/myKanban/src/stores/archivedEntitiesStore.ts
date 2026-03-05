@@ -3,6 +3,7 @@ import { create } from "zustand";
 import { useCardsStore } from "@/stores/cardsStore";
 import { useListsStore } from "@/stores/listsStore";
 import { useBoardDetailStore } from "@/stores/boardDetailStore";
+import { useAsyncRequestStore, useAsyncKey } from "@/stores/asyncRequestStore";
 
 import type { BoardList, Card, List, ListCardRelation } from "./types";
 
@@ -47,10 +48,15 @@ export const useArchivedEntitiesStore = create<ArchivedEntitiesStore>((set, get)
     boardListIdsByBoardId: {},
 
     fetchArchivedByBoardId: async (boardId: string) => {
-        const response = await api.get(`/boards/${boardId}/relations/deleted`);
-        const payload = response.data as DeletedBoardRelationsResponse;
-        console.log("Fetched archived relations for board", boardId, payload);
-        get().applyArchivedRelations(boardId, payload);
+        await useAsyncRequestStore.getState().execute(
+            useAsyncKey("board:archive:fetch", boardId),
+            async () => {
+                const response = await api.get(`/boards/${boardId}/relations/deleted`);
+                const payload = response.data as DeletedBoardRelationsResponse;
+                get().applyArchivedRelations(boardId, payload);
+            },
+            { successResetDelayMs: 1500 }
+        );
     },
 
     applyArchivedRelations: (boardId: string, payload: DeletedBoardRelationsResponse) => {
@@ -92,53 +98,71 @@ export const useArchivedEntitiesStore = create<ArchivedEntitiesStore>((set, get)
     },
 
     restoreArchivedBoardList: async (boardId: string, boardListId: string) => {
-        const response = await api.post(`/boards/${boardId}/lists/restorebulk`, {
-            BoardListIDs: [boardListId],
-        });
-
-        const restored = (response.data ?? []) as BoardList[];
-        if (restored.length > 0) {
-            const payload = restored.reduce((acc, relation) => {
-                acc[relation.ID] = relation;
-                return acc;
-            }, {} as Record<string, BoardList>);
-            useBoardDetailStore.getState().mergeBoardListsPatch(payload as any);
-        }
-
-        get().removeArchivedBoardListLocal(boardId, boardListId);
+        await useAsyncRequestStore.getState().execute(
+            useAsyncKey("board:archive:list:restore", boardListId),
+            async () => {
+                const response = await api.post(`/boards/${boardId}/lists/restorebulk`, {
+                    BoardListIDs: [boardListId],
+                });
+                const restored = (response.data ?? []) as BoardList[];
+                if (restored.length > 0) {
+                    const payload = restored.reduce((acc, relation) => {
+                        acc[relation.ID] = relation;
+                        return acc;
+                    }, {} as Record<string, BoardList>);
+                    useBoardDetailStore.getState().mergeBoardListsPatch(payload as any);
+                }
+                get().removeArchivedBoardListLocal(boardId, boardListId);
+            },
+            { successResetDelayMs: 1500 }
+        );
     },
 
     restoreArchivedListCard: async (boardId: string, listCardId: string) => {
-        const response = await api.post(`/boards/${boardId}/listcards/restorebulk`, {
-            ListCardIDs: [listCardId],
-        });
-
-        const restored = (response.data ?? []) as ListCardRelation[];
-        if (restored.length > 0) {
-            const payload = restored.reduce((acc, relation) => {
-                acc[relation.ID] = relation;
-                return acc;
-            }, {} as Record<string, ListCardRelation>);
-            useBoardDetailStore.getState().mergeListCardsPatch(payload as any);
-        }
-
-        get().removeArchivedListCardLocal(boardId, listCardId);
+        await useAsyncRequestStore.getState().execute(
+            useAsyncKey("board:archive:card:restore", listCardId),
+            async () => {
+                const response = await api.post(`/boards/${boardId}/listcards/restorebulk`, {
+                    ListCardIDs: [listCardId],
+                });
+                const restored = (response.data ?? []) as ListCardRelation[];
+                if (restored.length > 0) {
+                    const payload = restored.reduce((acc, relation) => {
+                        acc[relation.ID] = relation;
+                        return acc;
+                    }, {} as Record<string, ListCardRelation>);
+                    useBoardDetailStore.getState().mergeListCardsPatch(payload as any);
+                }
+                get().removeArchivedListCardLocal(boardId, listCardId);
+            },
+            { successResetDelayMs: 1500 }
+        );
     },
 
     purgeArchivedBoardList: async (boardId: string, boardListId: string) => {
-        await api.post(`/boards/${boardId}/lists/purgebulk`, {
-            BoardListIDs: [boardListId],
-        });
-
-        get().removeArchivedBoardListLocal(boardId, boardListId);
+        await useAsyncRequestStore.getState().execute(
+            useAsyncKey("board:archive:list:purge", boardListId),
+            async () => {
+                await api.post(`/boards/${boardId}/lists/purgebulk`, {
+                    BoardListIDs: [boardListId],
+                });
+                get().removeArchivedBoardListLocal(boardId, boardListId);
+            },
+            { successResetDelayMs: 1500 }
+        );
     },
 
     purgeArchivedListCard: async (boardId: string, listCardId: string) => {
-        await api.post(`/boards/${boardId}/listcards/purgebulk`, {
-            ListCardIDs: [listCardId],
-        });
-
-        get().removeArchivedListCardLocal(boardId, listCardId);
+        await useAsyncRequestStore.getState().execute(
+            useAsyncKey("board:archive:card:purge", listCardId),
+            async () => {
+                await api.post(`/boards/${boardId}/listcards/purgebulk`, {
+                    ListCardIDs: [listCardId],
+                });
+                get().removeArchivedListCardLocal(boardId, listCardId);
+            },
+            { successResetDelayMs: 1500 }
+        );
     },
 
     removeArchivedBoardListLocal: (boardId: string, boardListId: string) => {

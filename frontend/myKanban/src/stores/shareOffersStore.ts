@@ -1,4 +1,5 @@
 ﻿import { api } from "@/api/api";
+import axios from "axios";
 import { create } from "zustand";
 import type { BoardEvent, UserBoard, UserEvent, UserWorkspace, WorkspaceEvent } from "./types";
 import { useWorkspaceStore, type UserWorkspaceData } from "./workspaceStore";
@@ -14,6 +15,8 @@ import { useSortByDate } from "@/hooks/useSortByDate";
 import { useBoardsStore } from "./boardsStore";
 import { useBoardMembersStore } from "./boardMembersStore";
 import { useAuthStore } from "./auth";
+import { useAsyncRequestStore } from "./asyncRequestStore";
+import type { AxiosResponse } from "axios";
 export type { ShareOffer } from "./shareOfferTypes";
 
 type RespondToShareOfferPayload = {
@@ -1022,24 +1025,26 @@ export const useShareOffersStore = create<ShareOffersState>((set, get) => ({
         }
     },
     createBoardShareOffer: async (payload, boardID) => {
-        try {
-            set({
-                isSendingShareOffer: true,
-                isRequestSuccessful: false
-            });
 
-            const res = await api.post(`/boards/${boardID}/shareoffers`, payload);
-            set({ isRequestSuccessful: true });
-            if (res.data && Array.isArray(res.data)) {
-                useCacheStore.getState().upsertShareOffers(res.data as ShareOffer[]);
-                get().mergeWorkspaceDetailsFromShareOffers(res.data as ShareOffer[]);
+        await useAsyncRequestStore.getState().execute<AxiosResponse>(
+            "board:shareoffer:create",
+            () => api.post(`/boards/${boardID}/shareoffers`, payload),
+            {
+                successResetDelayMs: 2000,
+                mapError: (err) => {
+                    if (axios.isAxiosError(err) && err.response?.status === 409)
+                        return "An invite has already been sent to this user"
+                    return null
+                },
+                onSuccess(res) {
+                    //console.log("Board share offer created successfully:", res.data);
+                    if (res.data && Array.isArray(res.data)) {
+                        useCacheStore.getState().upsertShareOffers(res.data as ShareOffer[]);
+                        get().mergeWorkspaceDetailsFromShareOffers(res.data as ShareOffer[]);
+                    }
+                },
             }
-        } catch (error) {
-            set({ isRequestSuccessful: false });
-            throw error;
-        } finally {
-            set({ isSendingShareOffer: false });
-        }
+        )
     },
 
     revokeWorkspaceShareOffer: async (offerID: string, message: string) => {
@@ -1081,37 +1086,7 @@ export const useShareOffersStore = create<ShareOffersState>((set, get) => ({
             const response = await api.post(`/shareoffers/${offerID}/respond`, payload);
             set({ isRequestSuccessful: true });
             const data: RespondToShareOfferResponse = response.data;
-            // console.log("Responded to share offer successfully", data);
-            // Update the offer status in the store
 
-            /*  if (data.ShareOffer.Status === "accepted") {
-  
-                  if (data.ShareOffer.TargetType === "workspace") {
-                      if (data.UserWorkspace) {
-                          //Optimitic update of the workspace and user workspace in the cache to reflect the new access immediately
-                          //Transfer data from the cacheStore to the workspace store to update the workspace list and details with the new access
-                          const workspace = useCacheStore.getState().offerWorkspaceById[data.UserWorkspace.WorkspaceID];
-                          const workspaceSubscription = useCacheStore.getState().offerSubscriptionByWorkspaceId[data.UserWorkspace.WorkspaceID];
-                          useWorkspaceStore.getState().mergeWorkspaceData({
-                              Workspaces: [workspace],
-                              UserWorkspaces: [data.UserWorkspace],
-                              WorkspaceSubscriptions: [workspaceSubscription]
-                          })
-                      }
-  
-                  } else if (data.ShareOffer.TargetType === "board") {
-  
-                  }
-  
-                  //Optimistic update of the offer status to accepted in the cache
-                  useCacheStore.setState((state) => {
-                      const next = { ...state.offerById }
-                      next[offerID] = data.ShareOffer;
-                      return {
-                          offerById: next
-                      }
-                  })
-              }*/
 
         } catch (error) {
             set({ isRequestSuccessful: false });

@@ -43,10 +43,10 @@ import { BoardArchive } from "./BoardActions/BoardArchive";
 import { ActivityFeedRenderer } from "@/pages/User/acitivityFeedRenderer";
 import { useFetchFeedsForBoard } from "@/hooks/useFetchFeedsForBoard";
 import { useShallow } from "zustand/shallow";
-import { ChevronLeft } from "lucide-react";
 import { BoardShareModal } from "./BoardShareModal";
 import { useCurrentBoardRole } from "@/hooks/useCurrentBoardRole";
 import { useAuthStore } from "@/stores/auth";
+import { useTabPanelAutoHeight } from "@/hooks/useTabPanelAutoHeight";
 
 
 type BoardActionMenuBtnProps = {
@@ -135,6 +135,20 @@ export const BoardActionsMenu = forwardRef<HTMLDivElement, BoardActionsMenuProps
     const [activeLabelID, setActiveLabelID] = useState<string | undefined>(undefined)
     const [labelsSearchInput, setLabelsSearchInput] = useState("")
     const isStarred = !!userBoardRelation?.Props?.Starred;
+    const canAccessArchiveTab = isAdminOrOwner;
+    const canEditBoardSettings = isAdminOrOwner;
+
+    useEffect(() => {
+        if (activeTab === "archive" && !canAccessArchiveTab) {
+            setActiveTab("menu")
+        }
+    }, [activeTab, canAccessArchiveTab])
+
+    useEffect(() => {
+        if (!canEditBoardSettings && ["changeBackground", "colors", "images"].includes(activeTab)) {
+            setActiveTab("menu")
+        }
+    }, [activeTab, canEditBoardSettings])
 
     const ICON_SIZE_CLASS = "w-4 h-4";
     const iconClassName = `${ICON_SIZE_CLASS} text-neutral-300`;
@@ -203,6 +217,30 @@ export const BoardActionsMenu = forwardRef<HTMLDivElement, BoardActionsMenuProps
     }
 
     const h = 32; // Standard height for menu items, can be adjusted as needed
+    const panelClassName = (tab: BoardActionsMenuTabs, extraClassName = "") =>
+        `absolute inset-0 text-neutral-300 overflow-hidden transition-all duration-200 ease-out scrollbar-hidden ${activeTab === tab
+            ? "opacity-100 translate-x-0 pointer-events-auto"
+            : "opacity-0 translate-x-2 pointer-events-none"
+        } ${extraClassName}`
+
+    const TAB_MIN_HEIGHT: Record<BoardActionsMenuTabs, number> = {
+        menu: 420,
+        activity: 260,
+        about: 200,
+        changeBackground: 300,
+        colors: 220,
+        images: 360,
+        labels: 0,
+        labelEditor: 260,
+        archive: 50,
+    }
+
+    const PANEL_MAX_HEIGHT = 620
+    const { resolvedPanelHeight, getPanelRef } = useTabPanelAutoHeight<BoardActionsMenuTabs>({
+        activeTab,
+        minHeightByTab: TAB_MIN_HEIGHT,
+        maxHeight: PANEL_MAX_HEIGHT,
+    })
 
     const closeBoardItem: MenuItemExtended = {
         id: "closeboard",
@@ -221,8 +259,7 @@ export const BoardActionsMenu = forwardRef<HTMLDivElement, BoardActionsMenuProps
         icon: icon(XMarkIcon),
         onClick: () => {
             if (!currentUserID) return;
-            void boardActiios.leaveBoard(boardID, currentUserID);
-            onClose();
+            boardActiios.leaveBoardWithConfirmation(boardID, currentUserID, anchorRef, onClose);
         },
     };
 
@@ -243,6 +280,7 @@ export const BoardActionsMenu = forwardRef<HTMLDivElement, BoardActionsMenuProps
         },
         {
             id: "visibility", label: `Visibility: ${boardVisibilityLabel()}`, kind: "anchoredMenu", height: h, icon: icon(EyeIcon)
+            , disabled: !canEditBoardSettings
             , anchoredMenuProps: {
                 exclusiveGroup: "board-action-menu-nested",
                 menuComponent: ({ onClose, ref }) =>
@@ -271,6 +309,7 @@ export const BoardActionsMenu = forwardRef<HTMLDivElement, BoardActionsMenuProps
         /* { id: "settings", label: "Settings", kind: "standard", height: h, icon: icon(Cog6ToothIcon) }, */
         {
             id: "changeBackground", label: "Change background", kind: "standard", height: h, icon: icon(PaintBrushIcon),
+            disabled: !canEditBoardSettings,
             onClick: () => setActiveTab("changeBackground")
         },
 
@@ -283,10 +322,10 @@ export const BoardActionsMenu = forwardRef<HTMLDivElement, BoardActionsMenuProps
         /* { id: "stickers", label: "Stickers", kind: "standard", height: h, icon: icon(SparklesIcon) }, */
         /* { id: "makeTemplate", label: "Make template", kind: "standard", height: h, icon: icon(RectangleStackIcon) }, */
         { id: "activity", label: "Activity", kind: "standard", height: h, icon: icon(ClockIcon), onClick: () => setActiveTab("activity") },
-        {
-            id: "archiveditems", label: "Archived items", kind: "standard", height: h, icon: icon(ArchiveBoxIcon),
+        ...(canAccessArchiveTab ? [{
+            id: "archiveditems", label: "Archived items", kind: "standard" as const, height: h, icon: icon(ArchiveBoxIcon),
             onClick: () => setActiveTab("archive")
-        },
+        }] : []),
         { id: "divider-3", label: "", kind: "divider", height: 1 },
         {
             id: "watch",
@@ -309,24 +348,48 @@ export const BoardActionsMenu = forwardRef<HTMLDivElement, BoardActionsMenuProps
     return (
         <>
             <ActionMenuWrapper
-                style={{ maxHeight: 650, overflow: "hidden", minHeight: 0 }}
+                onBack={activeTab !== "menu" ? () => {
+                    if (activeTab === "labelEditor") {
+                        setActiveTab("labels");
+                        return;
+                    }
+                    if (activeTab === "images") {
+                        setActiveTab("changeBackground");
+                        return;
+                    }
+                    setActiveTab("menu");
+                } : undefined}
+                requestGroups={[
+                    { requestKey: ["board:edit:visibility", "board:edit:background:color", "board:edit:background:image", "userboard:edit:starred", "board:close", "board:label:create", "board:label:edit", "board:label:delete", "board:archive:list:restore", "board:archive:card:restore", "board:archive:list:purge", "board:archive:card:purge"], maxErrorMs: 3000, minLoadingMs: 0, minSuccessMs: 500 },
+                    { requestKey: ["board:member:fetch", "board:archive:fetch"], show: ["error"], maxErrorMs: 3000 },
+                ]}
+                style={{ maxHeight: 650, overflow: "hidden", minHeight: TAB_MIN_HEIGHT[activeTab], paddingBottom: 10 }}
+
                 ref={ref} Title={Title} onClose={onClose} width={350}
             >
-                <div className="text-neutral-300">
-                    {activeTab === "menu" && (
-                        <DropDown items={menuItems} onClick={() => { }} />
-                    )}
-                    {activeTab === "activity" && (
-                        <ActitivyTab boardId={boardID} />
-                    )}
-                    {activeTab === "about" && (
-                        <BoardAbout boardId={boardID} />
-                    )}
-                    {activeTab === "changeBackground" && (
-                        <BoardChangeBg onClick={(tab) => setActiveTab(tab)} />
-                    )}
-                    {activeTab === "colors" && (
-                        <div className="px-4 pt-4">
+                <div className="relative" style={{ height: `${resolvedPanelHeight}px` }}>
+                    <div className={panelClassName("menu", "overflow-y-auto")}>
+                        <div ref={getPanelRef("menu")}>
+                            <DropDown items={menuItems} onClick={() => { }} />
+                        </div>
+                    </div>
+                    <div className={panelClassName("activity", "overflow-y-auto")}>
+                        <div ref={getPanelRef("activity")}>
+                            <ActitivyTab boardId={boardID} />
+                        </div>
+                    </div>
+                    <div className={panelClassName("about", "overflow-y-auto")}>
+                        <div ref={getPanelRef("about")}>
+                            <BoardAbout boardId={boardID} />
+                        </div>
+                    </div>
+                    <div className={panelClassName("changeBackground")}>
+                        <div ref={getPanelRef("changeBackground")}>
+                            <BoardChangeBg onClick={(tab) => setActiveTab(tab)} />
+                        </div>
+                    </div>
+                    <div className={panelClassName("colors")}>
+                        <div ref={getPanelRef("colors")} className="px-4 pt-4">
                             <BoardColorsSection
                                 onSelectColor={(color) => {
                                     void boardActiios.setBoardBackgroundColor(boardID, color.token);
@@ -334,20 +397,22 @@ export const BoardActionsMenu = forwardRef<HTMLDivElement, BoardActionsMenuProps
                                 }}
                             />
                         </div>
-                    )}
-                    {activeTab === "images" && (
-                        <ImageSearchMenu
-                            showSearchHelpers={false}
-                            defaultImageLimit={30}
-                            onImageClick={(url) => {
-                                void boardActiios.setBoardBackgroundImage(boardID, url);
-                                setActiveTab("menu");
-                            }}
-                            onClose={() => setActiveTab("changeBackground")}
-                        />
-                    )}
-                    {activeTab === "labels" && (
-                        <div className="px-[14px] pb-3">
+                    </div>
+                    <div className={panelClassName("images", "overflow-y-auto")}>
+                        <div ref={getPanelRef("images")}>
+                            <ImageSearchMenu
+                                showSearchHelpers={false}
+                                defaultImageLimit={30}
+                                onImageClick={(url) => {
+                                    void boardActiios.setBoardBackgroundImage(boardID, url);
+                                    setActiveTab("menu");
+                                }}
+                                onClose={() => setActiveTab("changeBackground")}
+                            />
+                        </div>
+                    </div>
+                    <div className={panelClassName("labels", "overflow-y-auto")}>
+                        <div ref={getPanelRef("labels")} className="px-[14px] pb-3">
                             <div className="py-2 text-gray-500">
                                 <CustomInput
                                     className={"h-[35px] mb-0"}
@@ -378,29 +443,26 @@ export const BoardActionsMenu = forwardRef<HTMLDivElement, BoardActionsMenuProps
                                 />
                             </div>
                         </div>
-                    )}
-                    {activeTab === "labelEditor" && (
-                        <CreateBoardLabelMenu
-                            onClose={onClose}
-                            mode={activeLabelID ? "edit" : "create"}
-                            labelId={activeLabelID}
-                            onSelect={() => {
-                                setActiveLabelID(undefined);
-                                setActiveTab("labels");
-                            }}
-                        />
-                    )}
-                    {activeTab === "archive" && (
-                        <BoardArchive boardID={boardID} />
-                    )}
-                    {activeTab !== "menu" && (
-                        <ArrowBackIcon onClick={() => {
-                            if (activeTab === "labelEditor") {
-                                setActiveTab("labels");
-                                return;
-                            }
-                            setActiveTab("menu");
-                        }} />
+                    </div>
+                    <div className={panelClassName("labelEditor", "overflow-y-auto")}>
+                        <div ref={getPanelRef("labelEditor")}>
+                            <CreateBoardLabelMenu
+                                onClose={onClose}
+                                mode={activeLabelID ? "edit" : "create"}
+                                labelId={activeLabelID}
+                                onSelect={() => {
+                                    setActiveLabelID(undefined);
+                                    setActiveTab("labels");
+                                }}
+                            />
+                        </div>
+                    </div>
+                    {canAccessArchiveTab && (
+                        <div className={panelClassName("archive", "overflow-y-auto")}>
+                            <div ref={getPanelRef("archive")}>
+                                <BoardArchive boardID={boardID} />
+                            </div>
+                        </div>
                     )}
                 </div>
 
@@ -410,18 +472,6 @@ export const BoardActionsMenu = forwardRef<HTMLDivElement, BoardActionsMenuProps
 
     )
 });
-
-type ArrowBackIconProps = {
-    onClick: () => void;
-}
-
-export const ArrowBackIcon = ({ onClick }: ArrowBackIconProps) => {
-    return (
-        <div onClick={onClick} className="absolute top-3 left-3 rounded-md p-1 hover:bg-gray-500 hover:bg-opacity-20 cursor-pointer">
-            <ChevronLeft className="w-5 h-5 text-white" />
-        </div>
-    )
-}
 
 type ActitivyTabProps = {
     boardId: string;

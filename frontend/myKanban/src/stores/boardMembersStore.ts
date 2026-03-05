@@ -3,12 +3,12 @@ import type { UserBoard, BoardMember, UserWorkspace, User } from "./types";
 import { api } from "@/api/api";
 import { useUserStore } from "@/stores/userStore";
 import { useWsMembersStore } from "./wsMembersStore";
+import { useAsyncKey, useAsyncRequestStore } from "./asyncRequestStore";
 
 type BoardMembersState = {
     membersIdsByBoardId: Record<string, string[]>;
     membersById: Record<string, UserBoard>;
-    isRequestSuccessful: boolean;
-    isSendingShareOffer: boolean;
+
 
     fetchBoardMembers: (boardID: string) => Promise<void>;
     setBoardMemberRole: (boardID: string, tagetUserID: string, role: string) => Promise<void>;
@@ -22,15 +22,22 @@ type BoardMembersState = {
 export const useBoardMembersStore = create<BoardMembersState>((set) => ({
     membersIdsByBoardId: {},
     membersById: {},
-    isRequestSuccessful: false,
-    isSendingShareOffer: false,
+
 
     fetchBoardMembers: async (boardID: string) => {
-        try {
-            const response = await api.get(`boards/${boardID}/members`);
-            const data: BoardMember[] = response.data;
-            // console.log("Fetched board members for board", boardID, data);
 
+        await useAsyncRequestStore.getState().execute(
+            useAsyncKey("board:member:fetch", boardID),
+            () => api.get(`boards/${boardID}/members`),
+            {
+                onSuccess(result) {
+                    const data: BoardMember[] = result.data;
+                    mergeMembers(data);
+                },
+            }
+        );
+
+        function mergeMembers(data: BoardMember[]) {
 
             const membersIds = data.map(ub => ub.Relation.UserID);
             const membersById = data.reduce((acc, ub) => {
@@ -52,45 +59,29 @@ export const useBoardMembersStore = create<BoardMembersState>((set) => ({
                     ...state.membersById,
                     ...membersById,
                 }
-            }))
-        } catch (error) {
-            // console.error("Failed to fetch board members:", error);
+            }));
+
         }
+
+
     },
     setBoardMemberRole: async (boardID: string, tagetUserID: string, role: string) => {
-        try {
-            set({
-                isSendingShareOffer: true,
-                isRequestSuccessful: false
-            });
-            await api.patch(`boards/${boardID}/members/${tagetUserID}`, { role });
-            set({ isRequestSuccessful: true });
-        } catch (error) {
-            set({ isRequestSuccessful: false });
-            // console.error("Failed to set board member role:", error);
-        } finally {
-            set({
-                isSendingShareOffer: false,
 
-            });
-        }
+        await useAsyncRequestStore.getState().execute(
+            "board:member:edit:role",
+            () => api.patch(`boards/${boardID}/members/${tagetUserID}`, { role }),
+            { successResetDelayMs: 2000 }
+        );
+
     },
     deleteBoardMember: async (boardID: string, memberID: string) => {
-        try {
-            set({
-                isSendingShareOffer: true,
-                isRequestSuccessful: false,
-            });
-            await api.delete(`boards/${boardID}/members/${memberID}`);
-            set({ isRequestSuccessful: true });
-        } catch (error) {
-            set({ isRequestSuccessful: false });
-            throw error;
-        } finally {
-            set({
-                isSendingShareOffer: false,
-            });
-        }
+
+        await useAsyncRequestStore.getState().execute(
+            "board:member:delete",
+            () => api.delete(`boards/${boardID}/members/${memberID}`),
+            { successResetDelayMs: 2000 }
+        );
+
     },
     mergeBoardMembers: (boardID: string, members: UserBoard[]) => {
         const membersIds = members.map(ub => ub.UserID);

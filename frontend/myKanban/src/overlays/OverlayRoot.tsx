@@ -9,11 +9,12 @@ import { VirtualOverlay } from "./VirtualOverlay"
 export function OverlayRoot() {
 
     const stack = useOverlayStore((state) => state.stack)
-    const closeTop = useOverlayStore((state) => state.closeTop)
+    const close = useOverlayStore((state) => state.close)
 
     const timer = React.useRef<ReturnType<typeof setTimeout> | null>(null)
     const baseZIndex = 1000
     const zIndexStep = 10
+    const topInteractiveOverlay = [...stack].reverse().find((d) => d.opts?.passthrough !== true)
 
     //console.log("OverlayRoot render", { stack })
     useEffect(() => {
@@ -26,15 +27,15 @@ export function OverlayRoot() {
             // Check if the pointer down event is outside of any open overlay
 
 
-            const topDescriptor = stack[stack.length - 1]
+            const topDescriptor = topInteractiveOverlay
             const panelEl = topDescriptor?.panelRef?.current
 
             const isInside = panelEl?.contains(event.target as Node) ?? false
 
             //console.log("Is inside any overlay?", isInside)
 
-            if (!isInside && topDescriptor?.opts?.closeOnClickOutside !== false) {
-                closeTop()
+            if (!isInside && topDescriptor?.opts?.closeOnClickOutside !== false && topDescriptor?.id) {
+                close(topDescriptor.id)
 
             }
         }
@@ -43,12 +44,12 @@ export function OverlayRoot() {
         const onPointerMove = (event: PointerEvent) => {
             //console.log("Pointer move event", event)
             if (stack.length === 0) return
-            const closeOnMouseLeave = stack[stack.length - 1]?.opts?.closeOnMouseLeave
+            const closeOnMouseLeave = topInteractiveOverlay?.opts?.closeOnMouseLeave
             // console.log("Pointer move event", event, "closeOnMouseLeave?", closeOnMouseLeave)
             if (closeOnMouseLeave) {
                 // Handle close on mouse leave logic here
-                const topDescriptor = stack[stack.length - 1]
-                const panelEl = topDescriptor.panelRef?.current
+                const topDescriptor = topInteractiveOverlay
+                const panelEl = topDescriptor?.panelRef?.current
                 // console.log("Panel element for top overlay:", panelEl)
                 /*if (panelEl && !panelEl.contains(event.target as Node)) {
                     // console.log("Pointer moved outside of the top overlay, closing it.")
@@ -56,7 +57,11 @@ export function OverlayRoot() {
                 }*/
                 if (panelEl && !event.composedPath().includes(panelEl)) {
                     //console.log("Pointer moved outside of the top overlay, closing it.")
-                    timer.current = setTimeout(() => closeTop(), 600)
+                    timer.current = setTimeout(() => {
+                        if (topDescriptor?.id) {
+                            close(topDescriptor.id)
+                        }
+                    }, 600)
                 } else {
                     clearTimeout(timer.current!)
                     //console.log("Cleared close timer on pointer move")
@@ -76,7 +81,7 @@ export function OverlayRoot() {
             removeEventListener("pointermove", onPointerMove)
             removeEventListener("pointerdown", handlePointerDown)
         }
-    }, [stack, closeTop])
+    }, [stack, close, topInteractiveOverlay])
 
     return (createPortal(
         <>
@@ -84,21 +89,21 @@ export function OverlayRoot() {
             {stack.map((descriptor: OverlayDescriptor, index) => {
                 const zIndex = descriptor.zIndex ?? (baseZIndex + index * zIndexStep)
                 const descriptorWithZ = { ...descriptor, zIndex }
-                const isTopOverlay = index === stack.length - 1
+                const isInteractive = descriptor.id === topInteractiveOverlay?.id
                 if (descriptor.renderType === "livePoint") {
                     return <PointOverlayLive key={descriptor.id} {...descriptorWithZ} />
                 }
                 if (descriptor.renderType === "anchored") {
-                    return <AnchoredOverlay key={descriptor.id} {...descriptorWithZ} isInteractive={isTopOverlay} />
+                    return <AnchoredOverlay key={descriptor.id} {...descriptorWithZ} isInteractive={isInteractive} />
                 }
                 if (descriptor.renderType === "virtual") {
-                    return <VirtualOverlay key={descriptor.id} {...descriptorWithZ} isInteractive={isTopOverlay} />
+                    return <VirtualOverlay key={descriptor.id} {...descriptorWithZ} isInteractive={isInteractive} />
                 }
                 return (
                     <div
                         key={descriptor.id}
-                        style={{ position: "relative", zIndex, pointerEvents: isTopOverlay ? "auto" : "none" }}
-                        aria-hidden={!isTopOverlay}
+                        style={{ position: "relative", zIndex, pointerEvents: isInteractive ? "auto" : "none" }}
+                        aria-hidden={!isInteractive}
                     >
                         {descriptor.render()}
                     </div>

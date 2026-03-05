@@ -197,6 +197,9 @@ import { CircleAlert, Link, ShieldCheck, ShieldCheckIcon, ShieldX, ShieldXIcon }
 import { UserRoleBadge, type Role } from "../badges/UserRoleBadge";
 import { DateStatusBadge } from "../cardRowElements/DateStatusBadge";
 import { LeaveRemoveMember } from "../common/leaveRemoveMember";
+import { AsyncRequestOverlayA, FetchOverlay } from "../asyncRequestHandlers/asyncRequestOverlayA";
+import { useAsyncKey } from "@/stores/asyncRequestStore";
+import { useAsyncRequest } from "@/hooks/useAsyncRequest";
 type BoardMemberRowProps = {
     userId: string;
     isAdminOrOwner: boolean;
@@ -226,35 +229,51 @@ export const BoardMemberRow = ({ userId, isAdminOrOwner }: BoardMemberRowProps) 
         await boardActions.deleteBoardMember(boardID, userId);
     }
 
+    const { isLoading } = useAsyncRequest(useAsyncKey("board:member:fetch", boardID));
+
     return (
-        <div className="w-full h-10 flex flex-row items-center justify-between gap-4">
-            <div className="flex flex-row items-center gap-4">
-                <UserAvatar user={user} />
-                <div className="flex flex-col">
-                    <span className={`text-sm ${isCurrentUser ? "font-bold" : ""}`}>{user?.Name + (isCurrentUser ? " (You)" : "")}</span>
-                    <div className="text-xs text-neutral-500 flex flex-row items-center gap-1">
-                        <span className="text-xs text-neutral-400">@{user?.Username}</span>
-                        <span className="text-xs text-neutral-600 whitespace-pre-wrap"> • Workspace {roleLabel}</span>
+
+        <div className={`relative w-full h-fit rounded-lg overflow-hidden py-1`}>
+            <FetchOverlay
+                variant="banner"
+                minLoadingMs={0}
+                show={["loading"]}
+                requestKey={useAsyncKey("board:member:fetch", boardID)} />
+
+            <div className={`${isLoading ? "opacity-0" : "opacity-100"} w-full h-10 flex flex-row items-center justify-between gap-4 rounded-md overflow relative`}>
+
+
+
+
+                <div className="flex flex-row items-center gap-4">
+                    <UserAvatar user={user} />
+                    <div className="flex flex-col">
+                        <span className={`text-sm ${isCurrentUser ? "font-bold" : ""}`}>{user?.Name + (isCurrentUser ? " (You)" : "")}</span>
+                        <div className="text-xs text-neutral-500 flex flex-row items-center gap-1">
+                            <span className="text-xs text-neutral-400">@{user?.Username}</span>
+                            <span className="text-xs text-neutral-600 whitespace-pre-wrap"> • Workspace {roleLabel}</span>
+                        </div>
                     </div>
                 </div>
-            </div>
-            <div className="grid grid-cols-[160px_120px] gap-2 h-10 justify-end">
-                <LeaveRemoveMember
+                <div className="grid grid-cols-[160px_120px] gap-2 h-10 justify-end">
+                    <LeaveRemoveMember
 
-                    className="!h-10 !px-0 flex flex-row items-center justify-center gap-2 "
-                    canRemove={isAdminOrOwner && !isCurrentUser}
-                    canLeave={canLeave}
-                    isCurrentUser={isCurrentUser}
-                    onLeave={() => void handleLeaveBoard()}
-                    onRemove={() => void handleRemoveMember()}
-                />
-                <BoardMembersDropdown
-                    className="!rounded-md !text-sm font-semibold"
-                    userId={userId} boardID={boardID}
-                    isAdminOrOwner={isAdminOrOwner}
-                    isCurrentUser={isCurrentUser} />
+                        className="!h-10 !px-0 flex flex-row items-center justify-center gap-2 "
+                        canRemove={isAdminOrOwner && !isCurrentUser}
+                        canLeave={canLeave}
+                        isCurrentUser={isCurrentUser}
+                        onLeave={() => void handleLeaveBoard()}
+                        onRemove={() => void handleRemoveMember()}
+                    />
+                    <BoardMembersDropdown
+                        className="!rounded-md !text-sm font-semibold"
+                        userId={userId} boardID={boardID}
+                        isAdminOrOwner={isAdminOrOwner}
+                        isCurrentUser={isCurrentUser} />
+                </div>
             </div>
         </div>
+
     )
 
 }
@@ -351,6 +370,7 @@ type BoardLinkRowProps = {
 
 const BoardLinkRow = ({ link, creatorUser, onRevoke, onCopyLink }: BoardLinkRowProps) => {
     const copyButtonRef = useRef<HTMLDivElement>(null);
+    const asyncKey = useAsyncKey("board:sharelink:revoke", link.ID);
 
     const expiryDate = link.ExpiresAt ? new Date(link.ExpiresAt) : undefined;
     const now = Date.now();
@@ -376,7 +396,13 @@ const BoardLinkRow = ({ link, creatorUser, onRevoke, onCopyLink }: BoardLinkRowP
     const modeLabel = link.Mode === "sendrequest" ? "Request" : "Auto-join";
 
     return (
-        <div className="w-full min-h-10 grid grid-cols-[42px_minmax(120px,1fr)_96px_80px_24px_124px_92px] items-center gap-0">
+        <div className=" relative w-full min-h-10 grid grid-cols-[42px_minmax(120px,1fr)_96px_80px_24px_124px_92px] items-center gap-0 rounded-md overflow-hidden">
+
+            <AsyncRequestOverlayA requestKey={asyncKey}
+                show={["error", "loading"]}
+                variant="banner" />
+
+
             <div className="flex items-center justify-center">
                 <UserAvatar user={creatorUser} />
             </div>

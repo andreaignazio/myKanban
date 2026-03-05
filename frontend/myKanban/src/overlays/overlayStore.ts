@@ -21,6 +21,7 @@ export type OverlayOptions = {
     closeOnClickOutside?: boolean
     closeOnEscape?: boolean
     lockBackdrop?: boolean
+    passthrough?: boolean
     closeOnAncnhorScroll?: boolean
     closeOnSelection?: boolean
 
