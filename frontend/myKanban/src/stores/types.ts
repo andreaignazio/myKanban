@@ -980,3 +980,21 @@ export type BoardShareRequestRevokedPayload = {
     Users: Record<string, User>;
     Workspace: WorkspaceDetailResponse
 }
+
+export type CardMirrorsResponse = {
+    MirrorDataByListCardID: Record<string, MirrorCardData[]>
+    Boards: Board[]
+    UserBoards: UserBoard[]
+    Lists: List[]
+    BoardLists: BoardList[]
+    ListCards: ListCard[]
+}
+
+export type MirrorCardData = {
+    UserID: string
+    BoardID: string
+    ListID: string
+    BoardListID: string
+    ListCardID: string
+    CardID: string
+}

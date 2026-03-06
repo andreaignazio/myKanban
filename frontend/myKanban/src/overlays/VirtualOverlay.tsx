@@ -6,6 +6,7 @@ import type { OverlayDescriptor } from "./overlayStore"
 export type VirtualPreset =
     | "viewport-center"
     | "viewport-bottom-right"
+    | "viewport-top-center"
     | "cursor"
 
 export type Placement =
@@ -24,15 +25,16 @@ export function VirtualOverlay(ov: VirtualOverlayProps) {
     const offX = ov.position?.offset?.[0] ?? 0;
     const offY = ov.position?.offset?.[1] ?? 0;
     const virtualMode = ov.position?.virtual || "viewport-center";
-    const placement: Placement = virtualMode === "viewport-bottom-right" ? "top-end" : "bottom-start";
+    const placement: Placement = (virtualMode === "viewport-bottom-right"
+    ) ? "top-end" : "bottom-start";
 
     const { refs, floatingStyles, update } = useFloating({
         strategy: "fixed",
         placement,
         middleware: [
             offset(({ rects }) => ({
-                mainAxis: isViewportCenter ? -rects.floating.height / 2 : 0,
-                crossAxis: isViewportCenter ? -rects.floating.width / 2 : 0,
+                mainAxis: (isViewportCenter) ? -rects.floating.height / 2 : (virtualMode === "viewport-top-center") ? +rects.floating.height / 2 : 0,
+                crossAxis: (isViewportCenter || virtualMode === "viewport-top-center") ? -rects.floating.width / 2 : 0,
             })),
 
             shift({ padding: 0 }),
@@ -46,8 +48,10 @@ export function VirtualOverlay(ov: VirtualOverlayProps) {
             const centerY = window.innerHeight / 2;
             const bottomRightX = window.innerWidth;
             const bottomRightY = window.innerHeight;
-            const x = (virtualMode === "viewport-bottom-right" ? bottomRightX : centerX) + offX;
-            const y = (virtualMode === "viewport-bottom-right" ? bottomRightY : centerY) + offY;
+            const topCenterX = window.innerWidth / 2;
+            const topCenterY = 0;
+            const x = (virtualMode === "viewport-bottom-right" ? bottomRightX : virtualMode === "viewport-top-center" ? topCenterX : centerX) + offX;
+            const y = (virtualMode === "viewport-bottom-right" ? bottomRightY : virtualMode === "viewport-top-center" ? topCenterY : centerY) + offY;
             return {
                 x,
                 y,

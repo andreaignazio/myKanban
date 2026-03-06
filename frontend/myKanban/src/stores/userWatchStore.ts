@@ -1,10 +1,10 @@
 ﻿import { create } from "zustand";
-import type { Board, BoardWatch, Card, CardWatch, List, ListWatch, User, UserWatchPatchResponse, UserWatchResponse } from "./types";
+import type { Board, BoardWatch, Card, CardWatch, List, ListWatch, UserWatchPatchResponse, UserWatchResponse } from "./types";
 import { api } from "@/api/api";
-import { use } from "react";
 import { useBoardsStore } from "./boardsStore";
 import { useListsStore } from "./listsStore";
 import { useCardsStore } from "./cardsStore";
+import { useAsyncKey, useAsyncRequestStore } from "./asyncRequestStore";
 
 
 type UserWatchState = {
@@ -40,128 +40,162 @@ export const useUserWatchStore = create<UserWatchState>((set, get) => ({
     cardWatchIds: [], //CardIDs that the user is watching
     boardWatchIds: [], //BoardIDs that the user is watching
     fetchUserWatches: async () => {
-        try {
-            const response = await api.get(`/watches`)
-            const data = response.data as UserWatchResponse
-            // console.log("Raw user watches response:", data) // Log the raw response for debugging
-            const { ListWatches, CardWatches, BoardWatches } = data
-            const { Cards, Lists, Boards } = data
+        await useAsyncRequestStore.getState().execute<UserWatchResponse>(
+            useAsyncKey("watch:fetch"),
+            async () => {
+                const response = await api.get(`/watches`)
+                return response.data as UserWatchResponse
+            },
+            {
+                onSuccess(data) {
+                    const { ListWatches, CardWatches, BoardWatches } = data
+                    const { Cards, Lists, Boards } = data
 
-            const listWatchByListId: Record<string, ListWatch> = (ListWatches && ListWatches.length > 0) ? ListWatches.reduce((acc, watch) => {
-                acc[watch.ListID] = watch
-                return acc
-            }, {} as Record<string, ListWatch>) : {}
+                    const listWatchByListId: Record<string, ListWatch> = (ListWatches && ListWatches.length > 0) ? ListWatches.reduce((acc, watch) => {
+                        acc[watch.ListID] = watch
+                        return acc
+                    }, {} as Record<string, ListWatch>) : {}
 
-            const cardWatchByCardId: Record<string, CardWatch> = (CardWatches && CardWatches.length > 0) ? CardWatches.reduce((acc, watch) => {
-                acc[watch.CardID] = watch
-                return acc
-            }, {} as Record<string, CardWatch>) : {}
+                    const cardWatchByCardId: Record<string, CardWatch> = (CardWatches && CardWatches.length > 0) ? CardWatches.reduce((acc, watch) => {
+                        acc[watch.CardID] = watch
+                        return acc
+                    }, {} as Record<string, CardWatch>) : {}
 
-            const boardWatchByBoardId: Record<string, BoardWatch> = (BoardWatches && BoardWatches.length > 0) ? BoardWatches.reduce((acc, watch) => {
-                acc[watch.BoardID] = watch
-                return acc
-            }, {} as Record<string, BoardWatch>) : {}
+                    const boardWatchByBoardId: Record<string, BoardWatch> = (BoardWatches && BoardWatches.length > 0) ? BoardWatches.reduce((acc, watch) => {
+                        acc[watch.BoardID] = watch
+                        return acc
+                    }, {} as Record<string, BoardWatch>) : {}
 
-            const cardPatch: Record<string, Card> = (Cards && Cards.length > 0) ? Cards.reduce((acc, card) => {
-                acc[card.ID] = card
-                return acc
-            }, {} as Record<string, Card>) : {}
+                    const cardPatch: Record<string, Card> = (Cards && Cards.length > 0) ? Cards.reduce((acc, card) => {
+                        acc[card.ID] = card
+                        return acc
+                    }, {} as Record<string, Card>) : {}
 
-            const listPatch: Record<string, List> = (Lists && Lists.length > 0) ? Lists.reduce((acc, list) => {
-                acc[list.ID] = list
-                return acc
-            }, {} as Record<string, List>) : {}
+                    const listPatch: Record<string, List> = (Lists && Lists.length > 0) ? Lists.reduce((acc, list) => {
+                        acc[list.ID] = list
+                        return acc
+                    }, {} as Record<string, List>) : {}
 
-            const boardPatch: Record<string, Board> = (Boards && Boards.length > 0) ? Boards.reduce((acc, board) => {
-                acc[board.ID] = board
-                return acc
-            }, {} as Record<string, Board>) : {}
-            useCardsStore.getState().mergeCardsPatch(cardPatch)
-            useListsStore.getState().mergeListsPatch(listPatch)
-            useBoardsStore.getState().mergeBoardsPatch(boardPatch)
+                    const boardPatch: Record<string, Board> = (Boards && Boards.length > 0) ? Boards.reduce((acc, board) => {
+                        acc[board.ID] = board
+                        return acc
+                    }, {} as Record<string, Board>) : {}
 
-            // console.log("Fetched user watches:", { ListWatches, CardWatches, BoardWatches })
-            set({
-                listWatchByListId,
-                cardWatchByCardId,
-                boardWatchByBoardId,
-                listWatchIds: ListWatches ? ListWatches.map(watch => watch.ListID) : [],
-                cardWatchIds: CardWatches ? CardWatches.map(watch => watch.CardID) : [],
-                boardWatchIds: BoardWatches ? BoardWatches.map(watch => watch.BoardID) : []
-            })
+                    useCardsStore.getState().mergeCardsPatch(cardPatch)
+                    useListsStore.getState().mergeListsPatch(listPatch)
+                    useBoardsStore.getState().mergeBoardsPatch(boardPatch)
 
-
-        } catch (error) {
-            // console.error("Error fetching user watches:", error)
-        }
+                    set({
+                        listWatchByListId,
+                        cardWatchByCardId,
+                        boardWatchByBoardId,
+                        listWatchIds: ListWatches ? ListWatches.map(watch => watch.ListID) : [],
+                        cardWatchIds: CardWatches ? CardWatches.map(watch => watch.CardID) : [],
+                        boardWatchIds: BoardWatches ? BoardWatches.map(watch => watch.BoardID) : []
+                    })
+                }
+            }
+        )
     },
 
     addListWatch: async (boardId: string, listId: string) => {
-        try {
-            const response = await api.post(`boards/${boardId}/lists/${listId}/watch`)
-            const data = response.data as UserWatchPatchResponse
-
-            get().applyAddWatch(data)
-            //await get().fetchUserWatches()
-        } catch (error) {
-            // console.error("Error adding list watch:", error)
-        }
+        await useAsyncRequestStore.getState().execute<UserWatchPatchResponse>(
+            useAsyncKey("watch:add:list", listId),
+            async () => {
+                const response = await api.post(`boards/${boardId}/lists/${listId}/watch`)
+                return response.data as UserWatchPatchResponse
+            },
+            {
+                onSuccess(data) {
+                    get().applyAddWatch(data)
+                },
+                successResetDelayMs: 1500,
+            }
+        )
     },
     addCardWatch: async (boardId: string, cardId: string) => {
-        try {
-            const response = await api.post(`boards/${boardId}/cards/${cardId}/watch`)
-            const data = response.data as UserWatchPatchResponse
-            get().applyAddWatch(data)
-            //await get().fetchUserWatches()
-        } catch (error) {
-            // console.error("Error adding card watch:", error)
-        }
+        await useAsyncRequestStore.getState().execute<UserWatchPatchResponse>(
+            useAsyncKey("watch:add:card", cardId),
+            async () => {
+                const response = await api.post(`boards/${boardId}/cards/${cardId}/watch`)
+                return response.data as UserWatchPatchResponse
+            },
+            {
+                onSuccess(data) {
+                    get().applyAddWatch(data)
+                },
+                successResetDelayMs: 1500,
+            }
+        )
     },
     addBoardWatch: async (boardId: string) => {
-        try {
-            const response = await api.post(`boards/${boardId}/watch`)
-            const data = response.data as UserWatchPatchResponse
-            get().applyAddWatch(data)
-            //await get().fetchUserWatches()
-        } catch (error) {
-            // console.error("Error adding board watch:", error)
-        }
+        await useAsyncRequestStore.getState().execute<UserWatchPatchResponse>(
+            useAsyncKey("watch:add:board", boardId),
+            async () => {
+                const response = await api.post(`boards/${boardId}/watch`)
+                return response.data as UserWatchPatchResponse
+            },
+            {
+                onSuccess(data) {
+                    get().applyAddWatch(data)
+                },
+                successResetDelayMs: 1500,
+            }
+        )
     },
     patchCardWatchActive: async (cardId: string, active: boolean) => {
         const id = get().cardWatchByCardId[cardId]?.ID
-        try {
-            const response = await api.patch(`watches/cards/${id}/active`, { active })
-            const data = response.data as UserWatchPatchResponse
-            const cardWatch = data.CardWatch
-            get().applyPatchResponse(data)
-        }
-        catch (error) {
-            // console.error("Error patching card watch:", error)
-        }
+        if (!id) return
+
+        await useAsyncRequestStore.getState().execute<UserWatchPatchResponse>(
+            useAsyncKey("watch:patch:card", cardId),
+            async () => {
+                const response = await api.patch(`watches/cards/${id}/active`, { active })
+                return response.data as UserWatchPatchResponse
+            },
+            {
+                onSuccess(data) {
+                    get().applyPatchResponse(data)
+                },
+                successResetDelayMs: 1500,
+            }
+        )
     },
     patchListWatchActive: async (listId: string, active: boolean) => {
         const id = get().listWatchByListId[listId]?.ID
-        try {
-            const response = await api.patch(`watches/lists/${id}/active`, { active })
-            const data = response.data as UserWatchPatchResponse
-            const listWatch = data.ListWatch
-            get().applyPatchResponse(data)
-        }
-        catch (error) {
-            // console.error("Error patching list watch:", error)
-        }
+        if (!id) return
+
+        await useAsyncRequestStore.getState().execute<UserWatchPatchResponse>(
+            useAsyncKey("watch:patch:list", listId),
+            async () => {
+                const response = await api.patch(`watches/lists/${id}/active`, { active })
+                return response.data as UserWatchPatchResponse
+            },
+            {
+                onSuccess(data) {
+                    get().applyPatchResponse(data)
+                },
+                successResetDelayMs: 1500,
+            }
+        )
     },
     patchBoardWatchActive: async (boardId: string, active: boolean) => {
         const id = get().boardWatchByBoardId[boardId]?.ID
-        try {
-            const response = await api.patch(`watches/boards/${id}/active`, { active })
-            const data = response.data as UserWatchPatchResponse
-            const boardWatch = data.BoardWatch
-            get().applyPatchResponse(data)
-        }
-        catch (error) {
-            // console.error("Error patching board watch:", error)
-        }
+        if (!id) return
+
+        await useAsyncRequestStore.getState().execute<UserWatchPatchResponse>(
+            useAsyncKey("watch:patch:board", boardId),
+            async () => {
+                const response = await api.patch(`watches/boards/${id}/active`, { active })
+                return response.data as UserWatchPatchResponse
+            },
+            {
+                onSuccess(data) {
+                    get().applyPatchResponse(data)
+                },
+                successResetDelayMs: 1500,
+            }
+        )
     },
     applyPatchResponse: (data: UserWatchPatchResponse) => {
         const { EntityType, BoardWatch, ListWatch, CardWatch } = data

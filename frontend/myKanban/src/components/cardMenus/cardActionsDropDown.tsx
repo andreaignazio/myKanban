@@ -15,16 +15,20 @@ import { useCardsStore } from "@/stores/cardsStore"
 import { useParams } from "react-router"
 import { useAuthStore } from "@/stores/auth"
 import { useCardMembersStore } from "@/stores/CardMembersStore"
+import type { RequestGroup } from "../modals/ActionMenuWrapper"
+import { ConfirmDeletionPopover } from "../modals/ConfirmDeletion"
+import { useUiStore, type DomainModalData } from "@/stores/uiStore"
 
 type CardActionsDropDownProps = {
     onClose: () => void
     cardId: string
     listId?: string
+    onMoveSubmitSuccess?: () => void
 }
 
 type CardActionsTab = "menu" | "move" | "copy" | "mirror" | "labels" | "members" | "dates";
 
-export const CardActionsDropDown = forwardRef<HTMLDivElement, CardActionsDropDownProps>(({ onClose, cardId, listId }, ref) => {
+export const CardActionsDropDown = forwardRef<HTMLDivElement, CardActionsDropDownProps>(({ onClose, cardId, listId, onMoveSubmitSuccess }, ref) => {
 
     const [activeTab, setActiveTab] = useState<CardActionsTab>("menu");
     const { elementRef: labelsContentRef, height: labelsContentHeight } = useObservedHeight(300);
@@ -61,8 +65,27 @@ export const CardActionsDropDown = forwardRef<HTMLDivElement, CardActionsDropDow
 
     const archiveCard = async () => {
         if (!boardId || !resolvedListId || !cardId) return;
-        await cardsStore.removeCardFromList(boardId, resolvedListId, cardId);
-        onClose();
+        const result = await cardsStore.removeCardFromList(boardId, resolvedListId, cardId);
+        if (result !== null) onClose();
+    }
+
+    const archiveCardWithConfirmation = () => {
+        const data: DomainModalData = {
+            componentent: (onCloseModal) => (
+                <ConfirmDeletionPopover
+                    onClose={onCloseModal}
+                    onSubmit={() => {
+                        void archiveCard();
+                        onCloseModal();
+                    }}
+                    title="Archive card?"
+                    body="Are you sure you want to archive this card?"
+                    submitLabel="Archive"
+                />
+            ),
+            anchorRef: null,
+        }
+        useUiStore.getState().setDomainModalOpen(true, data)
     }
 
     const toggleJoinLeave = async () => {
@@ -130,9 +153,9 @@ export const CardActionsDropDown = forwardRef<HTMLDivElement, CardActionsDropDow
         { id: "divider1", label: "", kind: "divider" },
         {
             id: "archive", label: "Archive", kind: "standard",
-            height: h,
+            height: 38,
             icon: icon(ArchiveIcon),
-            onClick: () => { void archiveCard(); }
+            onClick: () => archiveCardWithConfirmation()
         },
     ]
 
@@ -147,7 +170,7 @@ export const CardActionsDropDown = forwardRef<HTMLDivElement, CardActionsDropDow
     }
 
     const heightByTab: Record<CardActionsTab, number> = {
-        menu: 290,
+        menu: 298,
         move: 420,
         copy: 660,
         mirror: 420,
@@ -175,13 +198,52 @@ export const CardActionsDropDown = forwardRef<HTMLDivElement, CardActionsDropDow
         : "opacity-0 translate-x-2 pointer-events-none"
         }`;
 
+    const requestGroups: RequestGroup[] = [
+        {
+            requestKey: [
+                "board:label:create",
+                "board:label:edit",
+                "board:label:delete",
+                "card:label:add",
+                "card:label:remove",
+            ],
+            minLoadingMs: 0,
+            minSuccessMs: 3000,
+            maxErrorMs: 3000,
+            maxSuccessMs: 1000,
+            show: ["error", "loading", "success"],
+        },
+        {
+            requestKey: [
+                "card:member:add",
+                "card:member:remove",
+            ],
+            minLoadingMs: 0,
+            minSuccessMs: 3000,
+            maxErrorMs: 3000,
+            maxSuccessMs: 1000,
+            show: ["error", "loading", "success"],
+        },
+        {
+            requestKey: [
+                "card:edit:dates:remove:cardmenu",
+            ],
+            minLoadingMs: 0,
+            minSuccessMs: 3000,
+            maxErrorMs: 3000,
+            maxSuccessMs: 1000,
+            show: ["error", "loading", "success"],
+        }
+    ]
 
     return (
         <ActionMenuWrapper
             ref={ref}
             Title="Card Actions"
             width={widthByTab[activeTab]}
+            maxWidth={20000}
             onClose={onClose}
+            requestGroups={requestGroups}
             onBack={activeTab !== "menu" ? () => setActiveTab("menu") : undefined}
         >
             <div className="relative" style={{ height: `${resolvedHeight}px` }}>
@@ -190,7 +252,7 @@ export const CardActionsDropDown = forwardRef<HTMLDivElement, CardActionsDropDow
                 </div>
 
                 <div className={panelClass("move")}>
-                    <CardMoveMenu onClose={onClose} cardId={cardId} listId={resolvedListId} mode="move" headless />
+                    <CardMoveMenu onClose={onClose} cardId={cardId} listId={resolvedListId} mode="move" headless onMoveSubmitSuccess={onMoveSubmitSuccess} />
                 </div>
                 <div className={panelClass("copy")}>
                     <CardMoveMenu onClose={onClose} cardId={cardId} listId={resolvedListId} mode="copy" headless />
@@ -209,7 +271,7 @@ export const CardActionsDropDown = forwardRef<HTMLDivElement, CardActionsDropDow
                     </div>
                 </div>
                 <div className={panelClass("dates")}>
-                    <CardDatesMenu onClose={onClose} cardId={cardId} headless />
+                    <CardDatesMenu onClose={onClose} cardId={cardId} headless contextKey="cardmenu" />
                 </div>
             </div>
 

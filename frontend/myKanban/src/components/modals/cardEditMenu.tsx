@@ -4,7 +4,7 @@ import { CardLabelMenu } from "../cardMenus/cardLabelMenu";
 import { CardRowMenuBtn } from "../cardMenus/cardRowMenus";
 import { useOverlayStore, type OverlayDescriptor } from "@/overlays/overlayStore";
 import { LabeledButtonPresetB } from "../buttons/labeledButton";
-import { bt } from "node_modules/react-router/dist/development/router-5iOvts3c.d.mts";
+
 import React from "react";
 import { CardMembersMenu } from "../cardMenus/cardMembersMenu";
 import { CardCoverTabSelector } from "./CardCoverMenu";
@@ -17,6 +17,7 @@ type CardEditMenuProps = {
     listId: string;
     cardID: string;
     onClose: () => void;
+    menuId?: string;
     // Define the props for the CardEditMenu component here
 }
 
@@ -28,6 +29,8 @@ type MenuItem = {
     menuToOpen?: (props: { onClose: () => void; ref: React.RefObject<HTMLDivElement | null> }) => JSX.Element | null;
     actionToPerform?: () => void;
 }
+
+type MenuItemAndID = MenuItem & { menuId?: string }
 
 export const CardEditMenu = forwardRef<HTMLDivElement, CardEditMenuProps>((props, ref) => {
     const { listId, cardID, onClose } = props;
@@ -49,15 +52,25 @@ export const CardEditMenu = forwardRef<HTMLDivElement, CardEditMenuProps>((props
     };
 
     const overlayCloseAll = useOverlayStore((state) => state.closeAll)
+    const onMenuClose = useOverlayStore((state) => state.close);
 
-    const menuItems: MenuItem[] = [
+
+    const handleCloseAllMenu = (id: string) => {
+        onMenuClose(id);
+        onMenuClose(props.menuId ?? id);
+
+    }
+
+
+    const menuItems: MenuItemAndID[] = [
         {
             id: "openCard", label: "Open Card", icon: <CreditCardIcon className={iconClass} />,
             actionToPerform: () => handleOpenCardDetailMenu()
         },
         {
             id: "editlabels", label: "Edit Labels", icon: <TagIcon className={iconClass} />,
-            menuToOpen: ({ onClose, ref }) => <CardLabelMenu onClose={onClose} ref={ref} cardID={cardID} />
+            menuToOpen: ({ onClose, ref }) => <CardLabelMenu onClose={onClose} ref={ref} cardID={cardID} />,
+            menuId: "card-edit-menu-labels"
         },
         {
             id: "editMembers", label: "Edit Members", icon: <User2 className={iconClass} />,
@@ -65,19 +78,23 @@ export const CardEditMenu = forwardRef<HTMLDivElement, CardEditMenuProps>((props
         },
         {
             id: "editCover", label: "Edit Cover", icon: <CreditCardIcon className={iconClass} />,
-            menuToOpen: ({ onClose, ref }) => <CardCoverTabSelector onClose={onClose} ref={ref} cardId={cardID} />
+            menuToOpen: ({ onClose, ref }) => <CardCoverTabSelector onClose={onClose} ref={ref} cardId={cardID} />,
+            menuId: "card-edit-menu-cover"
         },
         {
             id: "editDates", label: "Edit Dates", icon: <Clock10Icon className={iconClass} />,
-            menuToOpen: ({ onClose, ref }) => <CardDatesMenu onClose={onClose} ref={ref} cardId={cardID} />
+            menuToOpen: ({ onClose, ref }) => <CardDatesMenu onClose={onClose} ref={ref} cardId={cardID} />,
+            menuId: "card-edit-menu-dates"
         },
         {
             id: "move", label: "Move", icon: <ArrowRight className={iconClass} />,
-            menuToOpen: ({ onClose, ref }) => <CardMoveMenu onClose={() => overlayCloseAll()} ref={ref} cardId={cardID} listId={listId} mode="move" />
+            menuToOpen: ({ onClose, ref }) => <CardMoveMenu onClose={onClose} ref={ref} cardId={cardID} listId={listId} mode="move" />,
+            menuId: "card-edit-menu-move"
         },
         {
             id: "copy", label: "Copy", icon: <CopyIcon className={iconClass} />,
-            menuToOpen: ({ onClose, ref }) => <CardMoveMenu onClose={() => overlayCloseAll()} ref={ref} cardId={cardID} listId={listId} mode="copy" />
+            menuToOpen: ({ onClose, ref }) => <CardMoveMenu onClose={onClose} ref={ref} cardId={cardID} listId={listId} mode="copy" />,
+            menuId: "card-edit-menu-copy"
         },
         {
             id: "copyLink", label: "Copy Link", icon: <Link2Icon className={iconClass} />,
@@ -85,13 +102,14 @@ export const CardEditMenu = forwardRef<HTMLDivElement, CardEditMenuProps>((props
         },
         {
             id: "mirror", label: "Mirror", icon: <ArrowBigRight className={iconClass} />,
-            menuToOpen: ({ onClose, ref }) => <CardMoveMenu onClose={() => overlayCloseAll()} ref={ref} cardId={cardID} listId={listId} mode="mirror" />
+            menuToOpen: ({ onClose, ref }) => <CardMoveMenu onClose={onClose} ref={ref} cardId={cardID} listId={listId} mode="mirror" />,
+            menuId: "card-edit-menu-mirror"
         },
         { id: "archive", label: "Archive", icon: <ArchiveIcon className={iconClass} />, }
 
     ]
     const openOverlay = useOverlayStore((state) => state.open);
-    const onMenuClose = useOverlayStore((state) => state.close);
+
 
     const cardActionsMenuRef = useRef<HTMLDivElement>(null)
     const acnhorRef = ref as React.RefObject<HTMLDivElement>;
@@ -104,12 +122,13 @@ export const CardEditMenu = forwardRef<HTMLDivElement, CardEditMenuProps>((props
 
     function handleOpenCardActionModal(
         menuToOpen?: (props: { onClose: () => void; ref: React.RefObject<HTMLDivElement | null> }) => JSX.Element,
-        anchorKey?: string) {
+        anchorKey?: string, menuId?: string) {
         // console.log("Opening respond modal for share offer");
         const id = "card-edit-menu-labels";
         const descriptor: OverlayDescriptor = {
-            id: id,
-            render: () => menuToOpen ? menuToOpen({ onClose: () => onMenuClose(id), ref: cardActionsMenuRef }) : <CardLabelMenu cardID={cardID} onClose={() => onMenuClose(id)} ref={cardActionsMenuRef} />,
+            id: menuId ?? id,
+            render: () => menuToOpen ? menuToOpen({ onClose: () => handleCloseAllMenu(menuId ?? id), ref: cardActionsMenuRef })
+                : <CardLabelMenu cardID={cardID} onClose={() => onMenuClose(id)} ref={cardActionsMenuRef} />,
             anchorRef: anchorKey ? anchorMap.get(anchorKey) : btnRef,
             panelRef: cardActionsMenuRef,
             type: "modal",
@@ -152,7 +171,7 @@ export const CardEditMenu = forwardRef<HTMLDivElement, CardEditMenuProps>((props
                                 className="w-fit bg-neutral-800 text-white
                              hover:bg-neutral-700 rounded-[4px] px-2 py-1 text-left"
                                 label={item.label}
-                                onClick={() => { item.actionToPerform?.(); item.menuToOpen && handleOpenCardActionModal(item.menuToOpen, item.id); }} >
+                                onClick={() => { item.actionToPerform?.(); item.menuToOpen && handleOpenCardActionModal(item.menuToOpen, item.id, item.menuId); }} >
                                 {item.icon}
                             </LabeledButtonPresetB>
                         </div>

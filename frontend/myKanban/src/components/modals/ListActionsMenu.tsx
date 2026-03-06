@@ -54,12 +54,13 @@ export const ListActionsMenu = forwardRef<HTMLDivElement, ListActionsMenuProps>(
 
     const handleCopyList = async (title: string) => {
         const result = await listActions.copySingleListAfterSelf(boardID, listID, { title, keepMembers: false })
-        if (result !== null) scheduleClose()
+        if (result !== null) scheduleClose(600)
     }
 
     const handleMoveList = async (payload: MoveBoardListRequest) => {
+        onClose()
         const result = await listActions.moveBoardList(boardID, listID, payload)
-        if (result !== null) scheduleClose()
+        if (result !== null) { }
     }
 
     const handleMirrorList = async (payload: MirrorBoardListRequest) => {
@@ -67,24 +68,25 @@ export const ListActionsMenu = forwardRef<HTMLDivElement, ListActionsMenuProps>(
         if (result !== null) scheduleClose(1200)
     }
 
-    const handleMoveAllCards = (targetListID: string) => {
-        listActions.moveAllCardsInList(boardID, listID, targetListID)
-            .then(() => scheduleClose())
+    const handleMoveAllCards = async (targetListID: string) => {
+        const result = await listActions.moveAllCardsInList(boardID, listID, targetListID)
+        if (result !== null) scheduleClose(0)
     }
 
     const handleArchiveList = async () => {
+        onClose()
         const result = await listActions.archiveList(boardID, listID)
-        if (result !== null) scheduleClose()
+        if (result !== null) onClose()
     }
 
-    const handleArchiveAllCards = () => {
-        listActions.archiveAllCardsInList(boardID, listID)
-            .then(() => scheduleClose())
+    const handleArchiveAllCards = async () => {
+        const result = await listActions.archiveAllCardsInList(boardID, listID)
+        if (result !== null) scheduleClose(1200)
     }
 
     const handleAccessMode = async (mode: BoardListAccessMode) => {
         const result = await listActions.setListAccessMode(boardID, listID, mode)
-        if (result !== null) scheduleClose()
+        if (result !== null) scheduleClose(1200)
     }
 
     const h = 32;
@@ -120,9 +122,15 @@ export const ListActionsMenu = forwardRef<HTMLDivElement, ListActionsMenuProps>(
         <>
             <ActionMenuWrapper
                 requestGroups={[
-                    { requestKey: ["list:copy:bulk", "list:move", "list:mirror", "list:detach", "list:edit:props", "list:edit:access"], minLoadingMs: 0, maxErrorMs: 3000, minSuccessMs: 1000, show: ["loading", "success", "error"] },
+                    {
+                        requestKey: ["list:copy:bulk", "list:mirror",
+                            "list:detach", "list:edit:props", "list:edit:access",
+                            "card:detach:bulk", "card:move:bulk"],
+                        minLoadingMs: 0, maxErrorMs: 3000, minSuccessMs: 1000, show: ["loading", "success", "error"]
+                    },
+                    { requestKey: [], minLoadingMs: 0, maxErrorMs: 3000, minSuccessMs: 1000, show: ["loading", "error"] },
                 ]}
-                onBack={() => setActiveTab("main")}
+                onBack={activeTab !== "main" ? () => setActiveTab("main") : undefined}
                 width={300}
                 Title={Title} onClose={onClose}>
                 <div className={`text-neutral-300 ${activeTab !== "main" ? "opacity-0 h-0 pointer-events-none" : "opacity-100 h-[455px]"} transition-all duration-200`}>

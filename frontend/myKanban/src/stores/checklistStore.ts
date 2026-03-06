@@ -3,6 +3,7 @@ import type { AddEntryMemberRequest, Board, BoardEvent, CardChecklist, Checklist
 import type { E } from "node_modules/react-router/dist/development/router-5iOvts3c.d.mts";
 import type { BoardDetailPatch } from "./boardDetailStore";
 import { api } from "@/api/api";
+import { useAsyncRequestStore, useAsyncKey } from "@/stores/asyncRequestStore";
 import type { EventPayloadEnvelope } from "./audittypes";
 import type { ChecklistEventTypes } from "./eventTypes";
 
@@ -18,19 +19,19 @@ type ChecklistStore = {
 
     replaceChecklistData: (patch: BoardDetailPatch) => void;
     mergeChecklistPatch: (patch: BoardDetailPatch) => void;
-    createChecklistInCard: (boardId: string, cardId: string, payload: CreateChecklistRequest) => Promise<void>
-    cloneChecklistInCard: (boardId: string, cardId: string, payload: CloneChecklistRequest) => Promise<CloneChecklistResponse | undefined>
-    deleteChecklist: (boardId: string, cardId: string, checklistId: string) => Promise<void>
-    patchChecklist: (boardId: string, cardId: string, checklistId: string, payload: Partial<Checklist>) => Promise<void>
-    moveChecklist: (boardId: string, cardId: string, checklistId: string, payload: MoveChecklistRequest) => Promise<void>
-    createChecklistEntry: (boardId: string, cardId: string, checklistId: string, payload: CreateChecklistEntryRequest) => Promise<ChecklistEntryRowResponse | undefined>
-    patchChecklistEntry: (boardId: string, cardId: string, checklistId: string, entryId: string, payload: PatchChecklistEntryRequest) => Promise<void>
-    convertChecklistEntry: (boardId: string, cardId: string, checklistId: string, entryId: string, payload: ConvertChecklistEntryRequest) => Promise<ConvertChecklistEntryResponse | undefined>
-    deleteChecklistEntry: (boardId: string, cardId: string, checklistId: string, entryId: string) => Promise<void>
-    moveChecklistEntry: (boardId: string, cardId: string, checklistId: string, entryId: string, payload: MoveChecklistEntryRequest) => Promise<void>
-    addMemberToEntry: (boardId: string, cardId: string, checklistId: string, entryId: string, userId: string) => Promise<void>
-    removeMemberFromEntry: (boardId: string, cardId: string, checklistId: string, entryId: string, userId: string) => Promise<void>
-    crossMoveChecklistEntry: (boardId: string, cardId: string, sourceChecklistId: string, entryId: string, payload: CrossMoveChecklistEntryRequest) => Promise<void>
+    createChecklistInCard: (boardId: string, cardId: string, payload: CreateChecklistRequest) => Promise<void | null>
+    cloneChecklistInCard: (boardId: string, cardId: string, payload: CloneChecklistRequest) => Promise<CloneChecklistResponse | null>
+    deleteChecklist: (boardId: string, cardId: string, checklistId: string) => Promise<void | null>
+    patchChecklist: (boardId: string, cardId: string, checklistId: string, payload: Partial<Checklist>) => Promise<void | null>
+    moveChecklist: (boardId: string, cardId: string, checklistId: string, payload: MoveChecklistRequest) => Promise<void | null>
+    createChecklistEntry: (boardId: string, cardId: string, checklistId: string, payload: CreateChecklistEntryRequest) => Promise<ChecklistEntryRowResponse | null>
+    patchChecklistEntry: (boardId: string, cardId: string, checklistId: string, entryId: string, payload: PatchChecklistEntryRequest) => Promise<void | null>
+    convertChecklistEntry: (boardId: string, cardId: string, checklistId: string, entryId: string, payload: ConvertChecklistEntryRequest) => Promise<ConvertChecklistEntryResponse | null>
+    deleteChecklistEntry: (boardId: string, cardId: string, checklistId: string, entryId: string) => Promise<void | null>
+    moveChecklistEntry: (boardId: string, cardId: string, checklistId: string, entryId: string, payload: MoveChecklistEntryRequest) => Promise<void | null>
+    addMemberToEntry: (boardId: string, cardId: string, checklistId: string, entryId: string, userId: string) => Promise<void | null>
+    removeMemberFromEntry: (boardId: string, cardId: string, checklistId: string, entryId: string, userId: string) => Promise<void | null>
+    crossMoveChecklistEntry: (boardId: string, cardId: string, sourceChecklistId: string, entryId: string, payload: CrossMoveChecklistEntryRequest) => Promise<void | null>
     getChecklistsForBoard: (boardId: string) => ChecklistInCard[];
     getDoneEntriesForChecklist: (checklistId: string) => EntryInChecklist[];
     getDoneEntriesForCard: (boardId: string, cardId: string) => EntryInChecklist[];
@@ -245,105 +246,106 @@ export const useChecklistStore = create<ChecklistStore>((set, get) => ({
     },
 
     createChecklistInCard: async (boardId: string, cardId: string, payload: CreateChecklistRequest) => {
-        try {
-            const response = api.post(`boards/${boardId}/cards/${cardId}/checklists`, payload)
-        } catch (error) {
-            // console.log("Error creating checklist in card:", cardId)
-        }
-
+        return useAsyncRequestStore.getState().execute(
+            useAsyncKey("checklist:create", cardId),
+            () => api.post(`boards/${boardId}/cards/${cardId}/checklists`, payload),
+            { successResetDelayMs: 1500 }
+        )
     },
     cloneChecklistInCard: async (boardId: string, cardId: string, payload: CloneChecklistRequest) => {
-        try {
-            const response = await api.post<CloneChecklistResponse>(`boards/${boardId}/cards/${cardId}/checklists/clone`, payload)
-            return response.data
-        } catch (error) {
-            return undefined
-        }
+        return useAsyncRequestStore.getState().execute<CloneChecklistResponse>(
+            useAsyncKey("checklist:clone", cardId),
+            async () => {
+                const response = await api.post<CloneChecklistResponse>(`boards/${boardId}/cards/${cardId}/checklists/clone`, payload)
+                return response.data
+            },
+            { successResetDelayMs: 1500 }
+        )
     },
     deleteChecklist: async (boardId: string, cardId: string, checklistId: string) => {
-        try {
-            const response = api.delete(`boards/${boardId}/cards/${cardId}/checklists/${checklistId}`)
-        } catch (error) {
-            // console.log("Error deleting checklist in card:", cardId)
-        }
+        return useAsyncRequestStore.getState().execute(
+            useAsyncKey("checklist:delete", checklistId),
+            () => api.delete(`boards/${boardId}/cards/${cardId}/checklists/${checklistId}`),
+            { successResetDelayMs: 1500 }
+        )
     },
     patchChecklist: async (boardId: string, cardId: string, checklistId: string, payload: PatchChecklistEntryRequest) => {
-        try {
-            const response = api.patch(`boards/${boardId}/cards/${cardId}/checklists/${checklistId}`, payload)
-        } catch (error) {
-            // console.log("Error patching checklist in card:", cardId)
-        }
+        return useAsyncRequestStore.getState().execute(
+            useAsyncKey("checklist:edit", checklistId),
+            () => api.patch(`boards/${boardId}/cards/${cardId}/checklists/${checklistId}`, payload),
+            { successResetDelayMs: 1500 }
+        )
     },
     moveChecklist: async (boardId: string, cardId: string, checklistId: string, payload: MoveChecklistRequest) => {
-        try {
-            const response = api.patch(`boards/${boardId}/cards/${cardId}/checklists/${checklistId}/move`, payload)
-        } catch (error) {
-            // console.log("Error moving checklist in card:", cardId)
-        }
+        return useAsyncRequestStore.getState().execute(
+            useAsyncKey("checklist:move", checklistId),
+            () => api.patch(`boards/${boardId}/cards/${cardId}/checklists/${checklistId}/move`, payload),
+            { successResetDelayMs: 1500 }
+        )
     },
 
     createChecklistEntry: async (boardId: string, cardId: string, checklistId: string, payload: CreateChecklistEntryRequest) => {
-        try {
-            const response = await api.post<ChecklistEntryRowResponse>(`boards/${boardId}/cards/${cardId}/checklists/${checklistId}/entries`, payload)
-            return response.data
-        } catch (error) {
-            // console.log("Error creating checklist entry in checklist:", checklistId)
-            return undefined
-        }
+        return useAsyncRequestStore.getState().execute<ChecklistEntryRowResponse>(
+            useAsyncKey("checklist:entry:create", checklistId),
+            async () => {
+                const response = await api.post<ChecklistEntryRowResponse>(`boards/${boardId}/cards/${cardId}/checklists/${checklistId}/entries`, payload)
+                return response.data
+            },
+            { successResetDelayMs: 1500 }
+        )
     },
     patchChecklistEntry: async (boardId: string, cardId: string, checklistId: string, entryId: string, payload: PatchChecklistEntryRequest) => {
-        try {
-            const response = api.patch(`boards/${boardId}/cards/${cardId}/checklists/${checklistId}/entries/${entryId}`, payload)
-        } catch (error) {
-            // console.log("Error patching checklist entry in checklist:", checklistId)
-        }
+        return useAsyncRequestStore.getState().execute(
+            useAsyncKey("checklist:entry:edit", entryId),
+            () => api.patch(`boards/${boardId}/cards/${cardId}/checklists/${checklistId}/entries/${entryId}`, payload),
+            { successResetDelayMs: 1500 }
+        )
     },
     convertChecklistEntry: async (boardId: string, cardId: string, checklistId: string, entryId: string, payload: ConvertChecklistEntryRequest) => {
-        try {
-            const response = await api.post<ConvertChecklistEntryResponse>(`boards/${boardId}/cards/${cardId}/checklists/${checklistId}/entries/${entryId}/convert`, payload)
-            return response.data
-        } catch (error) {
-            return undefined
-        }
+        return useAsyncRequestStore.getState().execute<ConvertChecklistEntryResponse>(
+            useAsyncKey("checklist:entry:convert", entryId),
+            async () => {
+                const response = await api.post<ConvertChecklistEntryResponse>(`boards/${boardId}/cards/${cardId}/checklists/${checklistId}/entries/${entryId}/convert`, payload)
+                return response.data
+            },
+            { successResetDelayMs: 1500 }
+        )
     },
     deleteChecklistEntry: async (boardId: string, cardId: string, checklistId: string, entryId: string) => {
-        try {
-            const response = api.delete(`boards/${boardId}/cards/${cardId}/checklists/${checklistId}/entries/${entryId}`)
-        } catch (error) {
-            // console.log("Error deleting checklist entry in checklist:", checklistId)
-        }
+        return useAsyncRequestStore.getState().execute(
+            useAsyncKey("checklist:entry:delete", entryId),
+            () => api.delete(`boards/${boardId}/cards/${cardId}/checklists/${checklistId}/entries/${entryId}`),
+            { successResetDelayMs: 1500 }
+        )
     },
     moveChecklistEntry: async (boardId: string, cardId: string, checklistId: string, entryId: string, payload: MoveChecklistEntryRequest) => {
-        try {
-            const response = api.patch(`boards/${boardId}/cards/${cardId}/checklists/${checklistId}/entries/${entryId}/move`, payload)
-        } catch (error) {
-            // console.log("Error moving checklist entry in checklist:", checklistId)
-        }
+        return useAsyncRequestStore.getState().execute(
+            useAsyncKey("checklist:entry:move", entryId),
+            () => api.patch(`boards/${boardId}/cards/${cardId}/checklists/${checklistId}/entries/${entryId}/move`, payload),
+            { successResetDelayMs: 1500 }
+        )
     },
     addMemberToEntry: async (boardId: string, cardId: string, checklistId: string, entryId: string, userId: string) => {
-        const payload: AddEntryMemberRequest = {
-            MemberID: userId
-        }
-        try {
-            const response = api.post(`boards/${boardId}/cards/${cardId}/checklists/${checklistId}/entries/${entryId}/members`, payload)
-        } catch (error) {
-            // console.log("Error adding member to checklist entry:", entryId)
-        }
+        const payload: AddEntryMemberRequest = { MemberID: userId }
+        return useAsyncRequestStore.getState().execute(
+            useAsyncKey("checklist:entry:member:add", entryId),
+            () => api.post(`boards/${boardId}/cards/${cardId}/checklists/${checklistId}/entries/${entryId}/members`, payload),
+            { successResetDelayMs: 1500 }
+        )
     },
     removeMemberFromEntry: async (boardId: string, cardId: string, checklistId: string, entryId: string, userId: string) => {
-        try {
-            const response = api.delete(`boards/${boardId}/cards/${cardId}/checklists/${checklistId}/entries/${entryId}/members/${userId}`)
-        } catch (error) {
-            // console.log("Error removing member from checklist entry:", entryId)
-        }
+        return useAsyncRequestStore.getState().execute(
+            useAsyncKey("checklist:entry:member:remove", entryId),
+            () => api.delete(`boards/${boardId}/cards/${cardId}/checklists/${checklistId}/entries/${entryId}/members/${userId}`),
+            { successResetDelayMs: 1500 }
+        )
     },
     crossMoveChecklistEntry: async (boardId: string, cardId: string, sourceChecklistId: string, entryId: string, payload: CrossMoveChecklistEntryRequest) => {
-        try {
-            const response = api.patch(`boards/${boardId}/cards/${cardId}/checklists/${sourceChecklistId}/entries/${entryId}/crossmove`, payload)
-        } catch (error) {
-            // console.log("Error cross moving checklist entry:", entryId)
-        }
-
+        return useAsyncRequestStore.getState().execute(
+            useAsyncKey("checklist:entry:crossmove", entryId),
+            () => api.patch(`boards/${boardId}/cards/${cardId}/checklists/${sourceChecklistId}/entries/${entryId}/crossmove`, payload),
+            { successResetDelayMs: 1500 }
+        )
     },
 
 

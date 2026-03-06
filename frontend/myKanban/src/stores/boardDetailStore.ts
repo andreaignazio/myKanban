@@ -113,6 +113,7 @@ type BoardDetailStore = {
     rootBoardIdByListCardId: Record<string, string>
     invalidatedRootBoardListCardIds: Record<string, true>
 
+
     setCurrentBoardId: (boardID: string | null) => void
     getListCardIds: (listID: string) => string[]
 

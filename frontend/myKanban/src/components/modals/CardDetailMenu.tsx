@@ -40,6 +40,10 @@ import { useIsOverlayActive } from "@/hooks/useIsOverlayActive";
 import { RoundButton } from "../buttons/RoundButton";
 import { useDeferredContentVisibility } from "@/hooks/useDeferredContentVisibility";
 import { useAuditStore } from "@/stores/auditStore";
+import { MenuStateIndicator } from "../menuElements/menuWrapper";
+import type { RequestGroup } from "./ActionMenuWrapper";
+import { motion } from "motion/react";
+import { menuMotionProps } from "./menuMotion";
 
 type CardDetailMenuProps = {
     listId?: string;
@@ -138,10 +142,61 @@ export const CardDetailMenu = forwardRef<HTMLDivElement, CardDetailMenuProps>(({
         }
     }
 
+    const requestGroups: RequestGroup[] = [
+        {
+            requestKey: ["card:edit:dates:add:cardmenu"],
+            minLoadingMs: 0, minSuccessMs: 3000, maxErrorMs: 3000,
+            show: ["error", "loading", "success"]
+        },
+        {
+            requestKey: ["card:edit:description", "card:edit:done"],
+            minLoadingMs: 0, minSuccessMs: 3000, maxSuccessMs: 1000, maxErrorMs: 3000,
+            show: ["success"]
+        },
+        {
+            requestKey: [
+                "checklist:create",
+                "checklist:clone",
+                "checklist:delete",
+                "checklist:edit",
+                "checklist:move",
+
+                "checklist:entry:edit",
+                "checklist:entry:convert",
+                "checklist:entry:delete",
+                "checklist:entry:move",
+                "checklist:entry:crossmove",
+                "checklist:entry:member:add",
+                "checklist:entry:member:remove",
+            ],
+            minLoadingMs: 0,
+            minSuccessMs: 3000,
+            maxErrorMs: 3000,
+            show: ["error", "loading", "success"]
+        },
+        {
+            requestKey: ["checklist:entry:create",],
+            minLoadingMs: 0,
+            minSuccessMs: 3000,
+            maxErrorMs: 3000,
+            show: ["error"]
+        },
+        {
+            requestKey: ["watch:add:card", "watch:patch:card"],
+            minLoadingMs: 0,
+            minSuccessMs: 3000,
+            maxSuccessMs: 1000,
+            maxErrorMs: 3000,
+            show: ["error", "loading", "success"]
+        }
+    ]
+
 
     return (
         <>
-            <CardMenuWrapper Title="Card Actions"
+            <CardMenuWrapper
+                requestGroups={requestGroups}
+                Title="Card Actions"
                 width={resolvedWidth}
                 onTransitionEnd={handleCardWrapperTransitionEnd}
                 onClose={onClose} ref={ref}>
@@ -158,7 +213,9 @@ export const CardDetailMenu = forwardRef<HTMLDivElement, CardDetailMenuProps>(({
                         className="bg-[#4c6b1f] ">
                         <div className=" absolute top-4 right-0 flex items-center gap-1 px-4">
                             {isCardWatched && (
-                                <EyeIcon className={iconBtnClass} onClick={toggleCardWatch} />
+                                <RoundButton>
+                                    <EyeIcon className={iconBtnClass} onClick={toggleCardWatch} />
+                                </RoundButton>
                             )}
 
 
@@ -175,7 +232,7 @@ export const CardDetailMenu = forwardRef<HTMLDivElement, CardDetailMenuProps>(({
                             <CardRowMenuBtn
                                 customId={actionMenuId}
                                 exclusiveGroup={exclusiveGroup}
-                                menuComponent={({ onClose, ref }) => <CardActionsDropDown onClose={onClose} ref={ref} cardId={cardId!} listId={listId} />}
+                                menuComponent={({ onClose: onDropdownClose, ref }) => <CardActionsDropDown onClose={onDropdownClose} ref={ref} cardId={cardId!} listId={listId} onMoveSubmitSuccess={onClose} />}
                             >
                                 <RoundButton isActive={isActionMenuActive} >
                                     <EllipsisHorizontalIcon className={iconBtnClass} strokeWidth={2} />
@@ -255,22 +312,37 @@ type CardMenuWrapperProps = {
     width?: number | string
     isAsideCollapsed?: boolean
     onTransitionEnd?: (event: TransitionEvent<HTMLDivElement>) => void
+    requestGroups?: RequestGroup[];
 }
 
-export const CardMenuWrapper = forwardRef<HTMLDivElement, CardMenuWrapperProps>(({ children, Title, onClose, width, onTransitionEnd }, ref) => {
+export const CardMenuWrapper = forwardRef<HTMLDivElement, CardMenuWrapperProps>(({ children, Title, onClose, width, onTransitionEnd, requestGroups }, ref) => {
 
+
+    const indicators = requestGroups && requestGroups.length > 0
+        ? requestGroups.map((g, i) => (
+            <MenuStateIndicator key={i}
+                maxWidth={700}
+                requestKey={g.requestKey}
+                minLoadingMs={g.minLoadingMs}
+                minSuccessMs={g.minSuccessMs}
+                maxSuccessMs={g.maxSuccessMs}
+                maxErrorMs={g.maxErrorMs}
+                show={g.show} />
+        ))
+        : null;
     return (
-        <div ref={ref}
-            style={{ width: width }}
-            onTransitionEnd={onTransitionEnd}
-            className={` flex justify-start items-start theme-dark bg-menu transition-[width] duration-300
-             h-[80vh] rounded-xl 
+        <motion.div className="relative w-fit h-fit overflow-visible" {...menuMotionProps}>
+            {indicators}
+            <div ref={ref}
+                style={{ width: width }}
+                onTransitionEnd={onTransitionEnd}
+                className={`flex justify-start items-start theme-dark bg-menu transition-[width] duration-300
+             h-[80vh] rounded-xl
             shadow-lg shadow-black relative
-         text-white  overflow-hidden`} >
-
-
-            {children}
-        </div>
+         text-white overflow-hidden`} >
+                {children}
+            </div>
+        </motion.div>
     )
 
 })
@@ -397,7 +469,7 @@ export const CardMain = ({ cardId, isAsideCollapsed }: CardMainProps) => {
         },
         {
             id: "dates", label: "Dates", icon: icon(ClockIcon), shouldHideBtn: () => hasDates,
-            onClick: () => console.log("Labels button clicked"), menuToOpen: ({ onClose, ref }) => <CardDatesMenu onClose={onClose} ref={ref} />
+            onClick: () => console.log("Labels button clicked"), menuToOpen: ({ onClose, ref }) => <CardDatesMenu onClose={onClose} ref={ref} contextKey="cardmenu" />
         },
         { id: "members", label: "Members", icon: icon(UserPlusIcon), onClick: () => console.log("Members button clicked"), menuToOpen: ({ onClose, ref }) => <CardMembersMenu onClose={onClose} ref={ref} boardId={boardId} cardId={cardId} /> },
         { id: "checklist", label: "Checklist", icon: icon(CheckCircleIcon), onClick: () => console.log("Checklist button clicked"), menuToOpen: ({ onClose, ref }) => <CardChecklistMenu onClose={onClose} ref={ref} /> },
@@ -487,6 +559,7 @@ type CardActivitiesInlineProps = {
 
 const CardActivitiesInline = ({ show }: CardActivitiesInlineProps) => {
     const [activeTab, setActiveTab] = useState("activity");
+    const { workspaceId, cardId } = useParams<{ workspaceId: string; cardId: string }>();
     const tabs: Tab[] = [
         { id: "activity", label: "Activity" },
         { id: "comments", label: "Comments" },
@@ -500,7 +573,7 @@ const CardActivitiesInline = ({ show }: CardActivitiesInlineProps) => {
 
             <TabSelector tabs={tabs} setActiveTab={setActiveTab} activeTab={activeTab} />
             <div className="flex flex-col w-full min-h-0 overflow-hidden">
-                {activeTab === "activity" && <CardActivity />}
+                {activeTab === "activity" && <CardActivity cardID={cardId} workspaceId={workspaceId} />}
                 {activeTab === "comments" && <CardComments />}
             </div>
         </div >
@@ -542,7 +615,7 @@ const CardsDetesField = () => {
 
                 <CardRowMenuBtn
                     cardID={cardID}
-                    menuComponent={({ onClose, ref }) => <CardDatesMenu onClose={onClose} ref={ref} />}>
+                    menuComponent={({ onClose, ref }) => <CardDatesMenu onClose={onClose} ref={ref} contextKey="cardmenu" />}>
                     <LabeledButtonPresetB
                         label={label}
                         iconAtLeft={false}

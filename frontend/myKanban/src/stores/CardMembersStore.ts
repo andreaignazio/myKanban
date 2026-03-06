@@ -1,6 +1,7 @@
 ﻿import { create } from "zustand";
 import type { AddCardMemberRequest, BoardEvent, Card, CardMember } from "./types";
 import { api } from "@/api/api";
+import { useAsyncRequestStore, useAsyncKey } from "@/stores/asyncRequestStore";
 import type { EventPayloadEnvelope } from "./audittypes";
 import type { BoardDetailPatch } from "./boardDetailStore";
 
@@ -10,8 +11,8 @@ type CardMembersState = {
     cardMembersById: Record<string, CardMember>;
     replaceCardMembers: (members: CardMember[]) => void;
     mergeCardMembersPatch: (patch: BoardDetailPatch) => void;
-    addMemberToCard: (boardID: string, cardID: string, memberID: string) => Promise<void>;
-    removeMemberFromCard: (boardID: string, cardID: string, memberID: string) => Promise<void>;
+    addMemberToCard: (boardID: string, cardID: string, memberID: string) => Promise<void | null>;
+    removeMemberFromCard: (boardID: string, cardID: string, memberID: string) => Promise<void | null>;
     getUserIDsByCardID: (cardID: string) => string[];
     applyCardMemberEvent: (evt: BoardEvent) => void;
 }
@@ -66,22 +67,19 @@ export const useCardMembersStore = create<CardMembersState>((set, get) => ({
         }));
     },
     addMemberToCard: async (boardID: string, cardID: string, memberID: string) => {
-        try {
-            // /:boardID/cards /: cardID / members /
-            const payload: AddCardMemberRequest = {
-                MemberID: memberID
-            }
-            await api.post(`/boards/${boardID}/cards/${cardID}/members`, payload);
-        } catch (error) {
-            // console.error("Error adding member to card:", error);
-        }
+        const payload: AddCardMemberRequest = { MemberID: memberID }
+        return useAsyncRequestStore.getState().execute(
+            useAsyncKey("card:member:add", cardID),
+            () => api.post(`/boards/${boardID}/cards/${cardID}/members`, payload),
+            { successResetDelayMs: 1500 }
+        )
     },
     removeMemberFromCard: async (boardID: string, cardID: string, memberID: string) => {
-        try {
-            await api.delete(`/boards/${boardID}/cards/${cardID}/members/${memberID}`);
-        } catch (error) {
-            // console.error("Error removing member from card:", error);
-        }
+        return useAsyncRequestStore.getState().execute(
+            useAsyncKey("card:member:remove", cardID),
+            () => api.delete(`/boards/${boardID}/cards/${cardID}/members/${memberID}`),
+            { successResetDelayMs: 1500 }
+        )
     },
     getUserIDsByCardID: (cardID: string) => {
         const memberIDs = get().cardMemberIdsByCardId[cardID] || [];

@@ -3,11 +3,13 @@ import { useCardMembersStore } from "@/stores/CardMembersStore";
 import { useCardsStore } from "@/stores/cardsStore";
 import { useChecklistStore } from "@/stores/checklistStore";
 import type { CardProps, ChecklistEntryRowResponse, CopyCardToListRequest, CreateCardCommentRequest, CreateChecklistEntryRequest, CreateChecklistRequest, CreateInboxCardRequest, CrossMoveChecklistEntryRequest, MirrorCardToInboxRequest, MirrorCardToListRequest, MoveCardToBoardRequest, MoveChecklistEntryRequest, MoveChecklistRequest, PatchCardDetailsRequest, PatchChecklistEntryRequest } from "@/stores/types";
+import type { AsyncRequestKey } from "@/stores/asyncRequestTypes";
+import { useAsyncKey } from "@/stores/asyncRequestStore";
 import { extractMentionedUserIDs } from "@/hooks/commentMentions";
 import { useUserStore } from "@/stores/userStore";
 import { useBoardDetailStore } from "@/stores/boardDetailStore";
 import type { CardRouteState } from "@/components/CardRow";
-import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useUserInboxStore } from "@/stores/userInboxStore";
 export function useCardActionRegistry() {
     const cardsStore = useCardsStore();
@@ -16,6 +18,8 @@ export function useCardActionRegistry() {
     const cardCommentsStore = useCardCommentsStore();
     const boardDetailStore = useBoardDetailStore();
     const inboxStore = useUserInboxStore();
+    const location = useLocation();
+    const navigate = useNavigate();
 
 
     function setCardCoverSize(boardID: string, cardId: string, size: "small" | "large") {
@@ -50,11 +54,11 @@ export function useCardActionRegistry() {
         return cardsStore.patchCardProps(boardID, cardId, props)
     }
 
-    async function setCardTitle(boardID: string, cardId: string, title: string) {
+    async function setCardTitle(boardID: string, cardId: string, title: string, asyncKey?: AsyncRequestKey) {
         const payload: PatchCardDetailsRequest = {
             Title: title
         }
-        await cardsStore.patchCardDetails(boardID, cardId, payload)
+        await cardsStore.patchCardDetails(boardID, cardId, payload, asyncKey ?? useAsyncKey("card:edit:title", cardId))
         return
     }
 
@@ -62,7 +66,7 @@ export function useCardActionRegistry() {
         const payload: PatchCardDetailsRequest = {
             Done: done
         }
-        await cardsStore.patchCardDetails(boardID, cardId, payload)
+        await cardsStore.patchCardDetails(boardID, cardId, payload, useAsyncKey("card:edit:done", cardId))
         return
     }
 
@@ -80,59 +84,58 @@ export function useCardActionRegistry() {
     }
 
     async function addMemberToCard(boardID: string, cardID: string, memberID: string) {
-        await cardMembersStore.addMemberToCard(boardID, cardID, memberID);
+        return cardMembersStore.addMemberToCard(boardID, cardID, memberID);
     }
 
     async function removeMemberFromCard(boardID: string, cardID: string, memberID: string) {
-        await cardMembersStore.removeMemberFromCard(boardID, cardID, memberID);
+        return cardMembersStore.removeMemberFromCard(boardID, cardID, memberID);
     }
     async function addChecklistToCardAtEnd(boardID: string, cardID: string, title: string) {
         const payload: CreateChecklistRequest = {
             Title: title,
             InsertAt: "end"
         }
-        await checklistStore.createChecklistInCard(boardID, cardID, payload)
+        return checklistStore.createChecklistInCard(boardID, cardID, payload)
     }
 
     async function cloneChecklistToCardAtEnd(boardID: string, cardID: string, newTitle: string, checklistIDSource: string) {
-        await checklistStore.cloneChecklistInCard(boardID, cardID, {
+        return checklistStore.cloneChecklistInCard(boardID, cardID, {
             NewTitle: newTitle,
             ChecklistIDSource: checklistIDSource,
         })
     }
 
     async function deleteChecklistFromCard(boardID: string, cardID: string, checklistId: string) {
-        await checklistStore.deleteChecklist(boardID, cardID, checklistId)
+        return checklistStore.deleteChecklist(boardID, cardID, checklistId)
     }
 
-    async function addChecklistEntry(boardID: string, cardID: string, checklistId: string, title: string): Promise<ChecklistEntryRowResponse | undefined> {
+    async function addChecklistEntry(boardID: string, cardID: string, checklistId: string, title: string): Promise<ChecklistEntryRowResponse | null> {
         const payload: CreateChecklistEntryRequest = {
             Title: title
         }
-        return await checklistStore.createChecklistEntry(boardID, cardID, checklistId, payload)
+        return checklistStore.createChecklistEntry(boardID, cardID, checklistId, payload)
     }
 
     async function markChecklistEntry(boardID: string, cardID: string, checklistId: string, entryId: string, done: boolean) {
         const payload: PatchChecklistEntryRequest = {
             Done: done
         }
-        // console.log("Marking checklist entry with payload:", payload);
-        await checklistStore.patchChecklistEntry(boardID, cardID, checklistId, entryId, payload)
+        return checklistStore.patchChecklistEntry(boardID, cardID, checklistId, entryId, payload)
     }
 
     async function editChecklistEntryTitle(boardID: string, cardID: string, checklistId: string, entryId: string, title: string) {
         const payload: PatchChecklistEntryRequest = {
             Title: title
         }
-        await checklistStore.patchChecklistEntry(boardID, cardID, checklistId, entryId, payload)
+        return checklistStore.patchChecklistEntry(boardID, cardID, checklistId, entryId, payload)
     }
 
     async function deleteChecklistEntry(boardID: string, cardID: string, checklistId: string, entryId: string) {
-        await checklistStore.deleteChecklistEntry(boardID, cardID, checklistId, entryId)
+        return checklistStore.deleteChecklistEntry(boardID, cardID, checklistId, entryId)
     }
 
     async function convertChecklistEntry(boardID: string, cardID: string, checklistId: string, entryId: string, listID: string) {
-        await checklistStore.convertChecklistEntry(boardID, cardID, checklistId, entryId, {
+        return checklistStore.convertChecklistEntry(boardID, cardID, checklistId, entryId, {
             BoardID: boardID,
             CardID: cardID,
             ListID: listID,
@@ -144,7 +147,7 @@ export function useCardActionRegistry() {
         const payload: PatchChecklistEntryRequest = {
             Title: title
         }
-        await checklistStore.patchChecklist(boardID, cardID, checklistId, payload)
+        return checklistStore.patchChecklist(boardID, cardID, checklistId, payload)
     }
 
     async function moveChecklistInCard(boardID: string, cardID: string, checklistId: string, beforeID?: string | null, insertAtEnd?: boolean) {
@@ -152,23 +155,22 @@ export function useCardActionRegistry() {
             BeforeID: insertAtEnd ? null : beforeID,
             InsertAt: insertAtEnd ? "end" : null
         }
-        await checklistStore.moveChecklist(boardID, cardID, checklistId, payload)
+        return checklistStore.moveChecklist(boardID, cardID, checklistId, payload)
     }
 
     async function addMemberToChecklistEntry(boardID: string, cardID: string, checklistId: string, entryId: string, userId: string) {
-        await checklistStore.addMemberToEntry(boardID, cardID, checklistId, entryId, userId)
+        return checklistStore.addMemberToEntry(boardID, cardID, checklistId, entryId, userId)
     }
     async function removeMemberFromChecklistEntry(boardID: string, cardID: string, checklistId: string, entryId: string, userId: string) {
-        await checklistStore.removeMemberFromEntry(boardID, cardID, checklistId, entryId, userId)
+        return checklistStore.removeMemberFromEntry(boardID, cardID, checklistId, entryId, userId)
     }
 
-    async function setDatesForCard(boardID: string, cardID: string, from: Date | null, to: Date | null) {
+    async function setDatesForCard(boardID: string, cardID: string, from: Date | null, to: Date | null, asyncKey?: AsyncRequestKey) {
         const payload: PatchCardDetailsRequest = {
             StartDate: from ? from.toISOString() : null,
             EndDate: to ? to.toISOString() : null
         };
-        // console.log("Setting dates for card with payload:", payload);
-        await cardsStore.patchCardDetails(boardID, cardID, payload);
+        return cardsStore.patchCardDetails(boardID, cardID, payload, asyncKey ?? useAsyncKey("card:edit:dates", cardID))
     }
 
     async function setDueDateForChecklistEntry(boardID: string, cardID: string, entryID: string, dueDate: Date | null) {
@@ -190,7 +192,7 @@ export function useCardActionRegistry() {
         const payload: PatchCardDetailsRequest = {
             Description: description
         }
-        await cardsStore.patchCardDetails(boardID, cardID, payload)
+        await cardsStore.patchCardDetails(boardID, cardID, payload, useAsyncKey("card:edit:description", cardID))
     }
 
     async function crossMoveChecklistEntry(boardID: string, cardID: string, sourceChecklistId: string, entryId: string, targetChecklistId: string, targetBeforeId?: string, insertAtEnd?: boolean) {
@@ -199,8 +201,7 @@ export function useCardActionRegistry() {
             TargetBeforeID: insertAtEnd ? null : targetBeforeId,
             InsertAt: insertAtEnd ? "end" : null
         }
-        // console.log("Cross moving checklist entry with payload:", payload);
-        await checklistStore.crossMoveChecklistEntry(boardID, cardID, sourceChecklistId, entryId, payload)
+        return checklistStore.crossMoveChecklistEntry(boardID, cardID, sourceChecklistId, entryId, payload)
     }
 
     async function moveChecklistEntry(boardID: string, cardID: string, checklistId: string, entryId: string, beforeID?: string | null, insertAtEnd?: boolean) {
@@ -208,7 +209,7 @@ export function useCardActionRegistry() {
             BeforeID: insertAtEnd ? null : beforeID,
             InsertAt: insertAtEnd ? "end" : null
         }
-        await checklistStore.moveChecklistEntry(boardID, cardID, checklistId, entryId, payload)
+        return checklistStore.moveChecklistEntry(boardID, cardID, checklistId, entryId, payload)
     }
 
     async function addCommentToCard(boardID: string, cardID: string, content: string) {
@@ -253,7 +254,7 @@ export function useCardActionRegistry() {
         if (getTargetDetails) {
             boardDetailStore.getBoardDetailPatch(targetBoardID)
         }
-        await cardsStore.moveCardToBoard(boardID, cardID, payload)
+        return cardsStore.moveCardToBoard(boardID, cardID, payload)
     }
 
 
@@ -261,8 +262,6 @@ export function useCardActionRegistry() {
 
     function openCardDetailMenu(openCardRoute: OpenCardRoute) {
         const { cardID, sourceListID, boardID, workspaceId, openedFrom } = openCardRoute;
-        const location = useLocation();
-        const navigate = useNavigate();
         // const { workspaceId, boardId } = useParams<{ workspaceId: string; boardId: string }>()
         const nextState: CardRouteState = {
             backgroundLocation: location,

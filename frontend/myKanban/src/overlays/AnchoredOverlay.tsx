@@ -9,14 +9,22 @@ type AnchoredOverlayProps = OverlayDescriptor & {
 export function AnchoredOverlay(ov: AnchoredOverlayProps) {
     const placement = ov.position?.placement || "bottom"
     const off = ov.position?.offset || [0, 0]
+    const viewportPadding = { top: 20, right: 8, bottom: 8, left: 8 }
 
     const { refs, floatingStyles, update } = useFloating({
         strategy: "fixed",
         placement,
         middleware: [
             offset({ mainAxis: off[0], crossAxis: off[1] }),
-            flip(),
-            shift({ padding: 8 }),
+            flip({
+                padding: viewportPadding,
+                crossAxis: true,
+                fallbackAxisSideDirection: "start",
+            }),
+            shift({
+                padding: viewportPadding,
+                crossAxis: true,
+            }),
         ],
         whileElementsMounted: autoUpdate,
     })

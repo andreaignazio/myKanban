@@ -11,7 +11,7 @@ type LabeledButtonPresetBProps = {
     iconAtLeft?: boolean;
 } & LabeledButtonPresetProps
 
-export const LabeledButtonPresetB = ({ label, onClick, children, className, disabled, iconAtLeft = true, style, registerAnchor, anchorKey }: LabeledButtonPresetBProps) => {
+export const LabeledButtonPresetB = ({ label, onClick, onClickCapture, onPointerDownCapture, children, className, disabled, iconAtLeft = true, style, registerAnchor, anchorKey }: LabeledButtonPresetBProps) => {
     const anchorRef = useRef<HTMLDivElement | null>(null);
 
     if (registerAnchor && anchorRef && anchorKey) {
@@ -22,6 +22,8 @@ export const LabeledButtonPresetB = ({ label, onClick, children, className, disa
         <LabeledButtonCustom
             ref={anchorRef}
             label={label} onClick={onClick}
+            onClickCapture={onClickCapture}
+            onPointerDownCapture={onPointerDownCapture}
             disabled={disabled}
             iconAtLeft={iconAtLeft}
             style={style}

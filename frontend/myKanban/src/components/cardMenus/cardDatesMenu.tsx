@@ -17,15 +17,23 @@ import { PADDING_L } from "../modals/CardDetailMenu";
 import { useCardsStore } from "@/stores/cardsStore";
 import { useChecklistStore } from "@/stores/checklistStore";
 import { DateTimeSelectorField } from "../common/DateTimeSelectorField";
+import type { AsyncRequestKey } from "@/stores/asyncRequestTypes";
+import { useAsyncKey } from "@/stores/asyncRequestStore";
+import { useDelayedExecute } from "@/hooks/useDelayedExecute";
+
+
 type CardDatesMenuProps = {
     onClose: () => void;
     entryID?: string;
     cardId?: string;
     boardId?: string;
     headless?: boolean;
+    contextKey?: "editmodal" | "cardmenu";
 }
 
-export const CardDatesMenu = forwardRef<HTMLDivElement, CardDatesMenuProps>(({ onClose, entryID, cardId, boardId, headless = false }, ref) => {
+export const CardDatesMenu = forwardRef<HTMLDivElement, CardDatesMenuProps>(({ onClose, entryID, cardId, boardId, headless = false, contextKey = "editmodal" }, ref) => {
+
+    const { delayedExecute } = useDelayedExecute(onClose)
     const boardID = boardId ?? useParams().boardId as string;
     const cardID = cardId ?? useParams().cardId as string;
     const cardActions = useCardActionRegistry();
@@ -58,28 +66,40 @@ export const CardDatesMenu = forwardRef<HTMLDivElement, CardDatesMenuProps>(({ o
         return `${day}/${month}/${year} ${hours}:${minutes}`;
     }
 
-    const handleSave = () => {
+    const key = useAsyncKey("card:edit:dates:add", `${contextKey}:${cardID}`)
+    const removeKey = useAsyncKey("card:edit:dates:remove", `${contextKey}:${cardID}`)
+
+    const handleSave = async () => {
         if (isEntryMode && entryID) {
-            setEntryDueDate(boardID, cardID, entryID, dueDate ?? null);
-            onClose();
+            const result = await setEntryDueDate(boardID, cardID, entryID, dueDate ?? null);
+            if (result !== null) onClose();
             return;
         }
-        console.log("Saving card dates:", { startDate, dueDate }, "Card ID:", cardID, "Board ID:", boardID);
-        setCardDates(boardID, cardID, startDate ?? null, dueDate ?? null);
-        onClose();
+
+        const exec = async () => {
+            const result = await setCardDates(boardID, cardID, startDate ?? null, dueDate ?? null, key);
+            if (result !== null) onClose();
+        }
+
+        delayedExecute(exec, 200)
+
     }
 
-    const handleRemove = () => {
+    const handleRemove = async () => {
         if (isEntryMode && entryID) {
             setDueDate(undefined);
-            setEntryDueDate(boardID, cardID, entryID, null);
-            onClose();
+            const result = await setEntryDueDate(boardID, cardID, entryID, null);
+            if (result !== null);
             return;
         }
         setStartDate(undefined);
         setDueDate(undefined);
-        setCardDates(boardID, cardID, null, null);
-        onClose();
+        const exec = async () => {
+            const result = await setCardDates(boardID, cardID, null, null, removeKey);
+            if (result !== null);
+        }
+        exec();
+        //delayedExecute(exec, 200)
     }
 
     const card = useCardsStore((state) => state.cardsById[cardID]);
@@ -192,10 +212,25 @@ export const CardDatesMenu = forwardRef<HTMLDivElement, CardDatesMenuProps>(({ o
 
     const Title = isEntryMode ? "Date" : "Dates";
 
+    const requestKeys: AsyncRequestKey[] = isEntryMode
+        ? ["checklist:entry:edit"]
+        : ["card:edit:dates"];
+
+
 
     return (
         <>
-            <ActionMenuWrapper Title={Title}
+            <ActionMenuWrapper
+                requestGroups={[
+                    {
+                        requestKey: requestKeys,
+                        minLoadingMs: 0,
+                        maxErrorMs: 3000,
+                        minSuccessMs: 1000,
+                        show: ["loading", "error", "success"]
+                    },
+                ]}
+                Title={Title}
                 onClose={onClose}
                 width={550}
                 style={{ width: "300px", paddingTop: "10px", paddingBottom: "14px", paddingLeft: PADDING_X, paddingRight: PADDING_X }}

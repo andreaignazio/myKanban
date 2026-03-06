@@ -1,12 +1,14 @@
 import { forwardRef } from "react";
 import type { LabeledButtonProps } from "./types";
 
-export const LabeledButtonCustom = forwardRef<HTMLDivElement, LabeledButtonProps>(({ label, onClick, children, className, disabled, iconAtLeft = false, hidden = false, style }: LabeledButtonProps, ref) => {
+export const LabeledButtonCustom = forwardRef<HTMLDivElement, LabeledButtonProps>(({ label, onClick, onClickCapture, onPointerDownCapture, children, className, disabled, iconAtLeft = false, hidden = false, style }: LabeledButtonProps, ref) => {
     if (hidden) return null;
     return (
         <div
             ref={ref}
             onClick={disabled ? undefined : onClick}
+            onClickCapture={disabled ? undefined : onClickCapture}
+            onPointerDownCapture={disabled ? undefined : onPointerDownCapture}
             style={style}
             className={`relative flex flex-row items-center justify-start
              ${disabled ? "cursor-default " : "cursor-pointer hover:filter hover:brightness-110"}

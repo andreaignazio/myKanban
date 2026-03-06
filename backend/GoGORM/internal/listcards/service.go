@@ -11,6 +11,7 @@ import (
 	"GoGORM/models"
 	"context"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -2144,4 +2145,223 @@ func (s *ListCardsService) GetListCardsByIdsTX(ctx context.Context, tx *gorm.DB,
 // Returns the soft-deleted records.
 func (s *ListCardsService) BulkDeleteListCardsByIDsTX(ctx context.Context, tx *gorm.DB, ids []uuid.UUID) ([]models.ListCard, error) {
 	return s.ListCardsRepo.BulkDeleteListCardsByIdsTX(ctx, tx, ids)
+}
+
+func (s *ListCardsService) GetWorkspaceCardMirrors(ctx context.Context, userID, workspaceID, cardID uuid.UUID) (*MirrorCardsResponse, error) {
+	if err := authz.CheckUserMinWorkspaceRole(ctx, s.MembershipRepo, userID, workspaceID, rbac.Viewer, s.IncludeDeleted); err != nil {
+		return nil, err
+	}
+
+	baseQuery := s.db.WithContext(ctx).Table("list_cards lc").
+		Joins("JOIN board_lists bl ON bl.list_id = lc.list_id").
+		Joins("JOIN boards b ON b.id = bl.board_id").
+		Where("b.workspace_id = ?", workspaceID)
+
+	if s.IncludeDeleted {
+		baseQuery = baseQuery.Unscoped()
+	} else {
+		baseQuery = baseQuery.
+			Where("lc.deleted_at IS NULL").
+			Where("bl.deleted_at IS NULL").
+			Where("b.deleted_at IS NULL")
+	}
+
+	seed := &models.ListCard{}
+	if err := baseQuery.
+		Select("lc.*").
+		Where("lc.card_id = ?", cardID).
+		Order("lc.created_at ASC").
+		Take(seed).Error; err != nil {
+		return nil, domainerr.MapRepoErr(err, true)
+	}
+
+	rootID := seed.RootID
+	if rootID == uuid.Nil {
+		rootID = seed.ID
+	}
+
+	mirrorQuery := s.db.WithContext(ctx).Table("list_cards lc").
+		Joins("JOIN board_lists bl ON bl.list_id = lc.list_id").
+		Joins("JOIN boards b ON b.id = bl.board_id").
+		Select("lc.*").
+		Where("b.workspace_id = ?", workspaceID).
+		Where("lc.root_id = ?", rootID)
+
+	if s.IncludeDeleted {
+		mirrorQuery = mirrorQuery.Unscoped()
+	} else {
+		mirrorQuery = mirrorQuery.
+			Where("lc.deleted_at IS NULL").
+			Where("bl.deleted_at IS NULL").
+			Where("b.deleted_at IS NULL")
+	}
+
+	listCards := make([]models.ListCard, 0)
+	if err := mirrorQuery.Order("lc.created_at ASC").Find(&listCards).Error; err != nil {
+		return nil, domainerr.MapRepoErr(err, true)
+	}
+
+	if len(listCards) == 0 {
+		listCards = append(listCards, *seed)
+	}
+
+	listIDSet := make(map[uuid.UUID]struct{}, len(listCards))
+	listIDs := make([]uuid.UUID, 0, len(listCards))
+	for i := range listCards {
+		id := listCards[i].ListID
+		if id == uuid.Nil {
+			continue
+		}
+		if _, exists := listIDSet[id]; exists {
+			continue
+		}
+		listIDSet[id] = struct{}{}
+		listIDs = append(listIDs, id)
+	}
+
+	boardLists := make([]models.BoardList, 0)
+	if len(listIDs) > 0 {
+		boardListQuery := s.db.WithContext(ctx).Table("board_lists bl").
+			Joins("JOIN boards b ON b.id = bl.board_id").
+			Select("bl.*").
+			Where("bl.list_id IN ?", listIDs).
+			Where("b.workspace_id = ?", workspaceID)
+
+		if s.IncludeDeleted {
+			boardListQuery = boardListQuery.Unscoped()
+		} else {
+			boardListQuery = boardListQuery.
+				Where("bl.deleted_at IS NULL").
+				Where("b.deleted_at IS NULL")
+		}
+
+		if err := boardListQuery.Find(&boardLists).Error; err != nil {
+			return nil, domainerr.MapRepoErr(err, true)
+		}
+	}
+
+	boardIDSet := make(map[uuid.UUID]struct{}, len(boardLists))
+	boardIDs := make([]uuid.UUID, 0, len(boardLists))
+	for i := range boardLists {
+		id := boardLists[i].BoardID
+		if id == uuid.Nil {
+			continue
+		}
+		if _, exists := boardIDSet[id]; exists {
+			continue
+		}
+		boardIDSet[id] = struct{}{}
+		boardIDs = append(boardIDs, id)
+	}
+
+	boards := make([]models.Board, 0)
+	if len(boardIDs) > 0 {
+		boardsQuery := s.db.WithContext(ctx).Table("boards")
+		if s.IncludeDeleted {
+			boardsQuery = boardsQuery.Unscoped()
+		} else {
+			boardsQuery = boardsQuery.Where("deleted_at IS NULL")
+		}
+
+		if err := boardsQuery.
+			Where("id IN ?", boardIDs).
+			Where("workspace_id = ?", workspaceID).
+			Find(&boards).Error; err != nil {
+			return nil, domainerr.MapRepoErr(err, true)
+		}
+	}
+
+	userBoards := make([]models.UserBoard, 0)
+	if len(boardIDs) > 0 {
+		userBoardsQuery := s.db.WithContext(ctx).Table("user_boards")
+		if s.IncludeDeleted {
+			userBoardsQuery = userBoardsQuery.Unscoped()
+		} else {
+			userBoardsQuery = userBoardsQuery.Where("deleted_at IS NULL")
+		}
+
+		if err := userBoardsQuery.
+			Where("user_id = ?", userID).
+			Where("board_id IN ?", boardIDs).
+			Find(&userBoards).Error; err != nil {
+			return nil, domainerr.MapRepoErr(err, true)
+		}
+	}
+
+	lists := make([]models.List, 0)
+	if len(listIDs) > 0 {
+		listsQuery := s.db.WithContext(ctx).Table("lists")
+		if s.IncludeDeleted {
+			listsQuery = listsQuery.Unscoped()
+		} else {
+			listsQuery = listsQuery.Where("deleted_at IS NULL")
+		}
+
+		if err := listsQuery.Where("id IN ?", listIDs).Find(&lists).Error; err != nil {
+			return nil, domainerr.MapRepoErr(err, true)
+		}
+	}
+
+	res := &MirrorCardsResponse{
+		MirrorDataByListCardID: make(map[uuid.UUID][]MirrorCardData, len(listCards)),
+		Boards:                 make([]dto.BoardResponse, 0, len(boards)),
+		UserBoards:             make([]dto.UserBoardResponse, 0, len(userBoards)),
+		Lists:                  make([]dto.ListResponse, 0, len(lists)),
+		BoardLists:             make([]dto.BoardListResponse, 0, len(boardLists)),
+		ListCards:              make([]dto.ListCardResponse, 0, len(listCards)),
+	}
+
+	userIDByBoardID := make(map[uuid.UUID]uuid.UUID, len(userBoards))
+	for i := range userBoards {
+		userIDByBoardID[userBoards[i].BoardID] = userBoards[i].UserID
+	}
+
+	boardListsByListID := make(map[uuid.UUID][]models.BoardList, len(boardLists))
+	for i := range boardLists {
+		bl := boardLists[i]
+		boardListsByListID[bl.ListID] = append(boardListsByListID[bl.ListID], bl)
+	}
+
+	for i := range boards {
+		res.Boards = append(res.Boards, dto.BoardToResponse(&boards[i]))
+	}
+	for i := range userBoards {
+		res.UserBoards = append(res.UserBoards, dto.UserBoardToResponse(&userBoards[i]))
+	}
+	for i := range lists {
+		res.Lists = append(res.Lists, dto.ListToResponse(&lists[i]))
+	}
+	for i := range boardLists {
+		res.BoardLists = append(res.BoardLists, dto.BoardListToResponse(&boardLists[i]))
+	}
+	for i := range listCards {
+		if listCards[i].RootID == uuid.Nil {
+			listCards[i].RootID = listCards[i].ID
+		}
+		current := listCards[i]
+		res.ListCards = append(res.ListCards, dto.ListCardToResponse(&current))
+
+		mapped := make([]MirrorCardData, 0)
+		for _, boardList := range boardListsByListID[current.ListID] {
+			mapped = append(mapped, MirrorCardData{
+				UserID:      userIDByBoardID[boardList.BoardID],
+				BoardID:     boardList.BoardID,
+				ListID:      current.ListID,
+				BoardListID: boardList.ID,
+				ListCardID:  current.ID,
+				CardID:      current.CardID,
+			})
+		}
+
+		sort.Slice(mapped, func(a, b int) bool {
+			if mapped[a].BoardID == mapped[b].BoardID {
+				return mapped[a].BoardListID.String() < mapped[b].BoardListID.String()
+			}
+			return mapped[a].BoardID.String() < mapped[b].BoardID.String()
+		})
+
+		res.MirrorDataByListCardID[current.ID] = mapped
+	}
+
+	return res, nil
 }

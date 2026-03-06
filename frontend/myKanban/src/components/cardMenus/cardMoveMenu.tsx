@@ -15,6 +15,7 @@ import { useListsStore } from "@/stores/listsStore";
 import type { CopyCardToListRequest, List, MirrorCardToInboxRequest, MirrorCardToListRequest } from "@/stores/types";
 import { useCardsStore } from "@/stores/cardsStore";
 import { CustomInput } from "../menuElements/CustomInput";
+import type { AsyncRequestKey } from "@/stores/asyncRequestTypes";
 
 type cardMoveMenuMode = "move" | "copy" | "mirror";
 
@@ -24,9 +25,10 @@ type CardMoveMenuProps = {
     listId?: string;
     mode?: cardMoveMenuMode;
     headless?: boolean;
+    onMoveSubmitSuccess?: () => void;
 }
 
-export const CardMoveMenu = forwardRef<HTMLDivElement, CardMoveMenuProps>(({ onClose, cardId, listId, mode = "move", headless = false }, ref) => {
+export const CardMoveMenu = forwardRef<HTMLDivElement, CardMoveMenuProps>(({ onClose, cardId, listId, mode = "move", headless = false, onMoveSubmitSuccess }, ref) => {
     const boardID = useParams().boardId as string;
     const cardActions = useCardActionRegistry();
     const [activeTab, setActiveTab] = useState("board")
@@ -53,7 +55,7 @@ export const CardMoveMenu = forwardRef<HTMLDivElement, CardMoveMenuProps>(({ onC
             <div className="w-full" >
                 <TabSelector activeTab={activeTab} setActiveTab={setActiveTab} tabs={tabs} />
             </div>
-            {activeTab === "board" && <MoveToBoardTab onClose={onClose} cardId={cardId} listId={listId} mode={mode} />}
+            {activeTab === "board" && <MoveToBoardTab onClose={onClose} cardId={cardId} listId={listId} mode={mode} onMoveSubmitSuccess={onMoveSubmitSuccess} />}
             {activeTab === "inbox" && <MoveToInboxTab onClose={onClose} cardId={cardId} mode={mode} />}
         </>
     );
@@ -63,9 +65,14 @@ export const CardMoveMenu = forwardRef<HTMLDivElement, CardMoveMenuProps>(({ onC
     }
 
     const Title = mode === "move" ? "Move card to..." : mode === "copy" ? "Copy card to..." : "Mirror card to...";
+
+    const keys: AsyncRequestKey[] = ["card:move", "card:copy", "card:mirror"]
+
     return (
         <>
-            <ActionMenuWrapper Title={Title}
+            <ActionMenuWrapper
+
+                Title={Title}
                 onClose={onClose}
                 width={300}
                 style={{ paddingTop: "10px", paddingInline: "10px" }}
@@ -119,10 +126,11 @@ type MoveToBoardTabProps = {
     cardId?: string;
     listId?: string;
     mode?: cardMoveMenuMode;
+    onMoveSubmitSuccess?: () => void;
 }
 
 
-const MoveToBoardTab = ({ onClose, cardId, listId, mode }: MoveToBoardTabProps) => {
+const MoveToBoardTab = ({ onClose, cardId, listId, mode, onMoveSubmitSuccess }: MoveToBoardTabProps) => {
     const boardID = useParams().boardId as string;
     const cardActions = useCardActionRegistry();
 
@@ -346,6 +354,19 @@ const MoveToBoardTab = ({ onClose, cardId, listId, mode }: MoveToBoardTabProps) 
         kind: "standard"
     })
 
+    const scheduleClose = (delay: number) => {
+        setTimeout(() => {
+            onClose();
+        }, delay);
+    }
+
+    const delayedExecute = (action: () => Promise<void>, delay: number) => {
+        onClose();
+        setTimeout(() => {
+            void action();
+        }, delay);
+    }
+
     const handleMove = async () => {
         // console.log("Moving card with details: ", { cardId, listId, activeBoard, activeList, activePosition })
         if (isSubmitInvalid) return
@@ -361,15 +382,15 @@ const MoveToBoardTab = ({ onClose, cardId, listId, mode }: MoveToBoardTabProps) 
             insertAtEnd = true;
         }
 
-
-        try {
-            await moveCardToBoard(boardID, cardId, sourceListId, targetBoardId, targetListId, beforeId, insertAtEnd)
-
-            onClose();
+        const execMove = async () => {
+            const result = await moveCardToBoard(boardID, cardId, sourceListId, targetBoardId, targetListId, beforeId, insertAtEnd)
+            if (result !== null) {
+                onMoveSubmitSuccess?.();
+                onClose();
+            }
         }
-        catch (error) {
-            // console.error("Error moving card: ", error);
-        }
+
+        delayedExecute(execMove, 300);
     }
 
     const handleMirror = async () => {
@@ -385,14 +406,11 @@ const MoveToBoardTab = ({ onClose, cardId, listId, mode }: MoveToBoardTabProps) 
             BeforeID: beforeId,
             InsertAt: insertAtEnd ? "end" : null
         }
-        // console.log("Mirroring card with payload: ", payload);
-        try {
-            await cardActions.mirrorCardToList(boardID, cardId, payload)
-            onClose();
+        const execMirror = async () => {
+            const result = await cardActions.mirrorCardToList(boardID, cardId, payload)
+            if (result !== null) onClose();
         }
-        catch (error) {
-            // console.error("Error mirroring card: ", error);
-        }
+        delayedExecute(execMirror, 300);
     }
 
     const handleCopy = async () => {
@@ -412,14 +430,11 @@ const MoveToBoardTab = ({ onClose, cardId, listId, mode }: MoveToBoardTabProps) 
             KeepLabels: keepLabels,
             KeepChecklists: keepChecklists,
         }
-        // console.log("Copy payload: ", payload)
-        try {
-            await cardActions.copyCardToList(boardID, cardId, payload)
-            onClose();
+        const execCopy = async () => {
+            const result = await cardActions.copyCardToList(boardID, cardId, payload)
+            if (result !== null) onClose();
         }
-        catch (error) {
-            // console.error("Error copying card: ", error);
-        }
+        delayedExecute(execCopy, 300);
     }
 
 

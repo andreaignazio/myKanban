@@ -140,6 +140,8 @@ export const CardRow = ({ boardID, listId, listCardID: listCardID, cardId, index
 
 
 
+
+
     const cardRowRef = useRef<HTMLDivElement>(null)
 
     const handleCardEditMode = () => {
@@ -160,7 +162,8 @@ export const CardRow = ({ boardID, listId, listCardID: listCardID, cardId, index
         const id = editMenutID;
         const descriptor: OverlayDescriptor = {
             id: id,
-            render: () => <CardEditMenu ref={ActionsMenuRef} cardID={cardID} listId={listID} onClose={() => onMenuClose(id)} />,
+            render: () => <CardEditMenu
+                ref={ActionsMenuRef} cardID={cardID} listId={listID} onClose={() => onMenuClose(id)} menuId={id} />,
             anchorRef: cardRowRef,
             panelRef: ActionsMenuRef,
             type: "modal",
@@ -239,16 +242,46 @@ export const CardRow = ({ boardID, listId, listCardID: listCardID, cardId, index
 
     const { backgroundType: rootBoardBackgroundType, backgroundImageUrl: rootBoardBgImage, backgroundColorClassName: rootBoardBgColorClass, } = useBoardBackground({ board: effectiveRootBoard })
 
+    const [draftTitle, setDraftTitle] = useState(card?.Title ?? "")
+    const titleInputRef = useRef<HTMLInputElement>(null)
+
+    useEffect(() => {
+        setDraftTitle(card?.Title ?? "")
+    }, [card?.Title])
+
+    useEffect(() => {
+        if (!editMode) return
+        const inputEl = titleInputRef.current
+        if (!inputEl) return
+        inputEl.focus()
+        inputEl.select()
+    }, [editMode])
+
+    const onSubmitTitle = () => {
+        if (!cardID || !boardId) return
+        cardActions.setCardTitle(boardId, cardID, draftTitle, useAsyncKey("card:edit:title:inline", cardID))
+        setEditMode(false)
+        onMenuClose(editMenutID)
+    }
+
 
     return (
 
 
         <div
+            onContextMenu={(e) => {
+                e.preventDefault()
+                handleCardEditMode()
+            }
 
+            }
             style={{
                 zIndex: editMode ? 1000 : 0,
             }}
-            onClick={() => openCard(cardID!)}
+            onClick={() => {
+                if (editMode) return
+                openCard(cardID!)
+            }}
             data-list-card-id={listCardID}
             className="relative -mt-2 pt-2  "
         >
@@ -280,6 +313,8 @@ export const CardRow = ({ boardID, listId, listCardID: listCardID, cardId, index
 
                                 {mode === "detailed" && (
                                     <Mirrors
+                                        cardId={cardID!}
+                                        listCardId={listCardID}
                                         board={effectiveRootBoard}
                                         mode={source}
                                         placement="cover"
@@ -288,22 +323,34 @@ export const CardRow = ({ boardID, listId, listCardID: listCardID, cardId, index
 
                                 <div className="flex flex-col ">
 
-                                    {mode !== "detailed" && <Mirrors board={effectiveRootBoard} mode={source} />}
+                                    {mode !== "detailed" && <Mirrors cardId={cardID!} listCardId={listCardID} board={effectiveRootBoard} mode={source} />}
 
                                     <CardFieldsLabels hasLabels={cardHasLabels} cardID={cardID}
                                         boardID={boardId} mode={source}
                                     />
 
-                                    <CardRowTitle
-                                        minHeight={rowHeight}
-                                        title={title || ""} done={done}
-                                        editMode={editMode} setDone={handleDoneToggle} />
-                                    {/*<span className="text-xs" >{rootID}</span>*/}
+                                    {!editMode &&
+                                        <CardRowTitle
+                                            minHeight={rowHeight}
+                                            title={title || ""} done={done}
+                                            editMode={editMode} setDone={handleDoneToggle} />}
+
+                                    {editMode &&
+                                        <div style={{ minHeight: rowHeight }}
+                                            className="flex flex-col gap-1">
+                                            <input
+                                                ref={titleInputRef}
+                                                autoFocus
+                                                value={draftTitle}
+                                                onChange={(e) => setDraftTitle(e.target.value)}
+                                                className="bg-transparent
+                                                px-2 py-2 rounded focus:outline-none text-sm" />
+                                        </div>}
                                 </div>
 
                                 <CardRowFields cardID={cardID!} />
 
-                                <div className="absolute top-[14px] right-[11px] 
+                                <div className="absolute top-[10px] right-[11px] 
                             flex flex-row gap-2
                              z-10 opacity-0 group-hover:opacity-100 transition-all duration-200">
 
@@ -341,7 +388,20 @@ export const CardRow = ({ boardID, listId, listCardID: listCardID, cardId, index
                 }}
             </Draggable>
             <div>
-                {editMode === true && <LabeledButtonPresetBSubmit label="Save" onClick={() => { }} />}
+                {editMode === true &&
+
+                    <LabeledButtonPresetBSubmit label="Save"
+                        onClick={() => { }}
+                        onPointerDownCapture={(e) => {
+                            e.stopPropagation()
+                        }}
+                        onClickCapture={
+                            (e) => {
+                                e.stopPropagation()
+                                onSubmitTitle()
+                            }}
+                    />
+                }
             </div>
         </div>
 
@@ -375,6 +435,7 @@ import { CardRowCoverWrapper } from "./cardRowElements/CardRowCoverWrapper"
 import { useBoardsStore } from "@/stores/boardsStore"
 import { getClassNamesForColorToken, gradientColorTokens } from "@/domain/colorTokens"
 import { useBoardBackground } from "@/hooks/useBoardBackground"
+import { useAsyncKey } from "@/stores/asyncRequestStore"
 
 
 

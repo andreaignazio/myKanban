@@ -106,10 +106,14 @@ const AddFormPlaceholder = ({ isAdding, setIsAdding, disabled = false, closedHei
 
     return (
         <div className={`grid grid-cols-6 justify-between 
-            ${isAdding ? `h-0 opacity-0 pointer-events-none overflow-hidden` : `h-${closedHeight} opacity-100`}
+            ${isAdding
+                ? `h-0 opacity-0 pointer-events-none overflow-hidden`
+                : `h-${closedHeight} opacity-100`}
              transition-all duration-200 ease-in-out `}>
             <button className={`col-span-5 rounded-md 
-                    pb-1 pt-1 justify-text-start text-left ps-3 ${disabled ? "opacity-50" : "opacity-100"}`}
+                    bg-transparent hover:bg-neutral-500/20 transition-colors duration-200 ease-in-out
+                    pb-1 pt-1 justify-text-start text-left ps-3 
+                    ${disabled ? "opacity-50" : "opacity-100"}`}
                 onClick={() => {
                     if (disabled) return
                     setIsAdding(true)
@@ -215,6 +219,11 @@ export const AddFormOnEdit = ({ onSubmit, onButtonSubmit, onCancel, onBlurCancel
         }
     }, [isAdding, pendingTitle])
 
+    const handleSubmit = () => {
+        (onButtonSubmit ?? onSubmit)(pendingTitle ?? "")
+        setPendingTitle?.("")
+    }
+
     return (
         <div
             ref={formContainerRef}
@@ -253,7 +262,7 @@ export const AddFormOnEdit = ({ onSubmit, onButtonSubmit, onCancel, onBlurCancel
                 onPointerDownCapture={suppressNextBlurCancel}>
 
                 <LabeledButtonPresetBSubmit label={label ?? "Add Card"}
-                    onClick={() => (onButtonSubmit ?? onSubmit)(pendingTitle ?? "")}
+                    onClick={handleSubmit}
                     className="!h-full !w-fit !rounded-md !border-none" />
 
                 <div className="group h-full aspect-square bg-transparent cursor-pointer 

@@ -9,12 +9,13 @@ const MAX_ERROR_MS = 4000;
 type UseAsyncRequestDisplayOptions = {
     minLoadingMs?: number;
     minSuccessMs?: number;
+    maxSuccessMs?: number;
     maxErrorMs?: number;
 }
 
 export function useAsyncRequestDisplay(
     requestKey: AsyncRequestKey | AsyncRequestKey[],
-    { minLoadingMs = MIN_LOADING_MS, minSuccessMs = MIN_SUCCESS_MS, maxErrorMs = MAX_ERROR_MS }: UseAsyncRequestDisplayOptions = {}
+    { minLoadingMs = MIN_LOADING_MS, minSuccessMs = MIN_SUCCESS_MS, maxSuccessMs, maxErrorMs = MAX_ERROR_MS }: UseAsyncRequestDisplayOptions = {}
 ) {
     const { isLoading, isSuccessful, errorMessage } = useAsyncRequestGroup(requestKey ?? []);
 
@@ -23,6 +24,7 @@ export function useAsyncRequestDisplay(
 
     const [displaySuccess, setDisplaySuccess] = useState(false);
     const [displayError, setDisplayError] = useState(false);
+    const successTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     useEffect(() => {
         if (isLoading) {
@@ -43,10 +45,25 @@ export function useAsyncRequestDisplay(
     useEffect(() => {
         if (!displayLoading && isSuccessful) {
             setDisplaySuccess(true);
-            const timer = setTimeout(() => setDisplaySuccess(false), minSuccessMs);
-            return () => clearTimeout(timer);
+            const successDuration = Math.max(0, maxSuccessMs ?? minSuccessMs);
+            if (successTimerRef.current) {
+                clearTimeout(successTimerRef.current);
+            }
+            successTimerRef.current = setTimeout(() => {
+                setDisplaySuccess(false);
+                successTimerRef.current = null;
+            }, successDuration);
         }
-    }, [displayLoading, isSuccessful, minSuccessMs]);
+    }, [displayLoading, isSuccessful, minSuccessMs, maxSuccessMs]);
+
+    useEffect(() => {
+        return () => {
+            if (successTimerRef.current) {
+                clearTimeout(successTimerRef.current);
+                successTimerRef.current = null;
+            }
+        };
+    }, []);
 
     useEffect(() => {
         if (!displayLoading && !!errorMessage) {

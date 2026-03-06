@@ -9,6 +9,7 @@ import { CheckIcon, PencilIcon, XMarkIcon } from "@heroicons/react/24/solid";
 import { useParams } from "react-router";
 import { useBoardActionRegistry } from "@/actionRegistry/boardActionRegistry";
 import { useLabelsStore } from "@/stores/labelsStore";
+import type { AsyncRequestKey } from "@/stores/asyncRequestTypes";
 
 type CardLabelsMenuProps = {
     onClose: () => void;
@@ -37,8 +38,17 @@ export const CardLabelMenu = forwardRef<HTMLDivElement, CardLabelsMenuProps>(({ 
         return <div style={{ paddingTop: "10px", paddingInline: "0px" }}>{content}</div>;
     }
 
+    const requestKeys: AsyncRequestKey[] = ["board:label:create", "board:label:edit", "board:label:delete", "card:label:add", "card:label:remove"];
+
     return (
         <ActionMenuWrapper Title={Title}
+            requestGroups={[{
+                requestKey: requestKeys,
+                minLoadingMs: 0,
+                minSuccessMs: 800,
+                maxErrorMs: 3000,
+                show: ["loading", "error", "success"]
+            }]}
             onClose={onClose}
             onBack={activeTab != "select" ? () => setActiveTab("select") : undefined}
             width={300}
@@ -69,7 +79,6 @@ export const SelectCardLabelMenu = forwardRef<HTMLDivElement, SelectCardLabelMen
             <Icon className={iconClassName} />
         </div>
     );
-    const labelSearchRef = useRef<HTMLInputElement>(null);
     const [searchInput, setSearchInput] = useState("");
 
     const input = () => {
@@ -77,7 +86,7 @@ export const SelectCardLabelMenu = forwardRef<HTMLDivElement, SelectCardLabelMen
             <div className=" py-2 text-gray-500">
                 <CustomInput className={"h-[35px] mb-0"}
                     onInputChange={(inputRef) => {
-                        labelSearchRef.current && setSearchInput(labelSearchRef.current.value)
+                        setSearchInput(inputRef?.current?.value ?? "")
                     }} />
             </div>
         )
@@ -103,6 +112,7 @@ export const SelectCardLabelMenu = forwardRef<HTMLDivElement, SelectCardLabelMen
                 <CardLabelsSelector
                     cardID={cardID}
                     showCheckboxes={true}
+                    searchQuery={searchInput}
                     onEditLabel={(id) => {
                         setActiveLabelId(id);
                         setActiveTab("edit");
@@ -163,14 +173,6 @@ export const CardLabelsSelector = ({ onEditLabel, cardID, showCheckboxes = true,
             return title.toLowerCase().includes(normalizedQuery);
         })
         : boardLabelsIds;
-
-    /*useEffect(() => {
-        const labelIds = getBoardLabelsIds(boardId);
-        const cardLabelIds = getCardLabelsIds(boardId, cardId);
-        //   console.log("Fetched label IDs for board:", labelIds);
-        setBoardLabelsIds(labelIds);
-        setCardLabelsIds(cardLabelIds);
-    }, [getBoardLabelsIds, getCardLabelsIds, boardId, cardId])*/
 
 
 

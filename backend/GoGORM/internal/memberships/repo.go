@@ -242,13 +242,15 @@ func (r *GormRepo) GetUserWorkspaceRole(ctx context.Context, userID, workspaceID
 		query = query.Where("deleted_at IS NULL")
 	}
 
-	if err := query.
+	result := query.
 		Where("user_id = ? AND workspace_id = ?", userID, workspaceID).
-		First(&userWorkspace).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return "", domainerr.ErrNotFound
-		}
-		return "", dbx.WrapDBErr(err, "error fetching user workspace role")
+		Limit(1).
+		Find(&userWorkspace)
+	if result.Error != nil {
+		return "", dbx.WrapDBErr(result.Error, "error fetching user workspace role")
+	}
+	if result.RowsAffected == 0 {
+		return "", domainerr.ErrNotFound
 	}
 
 	return userWorkspace.Role.String(), nil

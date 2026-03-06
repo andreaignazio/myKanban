@@ -73,6 +73,7 @@ type ChecklistRepo interface {
 
 type MembershipRepo interface {
 	GetUserRole(ctx context.Context, userID, boardID uuid.UUID, includeDeleted bool) (string, error)
+	GetUserWorkspaceRole(ctx context.Context, userID, workspaceID uuid.UUID, includeDeleted bool) (string, error)
 }
 
 type ListRepo interface {

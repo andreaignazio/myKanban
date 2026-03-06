@@ -1,6 +1,8 @@
 export type LabeledButtonProps = {
     label: string;
-    onClick: () => void;
+    onClick: React.MouseEventHandler<HTMLDivElement>;
+    onClickCapture?: React.MouseEventHandler<HTMLDivElement>;
+    onPointerDownCapture?: React.PointerEventHandler<HTMLDivElement>;
     children?: React.ReactNode;
     className?: string;
     disabled?: boolean;

@@ -1,14 +1,18 @@
 import { ImageColorRenderer } from "@/components/menuElements/ImageColorRenderer"
 import { getClassNamesForColorToken } from "@/domain/colorTokens"
 import type { Board } from "@/stores/types"
+import { CardRowMenuBtn } from "../cardMenus/cardRowMenus"
+import { CardMirrorsMenu } from "../cardMenus/cardMirrorsMenu"
 
 type CardMirrorsFieldProps = {
     board?: Board
     mode: "board" | "inbox-mirror" | "inbox"
     placement?: "default" | "cover"
+    cardId: string;
+    listCardId?: string;
 }
 
-export const Mirrors = ({ board, mode, placement = "default" }: CardMirrorsFieldProps) => {
+export const Mirrors = ({ board, mode, placement = "default", cardId, listCardId }: CardMirrorsFieldProps) => {
     if (!board) return null
     if (mode === "inbox") return null
 
@@ -21,25 +25,31 @@ export const Mirrors = ({ board, mode, placement = "default" }: CardMirrorsField
         : "bg-transparent text-white pt-3 px-3"
 
     return (
-        <div className={wrapperClassName}>
-            <div
-                className="h-[30px] max-w-[170px] p-0 gap-1 w-fit pe-2 flex items-center justify-start rounded-[7px] bg-neutral-700/45 text-[11px] font-semibold"
-            >
-                <ImageColorRenderer
-                    style={{ width: "26px", height: "26px" }}
-                    overrideClassName
-                    className="rounded-[6px] overflow-hidden shrink-0"
-                    bgImage={rootBoardBgImage}
-                    bgColor={rootBoardBgColorClass}
+        <CardRowMenuBtn
+            menuComponent={
+                ({ onClose, ref }) => <CardMirrorsMenu cardId={cardId} listCardId={listCardId} ref={ref} onClose={onClose} />
+            }
+        >
+            <div className={wrapperClassName}>
+                <div
+                    className="h-[30px] max-w-[170px] p-0 gap-1 w-fit pe-2 flex items-center justify-start rounded-[7px] bg-neutral-700/45 text-[11px] font-semibold"
+                >
+                    <ImageColorRenderer
+                        style={{ width: "26px", height: "26px" }}
+                        overrideClassName
+                        className="rounded-[6px] overflow-hidden shrink-0"
+                        bgImage={rootBoardBgImage}
+                        bgColor={rootBoardBgColorClass}
 
-                    backgroundType={rootBoardBackgroundType ?? null}
-                />
-                <div className="flex flex-col items-start">
-                    <span className="truncate text-[10px] font-medium">{board?.Name}</span>
-                    <span className="text-[10px] font-extralight">{"X"}</span>
+                        backgroundType={rootBoardBackgroundType ?? null}
+                    />
+                    <div className="flex flex-col items-start">
+                        <span className="truncate text-[10px] font-medium">{board?.Name}</span>
+                        <span className="text-[10px] font-extralight">{"X"}</span>
+                    </div>
                 </div>
             </div>
-        </div>
+        </CardRowMenuBtn>
 
     )
 }

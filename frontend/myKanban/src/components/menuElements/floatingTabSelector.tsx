@@ -17,14 +17,13 @@ export type FloatingTabSelectorProps<TTab extends string> = {
 
 export const FloatingTabSelector = <TTab extends string,>({ activeTab, setActiveTab, tabs }: FloatingTabSelectorProps<TTab>) => {
     return (
-        <div className="z-50 relative cursor-pointer 
+        <div className="z-50 relative cursor-default 
         flex bg-[#18191a] gap-2 text-white items-center
          rounded-2xl p-[4px] overflow-hidden border-2
           border-gray-700/60 shadow-md">
             {tabs.map((tab) => (
-                <>
+                <div key={tab.id}>
                     {tab.type != "divider" && (<div
-                        key={tab.id}
                         className={`relative flex px-4 py-[6px]
                         rounded-lg justify-center items-center 
                         hover:filter  hover:brightness-110 
@@ -34,10 +33,11 @@ export const FloatingTabSelector = <TTab extends string,>({ activeTab, setActive
                                     "text-[#c9cacd] hover:bg-gray-700/50 "}
 
 
-                            ${tab.type === "fixed" ? "cursor-default" : "cursor-pointer"}
+                            ${tab.type === "fixed" ? "cursor-default pointer-events-none" : "cursor-pointer"}
                             `}
 
                         onClick={() => {
+                            if (tab.type === "fixed") return;
                             setActiveTab(tab.id);
                             tab.onClick?.();
                         }}
@@ -49,8 +49,8 @@ export const FloatingTabSelector = <TTab extends string,>({ activeTab, setActive
                      absolute rounded-full w-4 h-1 bottom-0 bg-[#5887d0]`}></div>
                     </div>)}
 
-                    {tab.type === "divider" && <div className="w-px self-stretch my-1 shrink-0 bg-gray-600/80" key={tab.id} />}
-                </>
+                    {tab.type === "divider" && <div className="w-px self-stretch my-1 shrink-0 bg-gray-600/80" />}
+                </div>
             ))}
         </div>
     )

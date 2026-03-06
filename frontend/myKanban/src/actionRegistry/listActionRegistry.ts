@@ -102,7 +102,7 @@ export function useListActionRegistry() {
     }
 
     async function archiveAllCardsInList(boardId: string, listId: string) {
-        await cardsStore.bulkDetatchListCards(boardId, listId)
+        return cardsStore.bulkDetatchListCards(boardId, listId)
     }
 
     async function moveAllCardsInList(boardId: string, sourceListId: string, targetListId: string) {
@@ -111,11 +111,13 @@ export function useListActionRegistry() {
             return
         }
 
-        await cardsStore.bulkMoveListCardsInBoard(boardId, {
+        const result = await cardsStore.bulkMoveListCardsInBoard(boardId, {
             ListCardIDs: listCardIds,
             TargetListID: targetListId,
             InsertAt: "end",
         })
+
+        if (result === null) return null
 
         const boardDetailStore = useBoardDetailStore.getState()
         await Promise.all([

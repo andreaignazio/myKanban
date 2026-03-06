@@ -13,6 +13,7 @@ import { useCardsStore } from "@/stores/cardsStore";
 import { ImageSearchMenu } from "../cardMenus/imageSearchMenu";
 import { ButtonHoverInset } from "../menuElements/buttonHoverInset";
 import { cardCover } from "@/domain/colorTokens";
+import type { AsyncRequestKey } from "@/stores/asyncRequestTypes";
 
 type CardActionMenuBtnProps = {
     cardID: string;
@@ -69,9 +70,14 @@ type CardCoverTabSelectorProps = {
 export const CardCoverTabSelector = forwardRef<HTMLDivElement, CardCoverTabSelectorProps>(({ onClose, cardId }, ref) => {
     const [activeTab, setActiveTab] = useState<"main" | "search">("main");
     const Title = activeTab === "main" ? "Cover" : "Search Photos";
+
+    const requestKeys: AsyncRequestKey[] = ["card:edit:props"];
     return (
         <>
             <ActionMenuWrapper Title={Title}
+                requestGroups={[
+                    { requestKey: requestKeys, minLoadingMs: 0, maxErrorMs: 3000, minSuccessMs: 800, show: ["loading", "error", "success"] }
+                ]}
                 onBack={() => setActiveTab("main")}
                 ref={ref}
                 onClose={onClose}

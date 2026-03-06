@@ -18,6 +18,7 @@ import { useBuildPublicURL } from "@/hooks/useBuildPublicURL";
 import { useBoardWebSocket } from "@/hooks/ws/useBoardWS";
 import { useUserActivityOverlay } from "@/hooks/useUserActivityOverlay";
 import { useUserWatchStore } from "@/stores/userWatchStore";
+import { AsyncRequestToasterController } from "@/components/asyncRequestHandlers/asyncRequestToaster";
 
 
 export default function AppLayout() {
@@ -322,6 +323,7 @@ export default function AppLayout() {
             <OverlayRoot />
             {showBackdrop && (<BackdropLock visible={backdropVisible} />)}
             <DomainModal />
+            <AsyncRequestToasterController />
         </>
     )
 }

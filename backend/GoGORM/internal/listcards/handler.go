@@ -554,3 +554,30 @@ func (h *ListCardsHandler) GetRootBoardForListCard(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, rootBoard)
 }
+
+func (h *ListCardsHandler) GetWorkspaceCardMirrors(c *gin.Context) {
+	ctx := c.Request.Context()
+	userID := c.MustGet("userID").(uuid.UUID)
+
+	workspaceIDStr := c.Param("workspaceID")
+	workspaceID, err := uuid.Parse(workspaceIDStr)
+	if err != nil {
+		httperr.WriteParamsError(c, err, "listcards.handler.GetWorkspaceCardMirrors")
+		return
+	}
+
+	cardIDStr := c.Param("cardID")
+	cardID, err := uuid.Parse(cardIDStr)
+	if err != nil {
+		httperr.WriteParamsError(c, err, "listcards.handler.GetWorkspaceCardMirrors")
+		return
+	}
+
+	response, err := h.ListCardsService.GetWorkspaceCardMirrors(ctx, userID, workspaceID, cardID)
+	if err != nil {
+		httperr.Write(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, response)
+}

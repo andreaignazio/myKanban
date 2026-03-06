@@ -2,6 +2,7 @@
 import type { OverlayDescriptor } from "./overlayStore"
 import { createPortal } from "react-dom"
 import React, { useEffect } from "react"
+import { AnimatePresence } from "motion/react"
 import { PointOverlayLive } from "./PointOverlayLive"
 import { AnchoredOverlay } from "./AnchoredOverlay"
 import { VirtualOverlay } from "./VirtualOverlay"
@@ -29,8 +30,11 @@ export function OverlayRoot() {
 
             const topDescriptor = topInteractiveOverlay
             const panelEl = topDescriptor?.panelRef?.current
+            const anchorEl = topDescriptor?.anchorRef?.current
 
-            const isInside = panelEl?.contains(event.target as Node) ?? false
+            const isInsidePanel = panelEl?.contains(event.target as Node) ?? false
+            const isInsideAnchor = anchorEl?.contains(event.target as Node) ?? false
+            const isInside = isInsidePanel || isInsideAnchor
 
             //console.log("Is inside any overlay?", isInside)
 
@@ -84,7 +88,7 @@ export function OverlayRoot() {
     }, [stack, close, topInteractiveOverlay])
 
     return (createPortal(
-        <>
+        <AnimatePresence>
 
             {stack.map((descriptor: OverlayDescriptor, index) => {
                 const zIndex = descriptor.zIndex ?? (baseZIndex + index * zIndexStep)
@@ -109,7 +113,7 @@ export function OverlayRoot() {
                     </div>
                 )
             })}
-        </>,
+        </AnimatePresence>,
         document.body
 
     )

@@ -147,6 +147,8 @@ const ListHeader = ({
     isReadonly = false,
 }: ListHeaderProps) => {
     const isListWatched = useUserWatchStore(useShallow((state) => state.isListWatched(listID)))
+    const listWatch = useUserWatchStore((state) => state.listWatchByListId[listID])
+    const addListWatch = useUserWatchStore((state) => state.addListWatch)
     const setListWatched = useUserWatchStore((state) => state.patchListWatchActive)
 
 
@@ -179,13 +181,13 @@ const ListHeader = ({
 
 
     const detatchList = useListsStore((state) => state.detatchList)
-    const handleWatchListToggle = () => {
-        if (isListWatched) {
-            setListWatched(listID, false)
-            // listActions.watchList(listID, false)
-        } else {
+    const handleWatchListToggle = async () => {
+        if (listWatch) {
+            await setListWatched(listID, !isListWatched)
             return
         }
+
+        await addListWatch(boardID, listID)
     }
 
 
@@ -239,7 +241,7 @@ const ListHeader = ({
 
     return (
         <div className="w-full flex flex-row justify-between h-8 mb-2">
-            <div className="flex items-center gap-2 min-w-0">
+            <div className="flex items-center gap-2 min-w-0 mr-1">
                 <InlineEditableTitle
                     ref={titleInputRef}
                     title={title}
@@ -256,6 +258,7 @@ const ListHeader = ({
                     onPointerCancel={onTitlePointerCancel}
 
                 />
+
                 {showRootBadge && (
                     <CardRowMenuBtn
                         customId={mirrorMenuId}
@@ -300,7 +303,13 @@ const ListHeader = ({
                 )}
             </div>
 
-            <LabeledButtonPresetB label="" onClick={handleWatchListToggle}
+            <LabeledButtonPresetB label=""
+                onClick={() => { }}
+                onClickCapture={(e) => {
+                    e.stopPropagation()
+                    void handleWatchListToggle()
+                }}
+                onPointerDownCapture={(e) => e.stopPropagation()}
                 style={{ backgroundColor: eyeBg }}
                 className={`h-full rounded-md px-2 bg-transparent !m-0 
             cursor-pointer transition-colors duration-150

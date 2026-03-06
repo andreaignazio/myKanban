@@ -32,7 +32,7 @@ export type OverlayPlacement = "top" | "bottom" | "left" | "right" | "top-start"
 export type OverlayPositionOptions = {
     placement?: OverlayPlacement
     offset?: [number, number]
-    virtual?: "viewport-center" | "viewport-bottom-right" | "cursor"
+    virtual?: "viewport-center" | "viewport-bottom-right" | "cursor" | "viewport-top-center"
 }
 
 export type OverlayDescriptor = {

@@ -1,5 +1,7 @@
 ﻿import { api } from '@/api/api'
 import { create } from 'zustand'
+import { useAsyncRequestStore, useAsyncKey } from '@/stores/asyncRequestStore'
+import type { AsyncRequestKey } from '@/stores/asyncRequestTypes'
 
 import type { ListCard } from './boardDetailStore'
 import type { BulkDetatchListCardsResponse, BulkMoveListCardsInBoardRequest, BulkMoveListCardsInBoardResponse, Card, CardProps, CopyCardToListRequest, MirrorCardToListRequest, MoveCardToBoardRequest, PatchCardDetailsRequest, PatchCardPropsRequest } from './types'
@@ -40,15 +42,15 @@ type CardsStore = {
     addCardToList: (boardID: string, listID: string, payload: CreateCardPayload) => Promise<Card | null>
     mergeCardsPatch: (payload: Record<string, Card>) => void
     removeCards: (cardIDs: string[]) => void
-    removeCardFromList: (boardID: string, listID: string, cardID: string) => Promise<void>
-    patchCardProps: (boardID: string, cardId: string, props: CardProps) => Promise<void>
-    patchCardDetails: (boardID: string, cardId: string, payload: PatchCardDetailsRequest) => Promise<void>
+    removeCardFromList: (boardID: string, listID: string, cardID: string) => Promise<void | null>
+    patchCardProps: (boardID: string, cardId: string, props: CardProps) => Promise<Card | null>
+    patchCardDetails: (boardID: string, cardId: string, payload: PatchCardDetailsRequest, asyncKey?: AsyncRequestKey) => Promise<void | null>
     applyCardPropsPatch: (cardId: string, props: CardProps) => void
-    moveCardToBoard: (boardId: string, cardId: string, payload: MoveCardToBoardRequest) => Promise<void>
-    bulkMoveListCardsInBoard: (boardId: string, payload: BulkMoveListCardsInBoardRequest) => Promise<BulkMoveListCardsInBoardResponse>
-    bulkDetatchListCards: (boardId: string, listId: string) => Promise<BulkDetatchListCardsResponse>
-    mirrorCardToList: (boardId: string, cardId: string, payload: MirrorCardToListRequest) => Promise<void>
-    copyCardToList: (boardId: string, cardId: string, payload: CopyCardToListRequest) => Promise<void>
+    moveCardToBoard: (boardId: string, cardId: string, payload: MoveCardToBoardRequest) => Promise<void | null>
+    bulkMoveListCardsInBoard: (boardId: string, payload: BulkMoveListCardsInBoardRequest) => Promise<BulkMoveListCardsInBoardResponse | null>
+    bulkDetatchListCards: (boardId: string, listId: string) => Promise<BulkDetatchListCardsResponse | null>
+    mirrorCardToList: (boardId: string, cardId: string, payload: MirrorCardToListRequest) => Promise<void | null>
+    copyCardToList: (boardId: string, cardId: string, payload: CopyCardToListRequest) => Promise<void | null>
 }
 
 export const useCardsStore = create<CardsStore>((set, get) => ({
@@ -84,53 +86,46 @@ export const useCardsStore = create<CardsStore>((set, get) => ({
     },
 
     addCardToList: async (boardID: string, listID: string, payload: CreateCardPayload) => {
-        let response = { data: {} as Card };
-        try {
-            response = await api.post(`/boards/${boardID}/lists/${listID}/cards/`, payload)
-            return response.data as Card
-        } catch (error) {
-            // console.error("Error adding card to list:", error)
-            throw error
-
-        }
-
+        return useAsyncRequestStore.getState().execute<Card>(
+            useAsyncKey("card:create", listID),
+            async () => {
+                const response = await api.post(`/boards/${boardID}/lists/${listID}/cards/`, payload)
+                return response.data as Card
+            },
+            { successResetDelayMs: 2000 }
+        )
     },
     removeCardFromList: async (boardID: string, listID: string, cardID: string) => {
-        let response = { data: {} as ListCard };
-        try {
-
-            response = await api.delete(`/boards/${boardID}/lists/${listID}/cards/${cardID}/`)
-        } catch (error) {
-            // console.error("Error removing card from list:", error)
-            throw error
-        }
+        return useAsyncRequestStore.getState().execute(
+            useAsyncKey("card:delete", cardID),
+            () => api.delete(`/boards/${boardID}/lists/${listID}/cards/${cardID}/`),
+            { successResetDelayMs: 1500 }
+        )
     },
-    patchCardDetails: async (boardID: string, cardId: string, payload: PatchCardDetailsRequest) => {
-        try {
-            // console.log(`Patching card details for card ${cardId} with payload:`, payload)
-            await api.patch(`/boards/${boardID}/cards/${cardId}/`, payload)
-        } catch (error) {
-            // console.error(`Error patching card ${cardId} details:`, error)
-            throw error
-        }
+    patchCardDetails: async (boardID: string, cardId: string, payload: PatchCardDetailsRequest, asyncKey?: AsyncRequestKey) => {
+        return useAsyncRequestStore.getState().execute(
+            asyncKey ?? useAsyncKey("card:edit:details", cardId),
+            () => api.patch(`/boards/${boardID}/cards/${cardId}/`, payload),
+            { successResetDelayMs: 1500 }
+        )
     },
 
     patchCardProps: async (boardID: string, cardId: string, props: CardProps) => {
-        const payload: PatchCardPropsRequest = {
-            Props: props,
-        }
-        // console.log(`Patching card ${cardId} props with payload:`, payload)
-        try {
-            const res = await api.patch(`/boards/${boardID}/cards/${cardId}/props`, payload)
-            const updatedCard = res.data as Card;
-            const updatedProps = updatedCard.Props?.Props;
-            if (updatedProps) {
-                get().applyCardPropsPatch(cardId, updatedProps);
+        const payload: PatchCardPropsRequest = { Props: props }
+        return useAsyncRequestStore.getState().execute<Card>(
+            useAsyncKey("card:edit:props", cardId),
+            async () => {
+                const res = await api.patch(`/boards/${boardID}/cards/${cardId}/props`, payload)
+                return res.data as Card
+            },
+            {
+                successResetDelayMs: 1500,
+                onSuccess(updatedCard) {
+                    const updatedProps = updatedCard.Props?.Props
+                    if (updatedProps) get().applyCardPropsPatch(cardId, updatedProps)
+                },
             }
-        } catch (error) {
-            // console.error(`Error patching card ${cardId} props:`, error)
-            throw error
-        }
+        )
     },
     applyCardPropsPatch: (cardId: string, props: CardProps) => {
         set((state) => {
@@ -158,48 +153,45 @@ export const useCardsStore = create<CardsStore>((set, get) => ({
         })
     },
     moveCardToBoard: async (boardId: string, cardId: string, payload: MoveCardToBoardRequest) => {
-        try {
-            // console.log(`Moving card ${cardId} to board ${boardId} with payload:`, payload)
-            await api.patch(`/boards/${boardId}/cards/${cardId}/moveto`, payload)
-        } catch (error) {
-            // console.error(`Error moving card ${cardId} to board ${boardId}:`, error)
-            throw error
-        }
+        return useAsyncRequestStore.getState().execute(
+            useAsyncKey("card:move", cardId),
+            () => api.patch(`/boards/${boardId}/cards/${cardId}/moveto`, payload),
+            { successResetDelayMs: 2000 }
+        )
     },
     bulkMoveListCardsInBoard: async (boardId: string, payload: BulkMoveListCardsInBoardRequest) => {
-        try {
-            const response = await api.patch(`/boards/${boardId}/listcards/movebulk`, payload)
-            return response.data as BulkMoveListCardsInBoardResponse
-        } catch (error) {
-            throw error
-        }
+        return useAsyncRequestStore.getState().execute<BulkMoveListCardsInBoardResponse>(
+            "card:move:bulk",
+            async () => {
+                const response = await api.patch(`/boards/${boardId}/listcards/movebulk`, payload)
+                return response.data as BulkMoveListCardsInBoardResponse
+            },
+            { successResetDelayMs: 2000 }
+        )
     },
     bulkDetatchListCards: async (boardId: string, listId: string) => {
-        try {
-            const response = await api.delete(`/boards/${boardId}/lists/${listId}/listcards`)
-            return response.data as BulkDetatchListCardsResponse
-        } catch (error) {
-            throw error
-        }
+        return useAsyncRequestStore.getState().execute<BulkDetatchListCardsResponse>(
+            useAsyncKey("card:detach:bulk", listId),
+            async () => {
+                const response = await api.delete(`/boards/${boardId}/lists/${listId}/listcards`)
+                return response.data as BulkDetatchListCardsResponse
+            },
+            { successResetDelayMs: 2000 }
+        )
     },
-
     mirrorCardToList: async (boardId: string, cardId: string, payload: MirrorCardToListRequest) => {
-        try {
-            // console.log(`Mirroring card ${cardId} to list ${payload.TargetListID} on board ${payload.TargetBoardID} with payload:`, payload)
-            await api.post(`/boards/${boardId}/cards/${cardId}/mirror`, payload)
-        } catch (error) {
-            // console.error(`Error mirroring card ${cardId} to list ${payload.TargetListID} on board ${payload.TargetBoardID}:`, error)
-            throw error
-        }
+        return useAsyncRequestStore.getState().execute(
+            useAsyncKey("card:mirror", cardId),
+            () => api.post(`/boards/${boardId}/cards/${cardId}/mirror`, payload),
+            { successResetDelayMs: 2000 }
+        )
     },
     copyCardToList: async (boardId: string, cardId: string, payload: CopyCardToListRequest) => {
-        try {
-            // console.log(`Copying card ${cardId} to list ${payload.TargetListID} on board ${payload.TargetBoardID} with payload:`, payload)
-            await api.post(`/boards/${boardId}/cards/${cardId}/copy`, payload)
-        } catch (error) {
-            // console.error(`Error copying card ${cardId} to list ${payload.TargetListID} on board ${payload.TargetBoardID}:`, error)
-            throw error
-        }
+        return useAsyncRequestStore.getState().execute(
+            useAsyncKey("card:copy", cardId),
+            () => api.post(`/boards/${boardId}/cards/${cardId}/copy`, payload),
+            { successResetDelayMs: 2000 }
+        )
     },
 }))
 

@@ -16,6 +16,7 @@ import { useCardMembersStore } from "@/stores/CardMembersStore";
 import { CustomInput } from "../menuElements/CustomInput";
 import { useShallow } from "zustand/shallow";
 import { useChecklistStore } from "@/stores/checklistStore";
+import type { AsyncRequestKey } from "@/stores/asyncRequestTypes";
 
 
 type CardMembersMenuProps = {
@@ -156,9 +157,19 @@ export const CardMembersMenu = forwardRef<HTMLDivElement, CardMembersMenuProps>(
     }
 
     const Title = entryId ? "Add to entry" : "Add to card";
+
+    const requestKeys: AsyncRequestKey[] = entryId ? ["checklist:entry:member:add", "checklist:entry:member:remove"] : ["card:member:add", "card:member:remove"];
+
     return (
         <>
             <ActionMenuWrapper Title={Title}
+                requestGroups={[{
+                    requestKey: requestKeys,
+                    minLoadingMs: 0,
+                    maxErrorMs: 3000,
+                    minSuccessMs: 1000,
+                    show: ["loading", "error", "success"]
+                }]}
                 onClose={onClose}
                 width={300}
                 style={{ paddingTop: "10px", paddingInline: PADDING_X }}

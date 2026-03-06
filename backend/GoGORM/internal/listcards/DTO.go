@@ -153,3 +153,21 @@ type CopyCardRequest struct {
 	KeepLabels     bool `json:"KeepLabels"`
 	KeepChecklists bool `json:"KeepChecklists"`
 }
+
+type MirrorCardsResponse struct {
+	MirrorDataByListCardID map[uuid.UUID][]MirrorCardData `json:"MirrorDataByListCardID"`
+	Boards                 []dto.BoardResponse            `json:"Boards"`
+	UserBoards             []dto.UserBoardResponse        `json:"UserBoards"`
+	Lists                  []dto.ListResponse             `json:"Lists"`
+	BoardLists             []dto.BoardListResponse        `json:"BoardLists"`
+	ListCards              []dto.ListCardResponse         `json:"ListCards"`
+}
+
+type MirrorCardData struct {
+	UserID      uuid.UUID `json:"UserID"`
+	BoardID     uuid.UUID `json:"BoardID"`
+	ListID      uuid.UUID `json:"ListID"`
+	BoardListID uuid.UUID `json:"BoardListID"`
+	ListCardID  uuid.UUID `json:"ListCardID"`
+	CardID      uuid.UUID `json:"CardID"`
+}
