@@ -75,15 +75,14 @@ type BoardListResponse struct {
 }
 
 type ListCardResponse struct {
-	ID        uuid.UUID   `json:"ID"`
-	CardID    uuid.UUID   `json:"CardID"`
-	ListID    uuid.UUID   `json:"ListID"`
-	RootID    uuid.UUID   `json:"RootID"`
-	Mirrors   []uuid.UUID `json:"Mirrors,omitempty"`
-	Position  string      `json:"Position"`
-	CreatedAt time.Time   `json:"CreatedAt"`
-	UpdatedAt time.Time   `json:"UpdatedAt"`
-	DeletedAt *time.Time  `json:"DeletedAt,omitempty"`
+	ID        uuid.UUID  `json:"ID"`
+	CardID    uuid.UUID  `json:"CardID"`
+	ListID    uuid.UUID  `json:"ListID"`
+	RootID    uuid.UUID  `json:"RootID"`
+	Position  string     `json:"Position"`
+	CreatedAt time.Time  `json:"CreatedAt"`
+	UpdatedAt time.Time  `json:"UpdatedAt"`
+	DeletedAt *time.Time `json:"DeletedAt,omitempty"`
 }
 
 type WorkspaceResponse struct {

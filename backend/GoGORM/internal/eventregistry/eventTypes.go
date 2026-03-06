@@ -76,10 +76,11 @@ const (
 	EventBoardListMirrored       DomainEventType = "board.list.mirrored"
 	EventBoardListMirroredTarget DomainEventType = "board.list.mirrored.target"
 	EventBoardListMirroredSource DomainEventType = "board.list.mirrored.source"
-	EventBoardListCardDetatched  DomainEventType = "board.listcard.detatched"
 	EventBoardListCardMoved      DomainEventType = "board.listcard.moved"
 	EventBoardListCardRestored   DomainEventType = "board.listcard.restored"
 	EventBoardListCardPurged     DomainEventType = "board.listcard.purged"
+	EventBoardListCardDetatched  DomainEventType = "board.listcard.detatched"
+
 	EventBoardListCardsDetatched DomainEventType = "board.listcards.detatched"
 )
 
@@ -153,10 +154,10 @@ func (e DomainEventType) IsValidEventType() bool {
 		EventBoardListMirrored,
 		EventBoardListMirroredTarget,
 		EventBoardListMirroredSource,
-		EventBoardListCardDetatched,
 		EventBoardListCardMoved,
 		EventBoardListCardRestored,
 		EventBoardListCardPurged,
+		EventBoardListCardDetatched,
 		EventBoardListCardsDetatched:
 
 		return true
@@ -222,10 +223,10 @@ func (e DomainEventType) IsBoardCoreToastEvent() bool {
 		EventBoardListMirrored,
 		EventBoardListMirroredTarget,
 		EventBoardListMirroredSource,
-		EventBoardListCardDetatched,
 		EventBoardListCardMoved,
 		EventBoardListCardRestored,
 		EventBoardListCardPurged,
+		EventBoardListCardDetatched,
 		EventBoardListCardsDetatched:
 
 		return true

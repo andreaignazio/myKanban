@@ -43,53 +43,48 @@ export const ListActionsMenu = forwardRef<HTMLDivElement, ListActionsMenuProps>(
 
     const [activeTab, setActiveTab] = useState<"main" | "copyList" | "moveList" | "mirrorList" | "moveAllCards" | "accessMode">("main")
 
-    const handleCopyList = (title: string) => {
-        listActions.copySingleListAfterSelf(boardID, listID, { title: title, keepMembers: false })
-            .then(() => {
-                onClose();
-            })
+
+
+    const CLOSE_TIMEOUT = 200;
+    const scheduleClose = (timeout: number = CLOSE_TIMEOUT) => {
+        setTimeout(() => {
+            onClose();
+        }, timeout)
     }
 
-    const handleMoveList = (payload: MoveBoardListRequest) => {
-        listActions.moveBoardList(boardID, listID, payload)
-            .then(() => {
-                onClose();
-            })
+    const handleCopyList = async (title: string) => {
+        const result = await listActions.copySingleListAfterSelf(boardID, listID, { title, keepMembers: false })
+        if (result !== null) scheduleClose()
     }
 
-    const handleMirrorList = (payload: MirrorBoardListRequest) => {
-        listActions.mirrorBoardList(boardID, listID, payload)
-            .then(() => {
-                onClose();
-            })
+    const handleMoveList = async (payload: MoveBoardListRequest) => {
+        const result = await listActions.moveBoardList(boardID, listID, payload)
+        if (result !== null) scheduleClose()
+    }
+
+    const handleMirrorList = async (payload: MirrorBoardListRequest) => {
+        const result = await listActions.mirrorBoardList(boardID, listID, payload)
+        if (result !== null) scheduleClose(1200)
     }
 
     const handleMoveAllCards = (targetListID: string) => {
         listActions.moveAllCardsInList(boardID, listID, targetListID)
-            .then(() => {
-                onClose();
-            })
+            .then(() => scheduleClose())
     }
 
-    const handleArchiveList = () => {
-        listActions.archiveList(boardID, listID)
-            .then(() => {
-                onClose();
-            })
+    const handleArchiveList = async () => {
+        const result = await listActions.archiveList(boardID, listID)
+        if (result !== null) scheduleClose()
     }
 
     const handleArchiveAllCards = () => {
         listActions.archiveAllCardsInList(boardID, listID)
-            .then(() => {
-                onClose();
-            })
+            .then(() => scheduleClose())
     }
 
-    const handleAccessMode = (mode: BoardListAccessMode) => {
-        listActions.setListAccessMode(boardID, listID, mode)
-            .then(() => {
-                onClose();
-            })
+    const handleAccessMode = async (mode: BoardListAccessMode) => {
+        const result = await listActions.setListAccessMode(boardID, listID, mode)
+        if (result !== null) scheduleClose()
     }
 
     const h = 32;
@@ -124,6 +119,9 @@ export const ListActionsMenu = forwardRef<HTMLDivElement, ListActionsMenuProps>(
     return (
         <>
             <ActionMenuWrapper
+                requestGroups={[
+                    { requestKey: ["list:copy:bulk", "list:move", "list:mirror", "list:detach", "list:edit:props", "list:edit:access"], minLoadingMs: 0, maxErrorMs: 3000, minSuccessMs: 1000, show: ["loading", "success", "error"] },
+                ]}
                 onBack={() => setActiveTab("main")}
                 width={300}
                 Title={Title} onClose={onClose}>
@@ -303,21 +301,21 @@ export const MoveListTab = ({ sourceBoardID, sourceListID, submitLabel = "Move",
     const hasDuplicateListByBoardID = useMemo(() => {
         const out: Record<string, boolean> = {}
         for (const id of boardIds) {
-            if (id === sourceBoardID) {
-                out[id] = false
-                continue
-            }
             const relIDs = boardListIdsByBoardId[id] ?? []
             out[id] = relIDs.some((relID) => boardListById[relID]?.ListID === sourceListID)
         }
         return out
-    }, [boardIds, sourceBoardID, sourceListID, boardListIdsByBoardId, boardListById])
+    }, [boardIds, sourceListID, boardListIdsByBoardId, boardListById])
 
     const targetHasNoModifyPermission = canModifyByBoardID[targetBoardID] !== true
     const targetHasDuplicateList = hasDuplicateListByBoardID[targetBoardID] === true
     const isTargetInvalid = targetHasNoModifyPermission || targetHasDuplicateList
 
     const getBoardDisableReason = (boardID: string): string | undefined => {
+        if (mode === "mirror" && boardID === sourceBoardID) {
+            return "List already present"
+        }
+
         const noModify = canModifyByBoardID[boardID] !== true
         if (noModify) {
             return "No edit permission"

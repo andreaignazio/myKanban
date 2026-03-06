@@ -136,11 +136,6 @@ type MoveCardEventPayload struct {
 	MovedCount         int
 }
 
-type BulkDetatchListCardsEventPayload struct {
-	ListID         string
-	DetatchedCount int
-}
-
 type BoardPatchedEventPayload struct {
 	ChangedFields []string
 }

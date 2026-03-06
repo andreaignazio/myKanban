@@ -216,7 +216,6 @@ export type ListCardRelation = {
     UpdatedAt: string;
     DeletedAt: string | null;
     RootID?: string;
-    Mirrors: string[];
 };
 
 export type BoardList = {
@@ -820,19 +819,6 @@ export type BulkDetatchListCardsResponse = {
     DetatchedListCards: ListCard[];
 }
 
-export type ExternalRootRef = {
-    RootListCardID: string;
-    CardID: string;
-    BoardID: string;
-    WorkspaceID: string;
-    ListID: string;
-    WorkspaceName: string;
-    BoardName: string;
-    ListTitle: string;
-    CardTitle: string;
-    UpdatedAt: string;
-}
-
 export type InboxCard = {
     ID: string
     UserID: string
@@ -863,7 +849,6 @@ export type CreateInboxCardRequest = MirrorCardToInboxRequest & {
 export type UserInboxCardResponse = {
     Cards: Record<string, Card>;
     InboxCards: InboxCard[];
-    ExternalRootsByID: Record<string, ExternalRootRef>;
 }
 
 export type CrossBoardMoveBoardPayload = {
@@ -880,8 +865,6 @@ export type CrossBoardMoveBoardPayload = {
     FromListCards: ListCard[]
     ToListCards: ListCard[]
     ListCardIdsByListID: Record<string, string[]>
-    ExternalRootsByID: Record<string, ExternalRootRef>
-
 }
 
 export type InboxRootCardMovedPayload = {
@@ -892,7 +875,6 @@ export type InboxRootCardMovedPayload = {
     SourceListID: string
     TargetListID: string
     AffectedInboxCardIDs: string[]
-    ExternalRootsByID: Record<string, ExternalRootRef>
 }
 
 export type CreateBoardRequest = {

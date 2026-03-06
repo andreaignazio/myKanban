@@ -55,7 +55,6 @@ export function ListRow({ boardID: boardID, boardListID: boardListID, index: ind
                         ...provided.draggableProps.style,
                         color: listTextColor,
                     }}>
-
                     <div className={`relative group/readonly ${isReadonly
                         ? "border-2 border-fuchsia-400/50 pt-1 hover:pt-6  bg-fuchsia-500/50"
                         : " "}

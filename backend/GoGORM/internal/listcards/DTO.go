@@ -97,10 +97,6 @@ type BulkMoveListCardsInBoardResponse struct {
 	MovedListCards []dto.ListCardResponse `json:"MovedListCards"`
 }
 
-type BulkDetatchListCardsResponse struct {
-	DetatchedListCards []dto.ListCardResponse `json:"DetatchedListCards"`
-}
-
 type MoveCardToBoardRequest struct {
 	SourceListID  uuid.UUID  `json:"SourceListID" binding:"required"`
 	TargetBoardID uuid.UUID  `json:"TargetBoardID" binding:"required"`
@@ -156,26 +152,4 @@ type CopyCardRequest struct {
 	KeepMembers    bool `json:"KeepMembers"`
 	KeepLabels     bool `json:"KeepLabels"`
 	KeepChecklists bool `json:"KeepChecklists"`
-}
-
-type ListCardMirrorReference struct {
-	BoardListID    uuid.UUID `json:"BoardListID"`
-	BoardID        uuid.UUID `json:"BoardID"`
-	WorkspaceID    uuid.UUID `json:"WorkspaceID"`
-	BoardName      string    `json:"BoardName"`
-	IsRootList     bool      `json:"IsRootList"`
-	ListCardID     uuid.UUID `json:"ListCardID"`
-	RootListCardID uuid.UUID `json:"RootListCardID"`
-	ListID         uuid.UUID `json:"ListID"`
-	ListTitle      string    `json:"ListTitle"`
-	CardID         uuid.UUID `json:"CardID"`
-	CardTitle      string    `json:"CardTitle"`
-	IsRoot         bool      `json:"IsRoot"`
-	IsCurrent      bool      `json:"IsCurrent"`
-}
-
-type ListCardMirrorsResponse struct {
-	RootListCardID    uuid.UUID                 `json:"RootListCardID"`
-	CurrentListCardID uuid.UUID                 `json:"CurrentListCardID"`
-	Items             []ListCardMirrorReference `json:"Items"`
 }

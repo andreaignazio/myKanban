@@ -166,6 +166,8 @@ func NewRouter(db *gorm.DB,
 			boards.PATCH("/:boardID/cards/:cardID/moveto", listCardsHandler.MoveCardToBoard)
 			//boards.POST("/:boardID/lists/:listID/cards/inbox", inboxHandler.MirrorCardToInbox)
 
+			boards.GET("/:boardID/listcards/:listCardID/rootboard", listCardsHandler.GetRootBoardForListCard)
+
 			boards.POST("/:boardID/cards/:cardID/mirror", listCardsHandler.MirrorCardToList)
 			boards.POST("/:boardID/cards/:cardID/copy", listCardsHandler.CopyCardToList)
 			boards.POST("/:boardID/cards/:cardID/mirrortoinbox", inboxHandler.MirrorCardToInbox)
@@ -173,7 +175,6 @@ func NewRouter(db *gorm.DB,
 			boards.PATCH("/:boardID/cards/:cardID/crossmove", listCardsHandler.CrossMoveCard)
 			boards.PATCH("/:boardID/cards/crossmovebulk", listCardsHandler.BulkCrossMoveCards)
 			boards.PATCH("/:boardID/listcards/movebulk", listCardsHandler.BulkMoveListCardsInBoard)
-			boards.GET("/:boardID/listcards/:listCardID/mirrors", listCardsHandler.GetListCardMirrors)
 			boards.PATCH("/:boardID/cards/:cardID", cardsHandler.PatchCardDetails)
 			boards.PATCH("/:boardID/cards/:cardID/props", cardsHandler.PatchCardProps)
 			//boards.PATCH("/:boardID/cards/:cardID/labels", cardsHandler.PatchCardLabels)

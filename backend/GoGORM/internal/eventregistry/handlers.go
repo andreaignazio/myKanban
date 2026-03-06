@@ -65,7 +65,7 @@ func buildHandlers(auditRepo auditcontext.Reader) map[DomainEventType]EventHandl
 		EventBoardShareRequestRevoked:           NewBoardShareRequestRevokedHandler(auditRepo),
 		EventBoardAccessClaimed:                 NewBoardAccessClaimedHandler(auditRepo),
 		EventBoardListCreated:                   NewBoardListCreatedHandler(auditRepo),
-		EventBoardListDetatched:                 NewBoardListDetachedHandler(auditRepo),
+		EventBoardListDetatched:                 NewBoardListDetatchedHandler(auditRepo),
 		EventBoardListRestored:                  NewBoardListRestoredHandler(auditRepo),
 		EventBoardListPurged:                    NewBoardListPurgedHandler(auditRepo),
 		EventBoardListMoved:                     NewBoardListMovedHandler(auditRepo),
@@ -73,11 +73,11 @@ func buildHandlers(auditRepo auditcontext.Reader) map[DomainEventType]EventHandl
 		EventBoardListMirrored:                  NewBoardListMirroredHandler(auditRepo),
 		EventBoardListMirroredTarget:            NewBoardListMirroredHandler(auditRepo),
 		EventBoardListMirroredSource:            NewBoardListMirroredHandler(auditRepo),
-		EventBoardListCardDetatched:             NewBoardListCardDetatchedHandler(auditRepo),
 		EventBoardListCardMoved:                 NewBoardListCardMovedHandler(auditRepo),
 		EventBoardListCardRestored:              NewBoardListCardRestoredHandler(auditRepo),
 		EventBoardListCardPurged:                NewBoardListCardPurgedHandler(auditRepo),
-		EventBoardListCardsDetatched:            NewBoardListCardsDetatchedHandler(auditRepo),
+		EventBoardListCardDetatched:             NewBoardListCardDetatchedHandler(auditRepo),
+		EventBoardListCardsDetatched:            NewBoardListCardDetatchedHandler(auditRepo),
 	}
 }
 

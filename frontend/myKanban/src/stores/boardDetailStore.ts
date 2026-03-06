@@ -6,19 +6,19 @@ import { api } from "@/api/api";
 import { useListsStore } from "./listsStore";
 import { useCardsStore, type CrossMoveCardRequest } from "./cardsStore";
 import { useBoardsStore } from "./boardsStore";
-import type { Board, BoardEvent, BoardLabel, BoardListAccessMode, Card, CardChecklist, CardComment, CardLabelLink, Checklist, ChecklistEntry, CrossBoardMoveBoardPayload, Entry, EntryMember, ExternalRootRef, List, ListCardMovedPayload, ListCardRelation, User, UserBoard, UserWorkspace } from "./types";
+import type { Board, BoardEvent, BoardLabel, BoardListAccessMode, Card, CardChecklist, CardComment, CardLabelLink, Checklist, ChecklistEntry, CrossBoardMoveBoardPayload, Entry, EntryMember, List, ListCardMovedPayload, ListCardRelation, User, UserBoard, UserWorkspace } from "./types";
 
 import type { BoardAuditLogEvent } from "./audittypes";
-import { use } from "react";
 import { useLabelsStore } from "./labelsStore";
 import { useBoardMembersStore } from "./boardMembersStore";
 import { useUserStore } from "./userStore";
 import { useCardMembersStore } from "./CardMembersStore";
 import { useChecklistStore } from "./checklistStore";
 import { useCardCommentsStore } from "./cardCommentsStore";
-import { useExternalRefStore } from "./externaRefStore";
 import type { ShareOffer } from "./shareOfferTypes";
 import { useUiStore } from "./uiStore";
+import { useAsyncRequestStore } from "./asyncRequestStore";
+import type { AxiosResponse } from "axios";
 
 
 
@@ -62,7 +62,6 @@ export type BoardDetailPatch = {
     EntryMembers: EntryMember[]
     MovedChecklistEntriesByChecklistID?: Record<string, ChecklistEntry[]>
     CardComments?: CardComment[]
-    ExternalRootsByID: Record<string, ExternalRootRef>
     UserWorkspaceRelations?: UserWorkspace[]
     ShareOffers?: ShareOffer[]
     BoardListIdsByBoardID?: Record<string, string[]>
@@ -91,34 +90,14 @@ function uniqueIds(ids: string[]): string[] {
     return Array.from(new Set(ids));
 }
 
-function withDerivedMirrorsForCardIDs(
-    listCardById: Record<string, ListCard>,
-    cardIDs: string[]
-): Record<string, ListCard> {
-    if (cardIDs.length === 0) return listCardById
-
-    const uniqueCardIDs = Array.from(new Set(cardIDs.filter(Boolean)))
-    if (uniqueCardIDs.length === 0) return listCardById
-
-    const next = { ...listCardById }
-
-    for (const cardID of uniqueCardIDs) {
-        const instances = Object.values(next).filter((lc) => lc.CardID === cardID)
-        if (instances.length === 0) continue
-
-        for (const instance of instances) {
-            const mirrors = instances
-                .filter((candidate) => candidate.ID !== instance.ID)
-                .map((candidate) => candidate.ID)
-
-            next[instance.ID] = {
-                ...instance,
-                Mirrors: mirrors,
-            }
-        }
+function extractInvalidatedRootBoardListCardIds(payloadData: any): string[] {
+    // Canonical contract: payload.invalidations.RootBoardListCardIds
+    const canonical = payloadData?.Payload?.invalidations?.RootBoardListCardIds;
+    if (Array.isArray(canonical)) {
+        return canonical.filter((id): id is string => typeof id === "string" && id.trim() !== "");
     }
 
-    return next
+    return [];
 }
 
 type BoardDetailStore = {
@@ -130,7 +109,9 @@ type BoardDetailStore = {
     listCardIdsByListId: Record<string, string[]>
     boardListById: Record<string, BoardList>
     boardListIdsByBoardId: Record<string, string[]>
-    //rootsByRootId: Record<string, ExternalRootRef>
+
+    rootBoardIdByListCardId: Record<string, string>
+    invalidatedRootBoardListCardIds: Record<string, true>
 
     setCurrentBoardId: (boardID: string | null) => void
     getListCardIds: (listID: string) => string[]
@@ -172,7 +153,11 @@ type BoardDetailStore = {
     getListIdForBoardListId: (boardListId: string) => string | null
     getCardIdForListCardId: (listCardId: string) => string | null
     persistMoveCardInBoard: (listCardId: string, targetListID: string, fromListID: string, beforeID: string | null) => Promise<void>
-
+    fetchRootBoardForListcardId: (boardID: string, listCardID: string) => Promise<Board | null>
+    getRootBoardForListCardId: (listCardID: string) => Board | null
+    invalidateRootBoardCacheForListCards: (listCardIDs: string[]) => void
+    clearRootBoardCacheInvalidation: (listCardID: string) => void
+    applyListCardDetachEvent: (payload: BoardDetailPatch) => Promise<void>
 }
 
 export type DeltaPayload = {
@@ -193,6 +178,8 @@ export const useBoardDetailStore = create<BoardDetailStore>((set, get) => ({
     boardListById: {}, //ORDER OF LISTS IN THE BOARD
     boardListIdsByBoardId: {}, //META OF BOARDLISTS BY ID
     //rootsByRootId: {},
+    rootBoardIdByListCardId: {},
+    invalidatedRootBoardListCardIds: {},
 
     getRootListIdForCardId: (cardID) => {
         const listCardById = get().listCardById
@@ -238,7 +225,6 @@ export const useBoardDetailStore = create<BoardDetailStore>((set, get) => ({
         useUserStore.getState().mergeUsers(Object.values(payload.Users))
         useCardMembersStore.getState().replaceCardMembers(payload.CardMembers)
         useChecklistStore.getState().replaceChecklistData(payload)
-        useExternalRefStore.getState().mergeExternalRootRefs(payload.ExternalRootsByID)
 
         const boardID = payload.Board.ID
 
@@ -270,7 +256,6 @@ export const useBoardDetailStore = create<BoardDetailStore>((set, get) => ({
             listCardIdsByListId: { ...state.listCardIdsByListId, ...ListCardIdsByListId },
             boardListById: { ...state.boardListById, ...BoardListById },
             boardListIdsByBoardId: { ...state.boardListIdsByBoardId, ...BoardListIdsByBoardId },
-            // rootsByRootId: { ...state.rootsByRootId, ...payload.ExternalRootsByID }
         }))
         //console.log("Updated BoardDetailStore:", get().ListIdsByBoardId, get().CardIdsByListId)
     },
@@ -334,6 +319,11 @@ export const useBoardDetailStore = create<BoardDetailStore>((set, get) => ({
         })
     },
     async applyEventDelta(payloadData: any) {
+        const invalidatedListCardIds = extractInvalidatedRootBoardListCardIds(payloadData)
+        if (invalidatedListCardIds.length > 0) {
+            get().invalidateRootBoardCacheForListCards(invalidatedListCardIds)
+        }
+
         let payload = payloadData as DeltaPayload
         let actionType = payload.Type
         let patch = payload.Payload
@@ -441,6 +431,7 @@ export const useBoardDetailStore = create<BoardDetailStore>((set, get) => ({
             case "board.list.mirrored":
             case "board.list.mirrored.target": {
                 get().applyEventEntitiesPatch(patch)
+                get().applyMergeListCards(patch)
                 await get().applyCreateListEvent(patch)
                 break
             }
@@ -451,10 +442,7 @@ export const useBoardDetailStore = create<BoardDetailStore>((set, get) => ({
                 await get().applyAddCardList(patch)
                 break
             }
-            case "board.listcard.detatched": {
-                await get().applyDetatchCardList(patch, false)
-                break
-            }
+
             case "board.listcard.purged": {
                 await get().applyDetatchCardList(patch, false)
                 break
@@ -462,12 +450,18 @@ export const useBoardDetailStore = create<BoardDetailStore>((set, get) => ({
             case "card.mirrored":
             case "card.mirrored.target":
             case "card.mirrored.source": {
+                useCardsStore.getState().mergeCardsPatch(patch.Cards)
                 get().applyMergeListCards(patch)
                 break
             }
             case "listcard.crossboard.moved": {
                 get().applyListCardCrossBoardMove(payloadData.Payload as CrossBoardMoveBoardPayload)
-                useExternalRefStore.getState().mergeExternalRootRefs(payloadData.Payload.ExternalRootsByID)
+                break
+            }
+            case "board.listcard.detatched":
+            case "board.listcards.detatched": {
+                await get().applyDetatchCardList(patch, true)
+                //get().applyListCardDetachEvent(patch)
                 break
             }
         }
@@ -663,13 +657,19 @@ export const useBoardDetailStore = create<BoardDetailStore>((set, get) => ({
 
         const prevListCardById = get().listCardById
         const prevListCardIdsByListId = get().listCardIdsByListId
+        const prevRootBoardIdByListCardId = get().rootBoardIdByListCardId
+        const prevInvalidatedRootBoardListCardIds = get().invalidatedRootBoardListCardIds
         let nextListCardById = { ...prevListCardById }
+        const nextRootBoardIdByListCardId = { ...prevRootBoardIdByListCardId }
+        const nextInvalidatedRootBoardListCardIds = { ...prevInvalidatedRootBoardListCardIds }
 
         const nextLCIdsByListId = { ...prevListCardIdsByListId }
         const affectedListIDs = Array.from(new Set(lcPayload.map((rel) => rel.ListID)))
 
         for (const rel of lcPayload) {
             delete nextListCardById[rel.ID]
+            delete nextRootBoardIdByListCardId[rel.ID]
+            delete nextInvalidatedRootBoardListCardIds[rel.ID]
             const ids = [...(nextLCIdsByListId[rel.ListID] ?? [])]
             const idx = ids.findIndex((id) => id === rel.ID)
             if (idx !== -1) {
@@ -694,6 +694,8 @@ export const useBoardDetailStore = create<BoardDetailStore>((set, get) => ({
         set((state) => ({
             listCardById: nextListCardById,
             listCardIdsByListId: nextLCIdsByListId,
+            rootBoardIdByListCardId: nextRootBoardIdByListCardId,
+            invalidatedRootBoardListCardIds: nextInvalidatedRootBoardListCardIds,
             OpCounter: state.OpCounter + 1
 
         }))
@@ -793,14 +795,6 @@ export const useBoardDetailStore = create<BoardDetailStore>((set, get) => ({
                 })
             }
 
-            const affectedCardIDs = [
-                listCardPatch?.CardID,
-                ...(fromListCards?.map((lc) => lc.CardID) ?? []),
-                ...(toListCards?.map((lc) => lc.CardID) ?? []),
-            ].filter((id): id is string => !!id)
-
-            nextListCardById = withDerivedMirrorsForCardIDs(nextListCardById, affectedCardIDs)
-
             set((state) => ({
                 listCardById: nextListCardById,
                 listCardIdsByListId: nextListCardIdsByListId,
@@ -814,9 +808,8 @@ export const useBoardDetailStore = create<BoardDetailStore>((set, get) => ({
                 ...currentListCardById,
                 [listCardPatch.ID]: listCardPatch,
             }
-            const hydratedListCardById = withDerivedMirrorsForCardIDs(nextListCardById, [listCardPatch.CardID])
             set(() => ({
-                listCardById: hydratedListCardById
+                listCardById: nextListCardById
             }))
         }
 
@@ -989,10 +982,6 @@ export const useBoardDetailStore = create<BoardDetailStore>((set, get) => ({
         if (payload.Boards) {
             useBoardsStore.getState().mergeBoardsPatch(payload.Boards)
         }
-        if (payload.ExternalRootsByID) {
-            useExternalRefStore.getState().mergeExternalRootRefs(payload.ExternalRootsByID)
-        }
-
         const listCardById = payload.ListCardRelations.reduce((acc, lc) => {
             acc[lc.ID] = lc
             return acc
@@ -1087,6 +1076,99 @@ export const useBoardDetailStore = create<BoardDetailStore>((set, get) => ({
         return listCard ? listCard.CardID : null
     },
 
+    fetchRootBoardForListcardId: async (boardID: string, listCardID: string): Promise<Board | null> => {
+
+        const response = await useAsyncRequestStore.getState().execute<AxiosResponse<Board | null>>("listcard:rootboard:fetch",
+            () => api.get(`/boards/${boardID}/listcards/${listCardID}/rootboard`),
+            {
+                successResetDelayMs: 2000, onSuccess(result) {
+                    const board = result.data as Board | null
+                    if (!board?.ID) {
+                        set((state) => {
+                            const nextRootBoardByListCardId = { ...state.rootBoardIdByListCardId }
+                            delete nextRootBoardByListCardId[listCardID]
+
+                            const nextInvalidated = { ...state.invalidatedRootBoardListCardIds }
+                            delete nextInvalidated[listCardID]
+
+                            return {
+                                rootBoardIdByListCardId: nextRootBoardByListCardId,
+                                invalidatedRootBoardListCardIds: nextInvalidated,
+                            }
+                        })
+                        return
+                    }
+                    useBoardsStore.getState().mergeBoardsPatch({ [board.ID]: board })
+                    set((state) => {
+                        const nextInvalidated = { ...state.invalidatedRootBoardListCardIds }
+                        delete nextInvalidated[listCardID]
+
+                        return {
+                            rootBoardIdByListCardId: {
+                                ...state.rootBoardIdByListCardId,
+                                [listCardID]: board.ID
+                            },
+                            invalidatedRootBoardListCardIds: nextInvalidated,
+                        }
+                    })
+
+                },
+            }
+        )
+
+
+        return response?.data ?? null
+
+    },
+
+    getRootBoardForListCardId: (listCardID: string): Board | null => {
+        const rootBoardId = get().rootBoardIdByListCardId[listCardID]
+        if (!rootBoardId) return null
+        const board = useBoardsStore.getState().boardsById[rootBoardId]
+        return board ?? null
+    },
+
+    invalidateRootBoardCacheForListCards: (listCardIDs: string[]) => {
+        if (listCardIDs.length === 0) return
+        set((state) => {
+            const nextInvalidated = { ...state.invalidatedRootBoardListCardIds }
+            for (const id of listCardIDs) {
+                if (!id) continue
+                nextInvalidated[id] = true
+            }
+            return { invalidatedRootBoardListCardIds: nextInvalidated }
+        })
+    },
+
+    clearRootBoardCacheInvalidation: (listCardID: string) => {
+        if (!listCardID) return
+        set((state) => {
+            const nextInvalidated = { ...state.invalidatedRootBoardListCardIds }
+            delete nextInvalidated[listCardID]
+            return { invalidatedRootBoardListCardIds: nextInvalidated }
+        })
+    },
+
+    applyListCardDetachEvent: (payload: BoardDetailPatch) => {
+        const lcPayload = payload.ListCardRelations
+        if (!lcPayload || lcPayload.length < 1) return
+
+        const nextlistCardById = { ...get().listCardById }
+        const nextListCardIdsByListId = { ...get().listCardIdsByListId }
+        lcPayload.forEach((rel) => {
+            delete nextlistCardById[rel.ID]
+            const ids = nextListCardIdsByListId[rel.ListID] ?? []
+            const idx = ids.findIndex((id) => id === rel.ID)
+            if (idx !== -1) {
+                ids.splice(idx, 1)
+                nextListCardIdsByListId[rel.ListID] = ids
+            }
+        })
+        set((state) => ({
+            listCardById: nextlistCardById,
+            listCardIdsByListId: nextListCardIdsByListId,
+        }))
+    },
 
 }
 

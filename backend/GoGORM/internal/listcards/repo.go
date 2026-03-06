@@ -58,18 +58,6 @@ func (r *GormListCardsRepo) UpsertListCardByIdTX(ctx context.Context, db *gorm.D
 	return nil
 }
 
-func (r *GormListCardsRepo) DeleteCardListTX(ctx context.Context, db *gorm.DB, listCard *models.ListCard) error {
-	if err := db.WithContext(ctx).
-		Table("list_cards").
-		Where("list_id = ? AND card_id = ?", listCard.ListID, listCard.CardID).
-		Clauses(clause.Returning{}).
-		Delete(listCard).
-		Scan(listCard).Error; err != nil {
-		return err
-	}
-	return nil
-}
-
 func (r *GormListCardsRepo) GetListCardByListAndCardTX(ctx context.Context, db *gorm.DB, listID, cardID uuid.UUID, includeDeleted bool) (*models.ListCard, error) {
 	var listCard models.ListCard
 	query := db.WithContext(ctx).Table("list_cards")
@@ -286,4 +274,57 @@ func (r *GormListCardsRepo) GetListCardsByRootIDTX(ctx context.Context, db *gorm
 		return nil, err
 	}
 	return listCards, nil
+}
+
+func (r *GormListCardsRepo) GetListCardsIdsByRootIdsTX(ctx context.Context, db *gorm.DB, rootIDs []uuid.UUID, includeDeleted bool) ([]uuid.UUID, error) {
+	if len(rootIDs) == 0 {
+		return []uuid.UUID{}, nil
+	}
+	var ids []uuid.UUID
+	query := db.WithContext(ctx).Table("list_cards").Select("id")
+	if includeDeleted {
+		query = query.Unscoped()
+	} else {
+		query = query.Where("deleted_at IS NULL")
+	}
+	if err := query.Where("root_id IN ?", rootIDs).Find(&ids).Error; err != nil {
+		return nil, err
+	}
+	return ids, nil
+}
+
+func (r *GormListCardsRepo) GetListCardsByIdsTX(ctx context.Context, db *gorm.DB, listCardIds []uuid.UUID, includeDeleted bool) ([]models.ListCard, error) {
+	return r.GetListCardsByIDsTX(ctx, db, listCardIds, includeDeleted)
+}
+
+func (r *GormListCardsRepo) BulkDeleteListCardsByIdsTX(ctx context.Context, tx *gorm.DB, idsToDelete []uuid.UUID) ([]models.ListCard, error) {
+	if len(idsToDelete) == 0 {
+		return []models.ListCard{}, nil
+	}
+	var deletedListCards []models.ListCard
+	if err := tx.WithContext(ctx).
+		Table("list_cards").
+		Where("id IN ?", idsToDelete).
+		Clauses(clause.Returning{}).
+		Delete(&models.ListCard{}).
+		Scan(&deletedListCards).Error; err != nil {
+		return nil, err
+	}
+	return deletedListCards, nil
+}
+
+func (r *GormListCardsRepo) GetListCardByIDTX(ctx context.Context, db *gorm.DB, listCardID uuid.UUID, includeDeleted bool) (*models.ListCard, error) {
+	listCard := &models.ListCard{}
+	query := db.WithContext(ctx).Table("list_cards")
+	if includeDeleted {
+		query = query.Unscoped()
+	} else {
+		query = query.Where("deleted_at IS NULL")
+	}
+
+	if err := query.Where("id = ?", listCardID).Take(listCard).Error; err != nil {
+		return nil, err
+	}
+
+	return listCard, nil
 }

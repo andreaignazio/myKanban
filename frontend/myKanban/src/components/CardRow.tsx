@@ -5,9 +5,9 @@ import { useCardsStore } from "@/stores/cardsStore"
 import { useNavigate, useLocation, useParams } from "react-router-dom"
 
 import { TrashIcon } from "@heroicons/react/24/outline"
-import { useEffect, useRef, useState } from "react"
+import { use, useEffect, useRef, useState } from "react"
 
-import type { Card } from "@/stores/types"
+import type { Board, Card } from "@/stores/types"
 import { useLabelsStore } from "@/stores/labelsStore"
 import { useUserWatchStore } from "@/stores/userWatchStore"
 import { ArchiveIcon, Clock, EyeIcon, List, SquareCheckBig, SquarePenIcon, TextAlignStartIcon } from "lucide-react"
@@ -59,15 +59,14 @@ export const CardRow = ({ boardID, listId, listCardID: listCardID, cardId, index
     const cardsStore = useCardsStore()
 
     const listCardsById = useBoardDetailStore((state) => state.listCardById)
-    const isListCardInBoard = useBoardDetailStore((state) => state.isListCardInBoard)
     const listcard = listCardsById[listCardID ?? ""]
-    const rootsByRootId = useExternalRefStore((state) => state.rootsByRootId)
 
     const navigate = useNavigate()
 
     const location = useLocation()
-    const { workspaceId, boardId } = useParams<{ workspaceId: string; boardId: string }>()
+    let { workspaceId, boardId } = useParams<{ workspaceId: string; boardId: string }>()
 
+    boardId = boardID ?? boardId
 
     const listID = listId ?? listcard?.ListID ?? ""
     const cardID = cardId ?? listCardsById[listCardID ?? ""]?.CardID ?? ""
@@ -109,20 +108,17 @@ export const CardRow = ({ boardID, listId, listCardID: listCardID, cardId, index
         ? (rootListCardId ?? effectiveListCardID)
         : (listcard?.RootID ?? rootListCardId ?? effectiveListCardID)
     const isMirrorCard = !!effectiveListCardID && !!resolvedRootListCardID && effectiveListCardID !== resolvedRootListCardID
-    const externalRoot = resolvedRootListCardID ? rootsByRootId[resolvedRootListCardID] : undefined
-    const rootIsInCurrentBoard = isMirrorCard && !!boardId && !!resolvedRootListCardID
-        ? isListCardInBoard(resolvedRootListCardID, boardId)
-        : false
-    const rootBoardID = isMirrorCard
-        ? (rootIsInCurrentBoard ? (boardId ?? "") : (externalRoot?.BoardID ?? ""))
-        : ""
+
+
+    /*
+    const rootBoardID = isMirrorCard ? (boardId ?? boardID ?? "") : ""
     const rootBoard = useBoardsStore((state) => rootBoardID ? state.boardsById[rootBoardID] : undefined)
     const rootBoardBackgroundType = rootBoard?.Props?.Background?.Type ?? null
     const rootBoardBgImage = rootBoardBackgroundType === "image" ? rootBoard?.Props?.Background?.Image?.Url : undefined
     const rootBoardBgColorToken = rootBoardBackgroundType === "color" ? rootBoard?.Props?.Background?.Color?.Token : undefined
     const rootBoardBgColorClass = rootBoardBgColorToken ? getClassNamesForColorToken(rootBoardBgColorToken) : undefined
     const fallbackIndex = getStableIndexFromString(rootBoard?.ID ?? rootBoardID ?? "fallback", gradientColorTokens.length)
-    const rootBoardFallbackGradientClass = gradientColorTokens[fallbackIndex]?.className
+    const rootBoardFallbackGradientClass = gradientColorTokens[fallbackIndex]?.className*/
 
 
     const done = card?.Done
@@ -202,6 +198,48 @@ export const CardRow = ({ boardID, listId, listCardID: listCardID, cardId, index
 
     const rowHeight = 36
 
+    const fetchRootBoardForListcardId = useBoardDetailStore((state) => state.fetchRootBoardForListcardId)
+    const getRootBoardForListcardId = useBoardDetailStore((state) => state.getRootBoardForListCardId)
+    const rootBoardIdByListCardId = useBoardDetailStore((state) => state.rootBoardIdByListCardId)
+    const invalidatedRootBoardListCardIds = useBoardDetailStore((state) => state.invalidatedRootBoardListCardIds)
+    const [effectiveRootBoard, setEffectiveRootBoard] = useState<Board | undefined>(undefined)
+
+    const [isValidRootBoard, setIsValidRootBoard] = useState(false)
+    const isRootBoardCacheInvalidated = !!effectiveListCardID && !!invalidatedRootBoardListCardIds[effectiveListCardID]
+
+
+    useEffect(() => {
+        if (!isMirrorCard) return
+        if (!effectiveListCardID) return
+        if (!boardId) return
+
+        if (effectiveRootBoard && isValidRootBoard && !isRootBoardCacheInvalidated) return
+
+        fetchRootBoardForListcardId(boardId, effectiveListCardID)
+    }, [effectiveListCardID, boardId, fetchRootBoardForListcardId, isMirrorCard, effectiveRootBoard, isValidRootBoard, isRootBoardCacheInvalidated])
+
+    useEffect(() => {
+        if (!effectiveListCardID) return
+        if (!boardId) return
+        if (!isMirrorCard) {
+            setEffectiveRootBoard(undefined)
+            setIsValidRootBoard(false)
+            return
+        }
+
+        const rootBoard = getRootBoardForListcardId(effectiveListCardID)
+        if (rootBoard) {
+            setEffectiveRootBoard(rootBoard)
+            setIsValidRootBoard(true)
+        } else {
+            setIsValidRootBoard(false)
+        }
+    }, [effectiveListCardID, boardId, getRootBoardForListcardId, rootBoardIdByListCardId, isMirrorCard])
+
+
+    const { backgroundType: rootBoardBackgroundType, backgroundImageUrl: rootBoardBgImage, backgroundColorClassName: rootBoardBgColorClass, } = useBoardBackground({ board: effectiveRootBoard })
+
+
     return (
 
 
@@ -236,13 +274,13 @@ export const CardRow = ({ boardID, listId, listCardID: listCardID, cardId, index
                                 mirrorBackdropBackgroundType={rootBoardBackgroundType}
                                 mirrorBackdropBgImage={rootBoardBgImage}
                                 mirrorBackdropBgColorClass={rootBoardBgColorClass}
-                                mirrorBackdropFallbackGradientClass={rootBoardFallbackGradientClass}
+
                                 ref={cardRowRef}>
 
 
                                 {mode === "detailed" && (
                                     <Mirrors
-                                        listcardID={listcard?.ID ?? rootListCardId ?? ""}
+                                        board={effectiveRootBoard}
                                         mode={source}
                                         placement="cover"
                                     />
@@ -250,7 +288,7 @@ export const CardRow = ({ boardID, listId, listCardID: listCardID, cardId, index
 
                                 <div className="flex flex-col ">
 
-                                    {mode !== "detailed" && <Mirrors listcardID={listcard?.ID ?? rootListCardId ?? ""} mode={source} />}
+                                    {mode !== "detailed" && <Mirrors board={effectiveRootBoard} mode={source} />}
 
                                     <CardFieldsLabels hasLabels={cardHasLabels} cardID={cardID}
                                         boardID={boardId} mode={source}
@@ -260,6 +298,7 @@ export const CardRow = ({ boardID, listId, listCardID: listCardID, cardId, index
                                         minHeight={rowHeight}
                                         title={title || ""} done={done}
                                         editMode={editMode} setDone={handleDoneToggle} />
+                                    {/*<span className="text-xs" >{rootID}</span>*/}
                                 </div>
 
                                 <CardRowFields cardID={cardID!} />
@@ -333,9 +372,9 @@ import { CardEditMenu } from "./modals/cardEditMenu"
 import { useBuildPublicURL } from "@/hooks/useBuildPublicURL"
 import { useCardActionRegistry } from "@/actionRegistry/cardActionRegistry"
 import { CardRowCoverWrapper } from "./cardRowElements/CardRowCoverWrapper"
-import { useExternalRefStore } from "@/stores/externaRefStore"
 import { useBoardsStore } from "@/stores/boardsStore"
 import { getClassNamesForColorToken, gradientColorTokens } from "@/domain/colorTokens"
+import { useBoardBackground } from "@/hooks/useBoardBackground"
 
 
 

@@ -323,6 +323,29 @@ func (r *GormEventRepository) GetUserActivityPaginated(ctx context.Context, acto
 	}, nil
 }
 
+func (r *GormEventRepository) GetListCardsByCardIDs(ctx context.Context, cardIDs []uuid.UUID, includeDeleted bool) ([]models.ListCard, error) {
+	if len(cardIDs) == 0 {
+		return []models.ListCard{}, nil
+	}
+
+	rows := make([]models.ListCard, 0, len(cardIDs))
+	query := r.db.WithContext(ctx).Table("list_cards lc")
+	if includeDeleted {
+		query = query.Unscoped()
+	} else {
+		query = query.Where("lc.deleted_at IS NULL")
+	}
+
+	if err := query.
+		Where("lc.card_id IN ?", cardIDs).
+		Order("lc.card_id, lc.created_at ASC, lc.id ASC").
+		Find(&rows).Error; err != nil {
+		return nil, err
+	}
+
+	return rows, nil
+}
+
 func (r *GormEventRepository) GetAuditEntitiesDetails(ctx context.Context, entityIDsByType map[string][]uuid.UUID) (AuditEntityRows, error) {
 	rows := AuditEntityRows{}
 
@@ -533,6 +556,68 @@ func (r *GormEventRepository) ResolveBoardConsumersForSourceBoardMirrors(ctx con
 		Where("root_bl.board_id = ?", sourceBoardID).
 		Where("bl.deleted_at IS NULL").
 		Where("root_bl.deleted_at IS NULL").
+		Find(&result).Error; err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func (r *GormEventRepository) ResolveBoardConsumersForSourceBoardCardMirrors(ctx context.Context, sourceBoardID uuid.UUID) ([]uuid.UUID, error) {
+	if sourceBoardID == uuid.Nil {
+		return []uuid.UUID{}, nil
+	}
+
+	result := make([]uuid.UUID, 0)
+	if err := r.db.WithContext(ctx).
+		Table("list_cards lc_consumer").
+		Distinct("bl_consumer.board_id").
+		Joins("JOIN list_cards lc_root ON lc_root.id = lc_consumer.root_id").
+		Joins("JOIN board_lists bl_root ON bl_root.list_id = lc_root.list_id").
+		Joins("JOIN board_lists bl_consumer ON bl_consumer.list_id = lc_consumer.list_id").
+		Where("bl_root.board_id = ?", sourceBoardID).
+		Where("lc_consumer.deleted_at IS NULL").
+		Where("lc_root.deleted_at IS NULL").
+		Where("bl_root.deleted_at IS NULL").
+		Where("bl_consumer.deleted_at IS NULL").
+		Find(&result).Error; err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func (r *GormEventRepository) ResolveListCardIDsByBoardID(ctx context.Context, boardID uuid.UUID) ([]uuid.UUID, error) {
+	if boardID == uuid.Nil {
+		return []uuid.UUID{}, nil
+	}
+
+	result := make([]uuid.UUID, 0)
+	if err := r.db.WithContext(ctx).
+		Table("board_lists bl").
+		Distinct("lc.id").
+		Joins("JOIN list_cards lc ON lc.list_id = bl.list_id").
+		Where("bl.board_id = ?", boardID).
+		Where("bl.deleted_at IS NULL").
+		Where("lc.deleted_at IS NULL").
+		Find(&result).Error; err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func (r *GormEventRepository) ResolveListCardIDsByRootID(ctx context.Context, rootListCardID uuid.UUID) ([]uuid.UUID, error) {
+	if rootListCardID == uuid.Nil {
+		return []uuid.UUID{}, nil
+	}
+
+	result := make([]uuid.UUID, 0)
+	if err := r.db.WithContext(ctx).
+		Table("list_cards lc").
+		Distinct("lc.id").
+		Where("lc.root_id = ?", rootListCardID).
+		Where("lc.deleted_at IS NULL").
 		Find(&result).Error; err != nil {
 		return nil, err
 	}

@@ -33,14 +33,16 @@ type ListCardsService struct {
 	PositionHelper   PositionHelper
 	MembershipRepo   MembershipRepo
 	CapabilitiesRepo CapabilitiesRepo
+	BoardsRepo       BoardRepo
 	IncludeDeleted   bool
 }
 
-func NewListCardsService(db *gorm.DB, hub *ws.Hub, eventRegistry *EventRegistry.EventRegistryService, listCardsRepo ListCardsRepo, cardsRepo CardsRepo, cardCommentsRepo CardCommentsRepo, cardMembersRepo CardMembersRepo, boardLabelsRepo BoardLabelsRepo, checklistRepo ChecklistRepo, listRepo ListRepo, boardListRepo BoardListRepo, positionHelper PositionHelper, membershipRepo MembershipRepo, capabilitiesRepo CapabilitiesRepo) *ListCardsService {
-	return &ListCardsService{db: db, Hub: hub, EventRegistry: eventRegistry, ListCardsRepo: listCardsRepo, CardsRepo: cardsRepo, CardCommentsRepo: cardCommentsRepo, CardMembersRepo: cardMembersRepo, BoardLabelsRepo: boardLabelsRepo, ChecklistRepo: checklistRepo, ListRepo: listRepo, BoardListRepo: boardListRepo, PositionHelper: positionHelper, MembershipRepo: membershipRepo, CapabilitiesRepo: capabilitiesRepo, IncludeDeleted: false}
+func NewListCardsService(db *gorm.DB, hub *ws.Hub, eventRegistry *EventRegistry.EventRegistryService, listCardsRepo ListCardsRepo, cardsRepo CardsRepo, cardCommentsRepo CardCommentsRepo, cardMembersRepo CardMembersRepo, boardLabelsRepo BoardLabelsRepo, checklistRepo ChecklistRepo, listRepo ListRepo, boardListRepo BoardListRepo, positionHelper PositionHelper, membershipRepo MembershipRepo, capabilitiesRepo CapabilitiesRepo, boardsRepo BoardRepo) *ListCardsService {
+	return &ListCardsService{db: db, Hub: hub, EventRegistry: eventRegistry, ListCardsRepo: listCardsRepo, CardsRepo: cardsRepo, CardCommentsRepo: cardCommentsRepo, CardMembersRepo: cardMembersRepo, BoardLabelsRepo: boardLabelsRepo, ChecklistRepo: checklistRepo, ListRepo: listRepo, BoardListRepo: boardListRepo, PositionHelper: positionHelper, MembershipRepo: membershipRepo, CapabilitiesRepo: capabilitiesRepo, BoardsRepo: boardsRepo, IncludeDeleted: false}
 }
 
 func (s *ListCardsService) HydrateListCardResponseMirrors(ctx context.Context, relations []dto.ListCardResponse) ([]dto.ListCardResponse, error) {
+	_ = ctx
 	if len(relations) == 0 {
 		return relations, nil
 	}
@@ -48,137 +50,14 @@ func (s *ListCardsService) HydrateListCardResponseMirrors(ctx context.Context, r
 	next := make([]dto.ListCardResponse, len(relations))
 	copy(next, relations)
 
-	cardIDSet := make(map[uuid.UUID]struct{}, len(next))
-	cardIDs := make([]uuid.UUID, 0, len(next))
 	for i := range next {
 		rel := &next[i]
 		if rel.RootID == uuid.Nil {
 			rel.RootID = rel.ID
 		}
-		rel.Mirrors = []uuid.UUID{}
-		if rel.CardID == uuid.Nil {
-			continue
-		}
-		if _, ok := cardIDSet[rel.CardID]; ok {
-			continue
-		}
-		cardIDSet[rel.CardID] = struct{}{}
-		cardIDs = append(cardIDs, rel.CardID)
-	}
-
-	if len(cardIDs) == 0 {
-		return next, nil
-	}
-
-	instances, err := s.ListCardsRepo.GetListCardsByCardIDsTX(ctx, s.db, cardIDs, s.IncludeDeleted)
-	if err != nil {
-		return nil, domainerr.MapRepoErr(err, true)
-	}
-
-	instancesByCardID := make(map[uuid.UUID][]models.ListCard)
-	for i := range instances {
-		lc := instances[i]
-		instancesByCardID[lc.CardID] = append(instancesByCardID[lc.CardID], lc)
-	}
-
-	for i := range next {
-		rel := &next[i]
-		if rel.CardID == uuid.Nil || rel.ID == uuid.Nil {
-			continue
-		}
-		allInstances := instancesByCardID[rel.CardID]
-		mirrors := make([]uuid.UUID, 0, len(allInstances))
-		for _, instance := range allInstances {
-			if instance.ID == rel.ID {
-				continue
-			}
-			mirrors = append(mirrors, instance.ID)
-		}
-		rel.Mirrors = mirrors
 	}
 
 	return next, nil
-}
-
-type ListCardsRepo interface {
-	CreateCardListTX(ctx context.Context, db *gorm.DB, listCard *models.ListCard) error
-	DeleteCardListTX(ctx context.Context, db *gorm.DB, listCard *models.ListCard) error
-	GetListCardByListAndCardTX(ctx context.Context, db *gorm.DB, listID, cardID uuid.UUID, includeDeleted bool) (*models.ListCard, error)
-	GetAnyListCardByCardIDTX(ctx context.Context, db *gorm.DB, cardID uuid.UUID, includeDeleted bool) (*models.ListCard, error)
-	GetCardsInList(ctx context.Context, listID uuid.UUID, includeDeleted bool) ([]models.ListCard, error)
-	GetListCardsDetail(ctx context.Context, listID uuid.UUID, includeDeleted bool) ([]ListCardDetail, error)
-	GetListCardsByCardIDsTX(ctx context.Context, db *gorm.DB, cardIDs []uuid.UUID, includeDeleted bool) ([]models.ListCard, error)
-	BulkUpsertListCardsPosTX(ctx context.Context, db *gorm.DB, listCards []models.ListCard) error
-	BulkDeleteListCardsTX(ctx context.Context,
-		db *gorm.DB, listID uuid.UUID, cardIDs []uuid.UUID) ([]models.ListCard, error)
-	GetListCardByListIDsTX(ctx context.Context, db *gorm.DB, listIDs []uuid.UUID) ([]models.ListCard, error)
-	GetListCardsByIDsTX(ctx context.Context, db *gorm.DB, listCardIDs []uuid.UUID, includeDeleted bool) ([]models.ListCard, error)
-	UpsertListCardByIdTX(ctx context.Context, db *gorm.DB, listCard *models.ListCard) error
-	GetListCardsByRootIDTX(ctx context.Context, db *gorm.DB, rootID uuid.UUID, includeDeleted bool) ([]models.ListCard, error)
-}
-
-type CapabilitiesRepo interface {
-	CanEditCardInBoard(ctx context.Context, db *gorm.DB, userID, boardID, cardID uuid.UUID, roles []string, includeDeleted bool) (*bool, error)
-	CanAccessListInBoard(ctx context.Context, db *gorm.DB,
-		userID, boardID, listID uuid.UUID, roles []string, accessMode string, includeDeleted bool) (*bool, error)
-}
-
-type CardsRepo interface {
-	CreateCard(ctx context.Context, db *gorm.DB, card *models.Card) error
-	CreateCardTX(ctx context.Context, tx *gorm.DB, card *models.Card) error
-	GetCardByIDTX(ctx context.Context, tx *gorm.DB, cardID uuid.UUID, includeDeleted bool) (*models.Card, error)
-}
-
-type CardCommentsRepo interface {
-	GetCommentsByCardIDTX(ctx context.Context, tx *gorm.DB, cardID uuid.UUID, includeDeleted bool) ([]models.CardComment, error)
-	CreateCommentTX(ctx context.Context, tx *gorm.DB, comment *models.CardComment) error
-	BulkCreateCommentTX(ctx context.Context, tx *gorm.DB, comments []models.CardComment) error
-}
-
-type CardMembersRepo interface {
-	GetMembersByCardIDTX(ctx context.Context, tx *gorm.DB, cardID uuid.UUID, includeDeleted bool) ([]models.CardMember, error)
-	CreateMemberLinkTX(ctx context.Context, tx *gorm.DB, member *models.CardMember) error
-	BulkCreateCardMembersLinkTX(ctx context.Context, tx *gorm.DB, members []models.CardMember) error
-}
-
-type BoardLabelsRepo interface {
-	GetLabelsByCardIDTX(ctx context.Context, tx *gorm.DB, cardID uuid.UUID, includeDeleted bool) ([]models.CardLabelLink, error)
-	GetLabelsByBoardIDTX(ctx context.Context, tx *gorm.DB, boardID uuid.UUID, includeDeleted bool) ([]models.BoardLabel, error)
-	CreateLabelLinkTX(ctx context.Context, tx *gorm.DB, link *models.CardLabelLink) error
-	BulkCreateLabelsTX(ctx context.Context, tx *gorm.DB, labels []models.BoardLabel) error
-	BulkCreateLabelLinksTX(ctx context.Context, tx *gorm.DB, links []models.CardLabelLink) error
-}
-
-type ChecklistRepo interface {
-	GetChecklistsByCardIDTX(ctx context.Context, tx *gorm.DB, cardID uuid.UUID, includeDeleted bool) ([]models.Checklist, error)
-	GetEntriesByCardIDTX(ctx context.Context, tx *gorm.DB, cardID uuid.UUID, includeDeleted bool) ([]models.Entry, error)
-	GetCardChecklistsByCardIDTX(ctx context.Context, tx *gorm.DB, cardID uuid.UUID, includeDeleted bool) ([]models.CardChecklist, error)
-	GetChecklistEntriesByCardIDTX(ctx context.Context, tx *gorm.DB, cardID uuid.UUID, includeDeleted bool) ([]models.ChecklistEntry, error)
-	BulkCreateChecklistsTX(ctx context.Context, tx *gorm.DB, checklists []models.Checklist) error
-	BulkCreateEntriesTX(ctx context.Context, tx *gorm.DB, entries []models.Entry) error
-	BulkCreateCardChecklistsTX(ctx context.Context, tx *gorm.DB, cardChecklists []models.CardChecklist) error
-	BulkCreateChecklistEntriesTX(ctx context.Context, tx *gorm.DB, checklistEntries []models.ChecklistEntry) error
-}
-
-type MembershipRepo interface {
-	GetUserRole(ctx context.Context, userID, boardID uuid.UUID, includeDeleted bool) (string, error)
-}
-
-type ListRepo interface {
-	GetListMeta(ctx context.Context, listID uuid.UUID, includeDeleted bool) (*models.List, error)
-}
-
-type BoardListRepo interface {
-	GetBoardList(ctx context.Context, boardID, listID uuid.UUID, includeDeleted bool) (*models.BoardList, error)
-}
-
-type PositionHelper interface {
-	CardPosAtListEnd(ctx context.Context, listID uuid.UUID) (string, error)
-	CardPosAtListStart(ctx context.Context, listID uuid.UUID) (string, error)
-	CardPosAfterID(ctx context.Context, listID, afterID uuid.UUID) (string, error)
-	CardPosBeforeID(ctx context.Context, listID, afterID uuid.UUID) (string, error)
-	BulkCardPosAfterID(ctx context.Context, cardIDs []uuid.UUID, sourceListId uuid.UUID,
-		targetListID, afterID uuid.UUID, isCrossList bool) ([]string, error)
 }
 
 func (s *ListCardsService) CreateCardInList(ctx context.Context, userID, workspaceID, boardID, listID uuid.UUID,
@@ -363,177 +242,16 @@ func (s *ListCardsService) GetListDetailPatch(ctx context.Context, userID, board
 		listCardRelations = append(listCardRelations, dto.ListCardToResponse(&listCard))
 	}
 
-	cardIDSet := make(map[uuid.UUID]struct{}, len(listCardRelations))
-	cardIDs := make([]uuid.UUID, 0, len(listCardRelations))
-	for _, rel := range listCardRelations {
-		if _, ok := cardIDSet[rel.CardID]; ok {
-			continue
-		}
-		cardIDSet[rel.CardID] = struct{}{}
-		cardIDs = append(cardIDs, rel.CardID)
-	}
-
-	instancesByCardID := make(map[uuid.UUID][]models.ListCard)
-	if len(cardIDs) > 0 {
-		allInstances, err := s.ListCardsRepo.GetListCardsByCardIDsTX(ctx, s.db, cardIDs, s.IncludeDeleted)
-		if err != nil {
-			return nil, domainerr.MapRepoErr(err, true)
-		}
-		for i := range allInstances {
-			lc := allInstances[i]
-			instancesByCardID[lc.CardID] = append(instancesByCardID[lc.CardID], lc)
-		}
-	}
-
 	for i := range listCardRelations {
 		rel := &listCardRelations[i]
 		if rel.RootID == uuid.Nil {
 			rel.RootID = rel.ID
 		}
-		instances := instancesByCardID[rel.CardID]
-		mirrors := make([]uuid.UUID, 0, len(instances))
-		for _, inst := range instances {
-			if inst.ID == rel.ID {
-				continue
-			}
-			mirrors = append(mirrors, inst.ID)
-		}
-		rel.Mirrors = mirrors
 	}
 
 	return &ListDetailPatchResponse{
 		Cards:             cards,
 		ListCardRelations: listCardRelations,
-	}, nil
-}
-
-type listCardMirrorReferenceRow struct {
-	BoardListID    uuid.UUID `gorm:"column:board_list_id"`
-	BoardID        uuid.UUID `gorm:"column:board_id"`
-	WorkspaceID    uuid.UUID `gorm:"column:workspace_id"`
-	BoardName      string    `gorm:"column:board_name"`
-	IsRootList     bool      `gorm:"column:is_root_list"`
-	ListCardID     uuid.UUID `gorm:"column:list_card_id"`
-	RootListCardID uuid.UUID `gorm:"column:root_list_card_id"`
-	ListID         uuid.UUID `gorm:"column:list_id"`
-	ListTitle      string    `gorm:"column:list_title"`
-	CardID         uuid.UUID `gorm:"column:card_id"`
-	CardTitle      string    `gorm:"column:card_title"`
-}
-
-func (s *ListCardsService) GetListCardMirrors(ctx context.Context, userID, boardID, listCardID uuid.UUID) (*ListCardMirrorsResponse, error) {
-	if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Viewer, s.IncludeDeleted); err != nil {
-		return nil, err
-	}
-
-	currentRows, err := s.ListCardsRepo.GetListCardsByIDsTX(ctx, s.db, []uuid.UUID{listCardID}, s.IncludeDeleted)
-	if err != nil {
-		return nil, domainerr.MapRepoErr(err, true)
-	}
-	if len(currentRows) == 0 {
-		return nil, domainerr.ErrNotFound
-	}
-	current := currentRows[0]
-
-	if _, err := s.BoardListRepo.GetBoardList(ctx, boardID, current.ListID, s.IncludeDeleted); err != nil {
-		return nil, domainerr.MapRepoErr(err, true)
-	}
-
-	rootID := current.RootID
-	if rootID == uuid.Nil {
-		rootID = current.ID
-	}
-
-	instances, err := s.ListCardsRepo.GetListCardsByRootIDTX(ctx, s.db, rootID, s.IncludeDeleted)
-	if err != nil {
-		return nil, domainerr.MapRepoErr(err, true)
-	}
-	if len(instances) == 0 {
-		return &ListCardMirrorsResponse{
-			RootListCardID:    rootID,
-			CurrentListCardID: current.ID,
-			Items:             []ListCardMirrorReference{},
-		}, nil
-	}
-
-	instanceIDs := make([]uuid.UUID, 0, len(instances))
-	for i := range instances {
-		instanceIDs = append(instanceIDs, instances[i].ID)
-	}
-
-	rows := make([]listCardMirrorReferenceRow, 0)
-	query := s.db.WithContext(ctx).Table("list_cards lc")
-	if s.IncludeDeleted {
-		query = query.Unscoped()
-	} else {
-		query = query.Where("lc.deleted_at IS NULL").
-			Where("bl.deleted_at IS NULL").
-			Where("b.deleted_at IS NULL").
-			Where("l.deleted_at IS NULL").
-			Where("c.deleted_at IS NULL")
-	}
-
-	if err := query.
-		Select(`
-			bl.id AS board_list_id,
-			bl.board_id AS board_id,
-			b.workspace_id AS workspace_id,
-			b.name AS board_name,
-			(bl.id = bl.root_id) AS is_root_list,
-			lc.id AS list_card_id,
-			lc.root_id AS root_list_card_id,
-			lc.list_id AS list_id,
-			l.title AS list_title,
-			lc.card_id AS card_id,
-			c.title AS card_title
-		`).
-		Joins("JOIN board_lists bl ON bl.list_id = lc.list_id").
-		Joins("JOIN boards b ON b.id = bl.board_id").
-		Joins("JOIN lists l ON l.id = lc.list_id").
-		Joins("JOIN cards c ON c.id = lc.card_id").
-		Where("lc.id IN ?", instanceIDs).
-		Order("b.name ASC, l.title ASC, c.title ASC, lc.created_at ASC, bl.created_at ASC").
-		Scan(&rows).Error; err != nil {
-		return nil, domainerr.MapRepoErr(err, false)
-	}
-
-	items := make([]ListCardMirrorReference, 0, len(rows))
-	for i := range rows {
-		row := rows[i]
-		role, roleErr := s.MembershipRepo.GetUserRole(ctx, userID, row.BoardID, s.IncludeDeleted)
-		if roleErr != nil {
-			continue
-		}
-		if _, roleErr = domainerr.ParseAndCheckRole(role, rbac.Viewer); roleErr != nil {
-			continue
-		}
-
-		resolvedRootID := row.RootListCardID
-		if resolvedRootID == uuid.Nil {
-			resolvedRootID = row.ListCardID
-		}
-
-		items = append(items, ListCardMirrorReference{
-			BoardListID:    row.BoardListID,
-			BoardID:        row.BoardID,
-			WorkspaceID:    row.WorkspaceID,
-			BoardName:      row.BoardName,
-			IsRootList:     row.IsRootList,
-			ListCardID:     row.ListCardID,
-			RootListCardID: resolvedRootID,
-			ListID:         row.ListID,
-			ListTitle:      row.ListTitle,
-			CardID:         row.CardID,
-			CardTitle:      row.CardTitle,
-			IsRoot:         row.ListCardID == rootID,
-			IsCurrent:      row.ListCardID == current.ID,
-		})
-	}
-
-	return &ListCardMirrorsResponse{
-		RootListCardID:    rootID,
-		CurrentListCardID: current.ID,
-		Items:             items,
 	}, nil
 }
 
@@ -725,63 +443,6 @@ func (s *ListCardsService) CrossMoveCard(ctx context.Context,
 		})
 	}
 	return targetListCard, sourceListCard, movePayload, nil
-}
-
-func (s *ListCardsService) DetatchCardFromList(ctx context.Context, userID, boardID, listID, cardID uuid.UUID) (*models.ListCard, error) {
-
-	if ok, err := s.CapabilitiesRepo.CanAccessListInBoard(ctx, s.db, userID, boardID, listID, rbac.AllowedAtLeast(rbac.Member), rbac.BoardListEditable.String(), s.IncludeDeleted); err != nil {
-		return nil, domainerr.MapRepoErr(err, false)
-	} else if !*ok {
-		return nil, domainerr.ErrForbidden
-	}
-
-	listCard := &models.ListCard{
-		CardID: cardID,
-		ListID: listID,
-	}
-	err := s.ListCardsRepo.DeleteCardListTX(ctx, s.db, listCard)
-	if err != nil {
-		fmt.Println("error 4")
-
-		return nil, domainerr.MapRepoErr(err, false)
-	}
-	return listCard, nil
-}
-
-func (s *ListCardsService) BulkDetatchCardsFromList(ctx context.Context, userID, boardID, listID uuid.UUID) ([]models.ListCard, error) {
-
-	if ok, err := s.CapabilitiesRepo.CanAccessListInBoard(ctx, s.db, userID, boardID, listID, rbac.AllowedAtLeast(rbac.Member), rbac.BoardListEditable.String(), s.IncludeDeleted); err != nil {
-		return nil, domainerr.MapRepoErr(err, false)
-	} else if !*ok {
-		return nil, domainerr.ErrForbidden
-	}
-
-	listCards, err := s.ListCardsRepo.GetCardsInList(ctx, listID, s.IncludeDeleted)
-	if err != nil {
-		return nil, domainerr.MapRepoErr(err, false)
-	}
-	if len(listCards) == 0 {
-		return []models.ListCard{}, nil
-	}
-
-	cardIDs := make([]uuid.UUID, 0, len(listCards))
-	for i := range listCards {
-		cardIDs = append(cardIDs, listCards[i].CardID)
-	}
-
-	var detatchedListCards []models.ListCard
-	err = s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		detatchedListCards, err = s.ListCardsRepo.BulkDeleteListCardsTX(ctx, tx, listID, cardIDs)
-		if err != nil {
-			return domainerr.MapRepoErr(err, false)
-		}
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	return detatchedListCards, nil
 }
 
 func (s *ListCardsService) BulkCrossMoveCards(ctx context.Context,
@@ -1299,20 +960,6 @@ func (s *ListCardsService) MoveCardToBoard(ctx context.Context, userID, sourceBo
 	if len(hydratedPatchSlice) > 0 {
 		listCardPatch = hydratedPatchSlice[0]
 	}
-	listcardMirrors, err := s.ListCardsRepo.GetListCardsByRootIDTX(ctx, s.db, movedListCard.RootID, s.IncludeDeleted)
-	if err != nil {
-		fmt.Println("MoveCardToBoard return: listcard mirrors lookup failed", err)
-		return nil, nil, domainerr.MapRepoErr(err, false)
-	}
-	mirrorIds := make([]uuid.UUID, 0, len(listcardMirrors))
-	for _, mirror := range listcardMirrors {
-		if mirror.ID == movedListCard.ID {
-			continue
-		}
-		mirrorIds = append(mirrorIds, mirror.ID)
-	}
-	listCardPatch.Mirrors = mirrorIds
-
 	boardLists := []dto.BoardListResponse{dto.BoardListToResponse(sourceBoardList)}
 	if req.TargetBoardID != sourceBoardID || req.TargetListID != req.SourceListID {
 		boardLists = append(boardLists, dto.BoardListToResponse(targetBoardList))
@@ -2183,4 +1830,318 @@ func (s *ListCardsService) CopyCardChecklistsTX(ctx context.Context, tx *gorm.DB
 	domain.checklistEntries = newChecklistEntries
 
 	return nil
+}
+
+func (s *ListCardsService) GetRootBoardForListCard(ctx context.Context, boardId uuid.UUID, listCardID uuid.UUID) (*dto.BoardResponse, error) {
+
+	listcard, err := s.ListCardsRepo.GetListCardByIDTX(ctx, s.db, listCardID, s.IncludeDeleted)
+	if err != nil {
+		return nil, domainerr.MapRepoErr(err, true)
+	}
+
+	if listcard.RootID == uuid.Nil {
+		return nil, nil
+	}
+
+	rootListcard, err := s.ListCardsRepo.GetListCardByIDTX(ctx, s.db, listcard.RootID, s.IncludeDeleted)
+	if err != nil {
+		return nil, domainerr.MapRepoErr(err, true)
+	}
+	listID := rootListcard.ListID
+
+	boardLists, err := s.BoardListRepo.GetBoardListsByListIdTX(ctx, s.db, listID, s.IncludeDeleted)
+	if err != nil {
+		return nil, domainerr.MapRepoErr(err, true)
+	}
+
+	if len(boardLists) == 0 {
+		return nil, nil
+	}
+
+	var rootBoardList *models.BoardList
+	if len(boardLists) > 1 {
+		for _, bl := range boardLists {
+			if bl.RootID == bl.ID {
+				rootBoardList = &bl
+				break
+			}
+		}
+		if rootBoardList == nil {
+			return nil, nil
+		}
+	} else {
+		rootBoardList = &boardLists[0]
+	}
+
+	board, err := s.BoardsRepo.GetBoardByIDTX(ctx, s.db, rootBoardList.BoardID, s.IncludeDeleted)
+	if err != nil {
+		return nil, domainerr.MapRepoErr(err, true)
+	}
+
+	response := dto.BoardToResponse(board)
+
+	return &response, nil
+}
+
+func (s *ListCardsService) DetatchCardFromList(ctx context.Context, userID uuid.UUID, workspaceUUID uuid.UUID, boardID uuid.UUID, listID uuid.UUID, cardID uuid.UUID, correlationID uuid.UUID) ([]uuid.UUID, error) {
+	if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Member, s.IncludeDeleted); err != nil {
+		return nil, err
+	}
+
+	listCard, err := s.ListCardsRepo.GetListCardByListAndCardTX(ctx, s.db, listID, cardID, s.IncludeDeleted)
+	if err != nil {
+		return nil, domainerr.MapRepoErr(err, true)
+	}
+
+	// collect all IDs to delete: the listcard itself plus all mirror children if it's a root
+	idsToDelete := []uuid.UUID{listCard.ID}
+	if listCard.ID == listCard.RootID {
+		childIDs, err := s.ListCardsRepo.GetListCardsIdsByRootIdsTX(ctx, s.db, []uuid.UUID{listCard.RootID}, s.IncludeDeleted)
+		if err != nil {
+			return nil, domainerr.MapRepoErr(err, false)
+		}
+		seen := map[uuid.UUID]struct{}{listCard.ID: {}}
+		for _, id := range childIDs {
+			if _, exists := seen[id]; !exists {
+				seen[id] = struct{}{}
+				idsToDelete = append(idsToDelete, id)
+			}
+		}
+	}
+
+	boardIds, err := s.ResolveBoardIdsForListCardIds(ctx, idsToDelete)
+	if err != nil {
+		fmt.Println("DetatchCardFromList: resolving board ids failed", err)
+		return nil, err
+	}
+
+	var deletedListCards []models.ListCard
+	err = s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		deletedListCards, err = s.ListCardsRepo.GetListCardsByIdsTX(ctx, tx, idsToDelete, false)
+		if err != nil {
+			return domainerr.MapRepoErr(err, false)
+		}
+		_, err = s.ListCardsRepo.BulkDeleteListCardsByIdsTX(ctx, tx, idsToDelete)
+		if err != nil {
+			return domainerr.MapRepoErr(err, false)
+		}
+		return nil
+	})
+	if err != nil {
+		fmt.Println("DetatchCardFromList: transaction failed", err)
+		return nil, err
+	}
+
+	targets := make([]EventRegistry.TargetRef, 0, len(boardIds))
+	for _, bId := range boardIds {
+		targets = append(targets, EventRegistry.TargetRef{
+			EntityType: "board",
+			EntityID:   bId,
+		})
+	}
+	for _, lc := range deletedListCards {
+		targets = append(targets, EventRegistry.TargetRef{
+			EntityType: "list_card",
+			EntityID:   lc.ID,
+			BoardID:    &boardID,
+		})
+	}
+
+	listCardResponses := make([]dto.ListCardResponse, 0, len(deletedListCards))
+	for _, lc := range deletedListCards {
+		listCardResponses = append(listCardResponses, dto.ListCardToResponse(&lc))
+	}
+
+	statePayload := dto.BoardDetailResponse{
+		ListCardRelations: listCardResponses,
+	}
+
+	domainEvent := EventRegistry.DomainEvent{
+		Type:          EventRegistry.EventBoardListCardDetatched,
+		BoardID:       &boardID,
+		WorkspaceID:   &workspaceUUID,
+		ActorUserID:   &userID,
+		CorrelationID: &correlationID,
+		Targets:       targets,
+		Payload: EventRegistry.EventPayloadEnvelope{
+			StatePayload: &statePayload,
+		},
+		OccurredAt: time.Now(),
+	}
+	if err := s.EventRegistry.Emit(ctx, s.db, domainEvent); err != nil {
+		fmt.Println("DetatchCardFromList: event emission failed", err)
+	}
+
+	return idsToDelete, nil
+}
+
+func (s *ListCardsService) BulkDetatchCardsFromList(ctx context.Context, userID uuid.UUID, workspaceUUID uuid.UUID, boardID uuid.UUID, listID uuid.UUID, correlationID uuid.UUID) ([]uuid.UUID, error) {
+	if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Member, s.IncludeDeleted); err != nil {
+		return nil, err
+	}
+
+	listcards, err := s.ListCardsRepo.GetCardsInList(ctx, listID, s.IncludeDeleted)
+	if err != nil {
+		return nil, domainerr.MapRepoErr(err, false)
+	}
+
+	var scheduledRoots []models.ListCard
+	for _, lc := range listcards {
+		if lc.ID == lc.RootID {
+			scheduledRoots = append(scheduledRoots, lc)
+		}
+	}
+
+	var idsToDelete map[uuid.UUID]struct{}
+
+	if len(scheduledRoots) > 0 {
+		rootIdsMap := make(map[uuid.UUID]struct{}, len(scheduledRoots))
+		for _, root := range scheduledRoots {
+			rootIdsMap[root.ID] = struct{}{}
+		}
+		rootIds := make([]uuid.UUID, 0, len(rootIdsMap))
+		for rootId := range rootIdsMap {
+			rootIds = append(rootIds, rootId)
+		}
+
+		childListCardIds, err := s.ListCardsRepo.GetListCardsIdsByRootIdsTX(ctx, s.db, rootIds, s.IncludeDeleted)
+		if err != nil {
+			return nil, domainerr.MapRepoErr(err, false)
+		}
+		idsToDelete = make(map[uuid.UUID]struct{}, len(childListCardIds))
+		for _, id := range childListCardIds {
+			idsToDelete[id] = struct{}{}
+		}
+
+	}
+
+	for _, lc := range listcards {
+		idsToDelete[lc.ID] = struct{}{}
+	}
+
+	idsToDeleteSlice := make([]uuid.UUID, 0, len(idsToDelete))
+	for id := range idsToDelete {
+		idsToDeleteSlice = append(idsToDeleteSlice, id)
+	}
+
+	boardIds, err := s.ResolveBoardIdsForListCardIds(ctx, idsToDeleteSlice)
+	if err != nil {
+		fmt.Println("BulkDetatchCardsFromList return: resolving board ids for list cards failed", err)
+		return nil, err
+	}
+
+	var deletedListCards []models.ListCard
+	err = s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		deletedListCards, err = s.ListCardsRepo.GetListCardsByIdsTX(ctx, tx, idsToDeleteSlice, false)
+		if err != nil {
+			return domainerr.MapRepoErr(err, false)
+		}
+
+		_, err = s.ListCardsRepo.BulkDeleteListCardsByIdsTX(ctx, tx, idsToDeleteSlice)
+		if err != nil {
+			return domainerr.MapRepoErr(err, false)
+		}
+		return nil
+	})
+	if err != nil {
+		fmt.Println("BulkDetatchCardsFromList return: transaction failed", err)
+		return nil, err
+	}
+
+	targets := []EventRegistry.TargetRef{}
+	for _, bId := range boardIds {
+		targets = append(targets, EventRegistry.TargetRef{
+			EntityType: "board",
+			EntityID:   bId,
+		})
+	}
+	for _, lc := range deletedListCards {
+		targets = append(targets, EventRegistry.TargetRef{
+			EntityType: "list_card",
+			EntityID:   lc.ID,
+			BoardID:    &boardID,
+		})
+	}
+
+	listCardResponses := make([]dto.ListCardResponse, 0, len(deletedListCards))
+	for _, lc := range deletedListCards {
+		listCardResponses = append(listCardResponses, dto.ListCardToResponse(&lc))
+	}
+
+	statePayload := dto.BoardDetailResponse{
+		ListCardRelations: listCardResponses,
+	}
+
+	payloadEnvolope := EventRegistry.EventPayloadEnvelope{
+		StatePayload: &statePayload,
+	}
+
+	domainEvent := EventRegistry.DomainEvent{
+		Type:          EventRegistry.EventBoardListCardsDetatched,
+		BoardID:       &boardID, // board primario per l'audit
+		WorkspaceID:   &workspaceUUID,
+		ActorUserID:   &userID,
+		CorrelationID: &correlationID,
+		Targets:       targets,
+		Payload:       payloadEnvolope,
+		OccurredAt:    time.Now(),
+	}
+	if err := s.EventRegistry.Emit(ctx, s.db, domainEvent); err != nil {
+		fmt.Println("BulkDetatchCardsFromList return: event emission failed", err)
+	}
+
+	return idsToDeleteSlice, nil
+}
+
+func (s *ListCardsService) ResolveBoardIdsForListCardIds(ctx context.Context, listCardIds []uuid.UUID) ([]uuid.UUID, error) {
+
+	listcards, err := s.ListCardsRepo.GetListCardsByIdsTX(ctx, s.db, listCardIds, s.IncludeDeleted)
+	if err != nil {
+		return nil, domainerr.MapRepoErr(err, true)
+	}
+	listIdsmap := map[uuid.UUID]struct{}{}
+	for _, lc := range listcards {
+		listIdsmap[lc.ListID] = struct{}{}
+	}
+	listIds := make([]uuid.UUID, 0, len(listIdsmap))
+	for listId := range listIdsmap {
+		listIds = append(listIds, listId)
+	}
+
+	boardLists, err := s.BoardListRepo.GetBoardListsByListIdsTX(ctx, s.db, listIds, s.IncludeDeleted)
+	if err != nil {
+		return nil, domainerr.MapRepoErr(err, true)
+	}
+	boardIdMap := map[uuid.UUID]struct{}{}
+	for _, bl := range boardLists {
+		boardIdMap[bl.BoardID] = struct{}{}
+	}
+	boardIds := make([]uuid.UUID, 0, len(boardIdMap))
+	for boardId := range boardIdMap {
+		boardIds = append(boardIds, boardId)
+	}
+
+	return boardIds, nil
+}
+
+// GetListCardsIdsByRootIds returns all list_card IDs (including mirrors) for the given root IDs.
+// Used by external services (e.g. links) to resolve cascade deletes.
+func (s *ListCardsService) GetListCardsIdsByRootIds(ctx context.Context, rootIDs []uuid.UUID) ([]uuid.UUID, error) {
+	return s.ListCardsRepo.GetListCardsIdsByRootIdsTX(ctx, s.db, rootIDs, s.IncludeDeleted)
+}
+
+// GetListCardsIdsByRootIdsTX is the transaction-aware variant for use inside an external tx.
+func (s *ListCardsService) GetListCardsIdsByRootIdsTX(ctx context.Context, tx *gorm.DB, rootIDs []uuid.UUID) ([]uuid.UUID, error) {
+	return s.ListCardsRepo.GetListCardsIdsByRootIdsTX(ctx, tx, rootIDs, s.IncludeDeleted)
+}
+
+// GetListCardsByIdsTX fetches list_cards by IDs inside an external transaction.
+func (s *ListCardsService) GetListCardsByIdsTX(ctx context.Context, tx *gorm.DB, ids []uuid.UUID, includeDeleted bool) ([]models.ListCard, error) {
+	return s.ListCardsRepo.GetListCardsByIdsTX(ctx, tx, ids, includeDeleted)
+}
+
+// BulkDeleteListCardsByIDsTX deletes list_cards by IDs inside an external transaction.
+// Returns the soft-deleted records.
+func (s *ListCardsService) BulkDeleteListCardsByIDsTX(ctx context.Context, tx *gorm.DB, ids []uuid.UUID) ([]models.ListCard, error) {
+	return s.ListCardsRepo.BulkDeleteListCardsByIdsTX(ctx, tx, ids)
 }

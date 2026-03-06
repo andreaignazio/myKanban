@@ -77,3 +77,60 @@ func (r *BoardListRepo) GetBoardListsByListIDs(ctx context.Context, listIDs []uu
 
 	return boardLists, nil
 }
+
+func (r *BoardListRepo) GetBoardList(ctx context.Context, boardID, listID uuid.UUID, includeDeleted bool) (*models.BoardList, error) {
+	boardList := &models.BoardList{}
+	query := r.db.WithContext(ctx).Table("board_lists")
+	if includeDeleted {
+		query = query.Unscoped()
+	} else {
+		query = query.Where("deleted_at IS NULL")
+	}
+
+	if err := query.
+		Where("board_id = ? AND list_id = ?", boardID, listID).
+		Take(boardList).Error; err != nil {
+		return nil, dbx.WrapDBErr(err, "error get board_list")
+	}
+
+	return boardList, nil
+}
+
+func (r *BoardListRepo) GetBoardListsByListIdsTX(ctx context.Context, tx *gorm.DB, listIDs []uuid.UUID, includeDeleted bool) ([]models.BoardList, error) {
+	if len(listIDs) == 0 {
+		return []models.BoardList{}, nil
+	}
+	boardLists := []models.BoardList{}
+	query := tx.WithContext(ctx).Table("board_lists")
+	if includeDeleted {
+		query = query.Unscoped()
+	} else {
+		query = query.Where("deleted_at IS NULL")
+	}
+	if err := query.
+		Where("list_id IN ?", listIDs).
+		Order("board_id ASC, pos COLLATE \"C\"").
+		Find(&boardLists).Error; err != nil {
+		return nil, dbx.WrapDBErr(err, "error get board_lists by list IDs TX")
+	}
+	return boardLists, nil
+}
+
+func (r *BoardListRepo) GetBoardListsByListIdTX(ctx context.Context, tx *gorm.DB, listID uuid.UUID, includeDeleted bool) ([]models.BoardList, error) {
+	boardLists := []models.BoardList{}
+	query := tx.WithContext(ctx).Table("board_lists")
+	if includeDeleted {
+		query = query.Unscoped()
+	} else {
+		query = query.Where("deleted_at IS NULL")
+	}
+
+	if err := query.
+		Where("list_id = ?", listID).
+		Order("created_at ASC").
+		Find(&boardLists).Error; err != nil {
+		return nil, dbx.WrapDBErr(err, "error get board_lists by list_id")
+	}
+
+	return boardLists, nil
+}

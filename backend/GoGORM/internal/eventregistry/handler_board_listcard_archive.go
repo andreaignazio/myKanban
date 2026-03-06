@@ -12,9 +12,8 @@ import (
 type BoardListCardArchiveHandlerMode string
 
 const (
-	BoardListCardArchiveHandlerModeDetatched BoardListCardArchiveHandlerMode = "detatched"
-	BoardListCardArchiveHandlerModeRestored  BoardListCardArchiveHandlerMode = "restored"
-	BoardListCardArchiveHandlerModePurged    BoardListCardArchiveHandlerMode = "purged"
+	BoardListCardArchiveHandlerModeRestored BoardListCardArchiveHandlerMode = "restored"
+	BoardListCardArchiveHandlerModePurged   BoardListCardArchiveHandlerMode = "purged"
 )
 
 type BoardListCardArchiveHandler struct {
@@ -24,10 +23,6 @@ type BoardListCardArchiveHandler struct {
 
 func NewBoardListCardRestoredHandler(auditRepo auditcontext.Reader) *BoardListCardArchiveHandler {
 	return &BoardListCardArchiveHandler{auditRepo: auditRepo, mode: BoardListCardArchiveHandlerModeRestored}
-}
-
-func NewBoardListCardDetatchedHandler(auditRepo auditcontext.Reader) *BoardListCardArchiveHandler {
-	return &BoardListCardArchiveHandler{auditRepo: auditRepo, mode: BoardListCardArchiveHandlerModeDetatched}
 }
 
 func NewBoardListCardPurgedHandler(auditRepo auditcontext.Reader) *BoardListCardArchiveHandler {
@@ -77,10 +72,6 @@ func (h *BoardListCardArchiveHandler) Build(ctx context.Context, evt DomainEvent
 
 	templateKey := AuditTemplateBoardListCardRestored
 	verb := "ha ripristinato la card"
-	if h.mode == BoardListCardArchiveHandlerModeDetatched {
-		templateKey = AuditTemplateBoardListCardDetatched
-		verb = "ha archiviato la card"
-	}
 	if h.mode == BoardListCardArchiveHandlerModePurged {
 		templateKey = AuditTemplateBoardListCardPurged
 		verb = "ha eliminato definitivamente la card"
@@ -117,9 +108,23 @@ func (h *BoardListCardArchiveHandler) Build(ctx context.Context, evt DomainEvent
 		},
 	}
 
-	targets := []TargetRef{
-		{EntityType: "card", EntityID: rel.CardID, BoardID: evt.BoardID},
-		{EntityType: "list", EntityID: rel.ListID, BoardID: evt.BoardID},
+	targets := make([]TargetRef, 0, len(statePayload.ListCardRelations)*2)
+	seenCards := make(map[uuid.UUID]struct{}, len(statePayload.ListCardRelations))
+	seenLists := make(map[uuid.UUID]struct{}, len(statePayload.ListCardRelations))
+	for i := range statePayload.ListCardRelations {
+		curr := statePayload.ListCardRelations[i]
+		if curr.CardID != uuid.Nil {
+			if _, exists := seenCards[curr.CardID]; !exists {
+				seenCards[curr.CardID] = struct{}{}
+				targets = append(targets, TargetRef{EntityType: "card", EntityID: curr.CardID, BoardID: evt.BoardID})
+			}
+		}
+		if curr.ListID != uuid.Nil {
+			if _, exists := seenLists[curr.ListID]; !exists {
+				seenLists[curr.ListID] = struct{}{}
+				targets = append(targets, TargetRef{EntityType: "list", EntityID: curr.ListID, BoardID: evt.BoardID})
+			}
+		}
 	}
 
 	return EventBuildResult{

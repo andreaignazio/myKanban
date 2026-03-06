@@ -57,20 +57,24 @@ type CrossBoardMoveEmitRequest struct {
 }
 
 type CrossBoardMoveBoardPayload struct {
-	RootListCardID      string                                    `json:"RootListCardID"`
-	MovedListCardID     string                                    `json:"MovedListCardID"`
-	CardID              string                                    `json:"CardID"`
-	Cards               map[uuid.UUID]dto.CardResponse            `json:"Cards"`
-	Boards              map[uuid.UUID]dto.BoardResponse           `json:"Boards"`
-	SourceBoardID       string                                    `json:"SourceBoardID"`
-	TargetBoardID       string                                    `json:"TargetBoardID"`
-	FromListID          string                                    `json:"FromListID"`
-	ToListID            string                                    `json:"ToListID"`
-	ListCardPatch       dto.ListCardResponse                      `json:"ListCardPatch"`
-	FromListCards       []dto.ListCardResponse                    `json:"FromListCards"`
-	ToListCards         []dto.ListCardResponse                    `json:"ToListCards"`
-	ListCardIdsByListID map[string][]string                       `json:"ListCardIdsByListID"`
-	ExternalRootsByID   map[uuid.UUID]dto.ExternalRootRefResponse `json:"ExternalRootsByID"`
+	RootListCardID      string                          `json:"RootListCardID"`
+	MovedListCardID     string                          `json:"MovedListCardID"`
+	CardID              string                          `json:"CardID"`
+	Cards               map[uuid.UUID]dto.CardResponse  `json:"Cards"`
+	Boards              map[uuid.UUID]dto.BoardResponse `json:"Boards"`
+	SourceBoardID       string                          `json:"SourceBoardID"`
+	TargetBoardID       string                          `json:"TargetBoardID"`
+	FromListID          string                          `json:"FromListID"`
+	ToListID            string                          `json:"ToListID"`
+	ListCardPatch       dto.ListCardResponse            `json:"ListCardPatch"`
+	FromListCards       []dto.ListCardResponse          `json:"FromListCards"`
+	ToListCards         []dto.ListCardResponse          `json:"ToListCards"`
+	ListCardIdsByListID map[string][]string             `json:"ListCardIdsByListID"`
+	Invalidations       *EventInvalidations             `json:"invalidations,omitempty"`
+}
+
+type EventInvalidations struct {
+	RootBoardListCardIds []string `json:"RootBoardListCardIds,omitempty"`
 }
 
 type EventBuildResult struct {
@@ -93,6 +97,7 @@ type EventPayloadEnvelope struct {
 	RealtimePayload any
 	FeedPayload     AuditRenderPayload
 	UserPayload     map[uuid.UUID]ws.UserEventPayload
+	Invalidations   *EventInvalidations `json:"invalidations,omitempty"`
 }
 
 type AuditRenderPayload struct {

@@ -45,6 +45,22 @@ func (r *GormBoardsRepo) GetBoard(ctx context.Context, boardID uuid.UUID, includ
 	return &board, nil
 }
 
+func (r *GormBoardsRepo) GetBoardByIDTX(ctx context.Context, tx *gorm.DB, boardID uuid.UUID, includeDeleted bool) (*models.Board, error) {
+	board := &models.Board{}
+	query := tx.WithContext(ctx).Table("boards")
+	if includeDeleted {
+		query = query.Unscoped()
+	} else {
+		query = query.Where("boards.deleted_at IS NULL")
+	}
+
+	if err := query.Where("boards.id = ?", boardID).Take(board).Error; err != nil {
+		return nil, err
+	}
+
+	return board, nil
+}
+
 func (r *GormBoardsRepo) GetBoardsByIDs(ctx context.Context, boardIDs []uuid.UUID, includeDeleted bool) ([]models.Board, error) {
 	if len(boardIDs) == 0 {
 		return []models.Board{}, nil

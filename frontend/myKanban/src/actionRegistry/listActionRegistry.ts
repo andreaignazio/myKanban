@@ -44,8 +44,7 @@ export function useListActionRegistry() {
     }
 
     async function setListTitle(boardId: string, listId: string, title: string) {
-        await listStore.patchListDetails(listId, boardId, { Title: title });
-        //console.log("Set List Title action triggered");
+        return listStore.patchListDetails(listId, boardId, { Title: title });
     }
 
     async function setListColor(boardId: string, listId: string, color: string | null) {
@@ -60,7 +59,7 @@ export function useListActionRegistry() {
         }
         delete normalizedProps.Props
 
-        await listStore.patchListProps(listId, boardId, {
+        return listStore.patchListProps(listId, boardId, {
             Props: {
                 ...normalizedProps,
                 Color: color,
@@ -69,7 +68,7 @@ export function useListActionRegistry() {
     }
 
     async function setListAccessMode(boardId: string, listId: string, accessMode: BoardListAccessMode) {
-        await listStore.patchListAccessMode(listId, boardId, { AccessMode: accessMode })
+        return listStore.patchListAccessMode(listId, boardId, { AccessMode: accessMode })
     }
 
     function copyBulkListsRaw(boardId: string, payload: BulkCopyListsRequest): Promise<BulkCopyListsResponse> {
@@ -99,12 +98,11 @@ export function useListActionRegistry() {
     }
 
     async function archiveList(boardId: string, listId: string) {
-        await listStore.detatchList(listId, boardId)
+        return listStore.detatchList(listId, boardId)
     }
 
     async function archiveAllCardsInList(boardId: string, listId: string) {
         await cardsStore.bulkDetatchListCards(boardId, listId)
-        await useBoardDetailStore.getState().fetchCardsByListId(boardId, listId)
     }
 
     async function moveAllCardsInList(boardId: string, sourceListId: string, targetListId: string) {

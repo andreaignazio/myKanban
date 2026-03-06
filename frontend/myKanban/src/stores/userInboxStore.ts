@@ -2,8 +2,6 @@
 import type { CreateInboxCardRequest, InboxCard, InboxCardResponse, MirrorCardToInboxRequest, UserEvent, UserInboxCardResponse } from "./types";
 import { api } from "@/api/api";
 import { useCardsStore } from "./cardsStore";
-import { use } from "react";
-import { useExternalRefStore } from "./externaRefStore";
 
 
 
@@ -31,8 +29,6 @@ export const useUserInboxStore = create<UserInboxStore>((set, get) => ({
             data.InboxCards.forEach(inboxCard => {
                 cardsById[inboxCard.ID] = inboxCard;
             });
-            useExternalRefStore.getState().mergeExternalRootRefs(data.ExternalRootsByID);
-            // console.log("Merged external root refs:", data.ExternalRootsByID)
             set({
                 inboxCardsById: cardsById,
                 inboxCardsIds: data.InboxCards.map(inboxCard => inboxCard.ID)
@@ -94,11 +90,7 @@ export const useUserInboxStore = create<UserInboxStore>((set, get) => ({
     applyInboxEvent: (evt: UserEvent) => {
         switch (evt.Type) {
             case "inbox.rootcard.moved": {
-                const payload = evt.Payload.InboxRootCardMovedPayload
-                if (!payload) {
-                    return
-                }
-                useExternalRefStore.getState().mergeExternalRootRefs(payload.ExternalRootsByID)
+                return
             }
         }
     },

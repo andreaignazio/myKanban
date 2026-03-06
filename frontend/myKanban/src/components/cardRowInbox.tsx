@@ -37,7 +37,7 @@ export const CardRowInbox = ({ inboxCardId }: { inboxCardId: string }) => {
     return (
         <CardRowCoverWrapper mode={mode} cardColor={cardColor} cardCoverURL={cardCoverURL}>
 
-            {!isInboxOnlyCard() && <Mirrors listcardID={inboxCard.RootListCardID} mode={"inbox"} mirrors={inboxCard?.Mirrors} />}
+            {!isInboxOnlyCard() && <Mirrors listcardID={inboxCard.RootListCardID} mode={"inbox"} />}
             <div className="flex flex-col p-2 pb-2 gap-1">
                 <CardRowTitle title={card?.Title || "Untitled Card"} editMode={false} done={done} />
             </div>

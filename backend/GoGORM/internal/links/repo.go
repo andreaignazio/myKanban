@@ -137,6 +137,20 @@ func (r *GormLinksRepo) CreateBoardListTX(ctx context.Context, db *gorm.DB, boar
 	return nil
 }
 
+func (r *GormLinksRepo) BulkDetatchBoardListsByRootIDTX(ctx context.Context, db *gorm.DB, rootID uuid.UUID) ([]models.BoardList, error) {
+	var boardLists []models.BoardList
+	if err := db.WithContext(ctx).
+		Table("board_lists").
+		Clauses(clause.Returning{}).
+		Where("root_id = ?", rootID).
+		Where("deleted_at IS NULL").
+		Delete(&models.BoardList{}).
+		Scan(&boardLists).Error; err != nil {
+		return nil, dbx.WrapDBErr(err, "error bulk detatching board lists by root id")
+	}
+	return boardLists, nil
+}
+
 func (r *GormLinksRepo) DetatchListFromBoard(ctx context.Context, db *gorm.DB, boardID, listID uuid.UUID) (*models.BoardList, error) {
 	var boardList models.BoardList
 	tx := db.WithContext(ctx).
@@ -212,6 +226,40 @@ func (r *GormLinksRepo) GetBoardListByID(ctx context.Context, boardID, boardList
 		return nil, dbx.WrapDBErr(err, "error get board list by id")
 	}
 	return boardList, nil
+}
+
+func (r *GormLinksRepo) GetBoardListByIdsTX(ctx context.Context, tx *gorm.DB, ids []uuid.UUID, includeDeleted bool) ([]models.BoardList, error) {
+	if len(ids) == 0 {
+		return []models.BoardList{}, nil
+	}
+	boardLists := []models.BoardList{}
+	query := tx.WithContext(ctx).Table("board_lists bl")
+	if includeDeleted {
+		query = query.Unscoped()
+	} else {
+		query = query.Where("bl.deleted_at IS NULL")
+	}
+	if err := query.Where("bl.id IN ?", ids).Find(&boardLists).Error; err != nil {
+		return nil, dbx.WrapDBErr(err, "error getting board lists by ids in tx")
+	}
+	return boardLists, nil
+}
+
+func (r *GormLinksRepo) BulkDetatchBoardListsByIdsTX(ctx context.Context, tx *gorm.DB, ids []uuid.UUID) ([]models.BoardList, error) {
+	if len(ids) == 0 {
+		return []models.BoardList{}, nil
+	}
+	var boardLists []models.BoardList
+	if err := tx.WithContext(ctx).
+		Table("board_lists").
+		Clauses(clause.Returning{}).
+		Where("id IN ?", ids).
+		Where("deleted_at IS NULL").
+		Delete(&models.BoardList{}).
+		Scan(&boardLists).Error; err != nil {
+		return nil, dbx.WrapDBErr(err, "error bulk detatching board lists by ids")
+	}
+	return boardLists, nil
 }
 
 func (r *GormLinksRepo) GetBoardListLinksByRootID(ctx context.Context, rootID uuid.UUID, includeDeleted bool) ([]models.BoardList, error) {
@@ -370,6 +418,26 @@ func (r *GormLinksRepo) GetDeletedListCardLinksByIDsAndBoardIDTX(ctx context.Con
 	return listCards, nil
 }
 
+func (r *GormLinksRepo) GetDeletedListCardLinksByRootIDsTX(ctx context.Context, tx *gorm.DB, rootIDs []uuid.UUID) ([]models.ListCard, error) {
+	if len(rootIDs) == 0 {
+		return []models.ListCard{}, nil
+	}
+
+	listCards := []models.ListCard{}
+	if err := tx.WithContext(ctx).
+		Unscoped().
+		Table("list_cards lc").
+		Select("lc.*").
+		Where("lc.root_id IN ?", rootIDs).
+		Where("lc.deleted_at IS NOT NULL").
+		Order("lc.created_at ASC").
+		Find(&listCards).Error; err != nil {
+		return nil, dbx.WrapDBErr(err, "error get deleted list card links by root ids")
+	}
+
+	return listCards, nil
+}
+
 func (r *GormLinksRepo) RestoreListCardLinksTX(ctx context.Context, tx *gorm.DB, listCards []models.ListCard) ([]models.ListCard, error) {
 	if len(listCards) == 0 {
 		return []models.ListCard{}, nil
@@ -437,6 +505,25 @@ func (r *GormLinksRepo) PurgeListCardLinksByIDsTX(ctx context.Context, tx *gorm.
 	}
 
 	return purged, nil
+}
+
+func (r *GormLinksRepo) GetListCardLinksTX(ctx context.Context, tx *gorm.DB, listIDs []uuid.UUID, includeDeleted bool) ([]models.ListCard, error) {
+	if len(listIDs) == 0 {
+		return []models.ListCard{}, nil
+	}
+	listCards := []models.ListCard{}
+	query := tx.WithContext(ctx).Table("list_cards lc")
+	if includeDeleted {
+		query = query.Unscoped()
+	} else {
+		query = query.Where("lc.deleted_at IS NULL")
+	}
+	if err := query.Where("lc.list_id IN ?", listIDs).
+		Order("lc.list_id, lc.pos COLLATE \"C\"").
+		Find(&listCards).Error; err != nil {
+		return nil, dbx.WrapDBErr(err, "error get list card links in tx")
+	}
+	return listCards, nil
 }
 
 func (r *GormLinksRepo) GetListCardLinksByCardIDs(ctx context.Context, cardIDs []uuid.UUID, includeDeleted bool) ([]models.ListCard, error) {

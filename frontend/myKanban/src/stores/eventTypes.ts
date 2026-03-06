@@ -70,6 +70,7 @@ export type BoradEventTypes =
     | "board.shareoffer.request.accepted"
     | "board.shareoffer.request.rejected"
     | "board.shareoffer.request.revoked"
+    | "board.listcards.detached";
 
 
 export type CardsUserEventTypes =

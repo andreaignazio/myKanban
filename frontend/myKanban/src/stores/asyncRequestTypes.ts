@@ -20,6 +20,15 @@ export const ASYNC_REQUEST_BASE_KEYS = [
     "board:archive:card:restore",
     "board:archive:list:purge",
     "board:archive:card:purge",
+    "list:create",
+    "list:copy:bulk",
+    "list:move",
+    "list:mirror",
+    "list:detach",
+    "list:edit:title",
+    "list:edit:props",
+    "list:edit:access",
+    "listcard:rootboard:fetch",
 ] as const;
 
 export type AsyncRequestBaseKey = typeof ASYNC_REQUEST_BASE_KEYS[number];

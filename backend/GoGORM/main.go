@@ -138,7 +138,7 @@ func main() {
 	cardCommentRepo := cardcomments.NewGormCardCommentsRepository(db)
 	checklistRepo := checklists.NewGormChecklistRepo(db)
 	listCardsService := listcards.NewListCardsService(db, wsHub, eventRegistryService, listCardsRepo, cardsRepo, cardCommentRepo,
-		cardMembersRepo, boardLabelsRepo, checklistRepo, listsRepo, linksRepo, positionService, membarshipsRepo, capabilitiesRepo)
+		cardMembersRepo, boardLabelsRepo, checklistRepo, listsRepo, boardListRepo, positionService, membarshipsRepo, capabilitiesRepo, boardsRepo)
 	listCardsHandler := listcards.NewListCardsHandler(listCardsService, eventRegistryService)
 
 	workspaceBoardPositionHelper := pos.NewWorkspaceBoardPositionHelper(positionGenerator, workspacesRepo)
