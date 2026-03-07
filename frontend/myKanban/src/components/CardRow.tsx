@@ -86,12 +86,14 @@ export const CardRow = ({ boardID, listId, listCardID: listCardID, cardId, index
         //  cardsStore.removeCardFromInbox(cardID)
     }
 
-    const cardColor = card?.Props?.Props?.Display?.Cover?.Type === "color" ? card.Props.Props.Display.Cover.Color : undefined;
+    /*const cardColor = card?.Props?.Props?.Display?.Cover?.Type === "color" ? card.Props.Props.Display.Cover.Color : undefined;
     const cardCoverURL = card?.Props?.Props?.Display?.Cover?.Type === "image" ? card.Props.Props.Display.Cover.URL : undefined;
     //const cardHasCover = !!card?.Props?.Props?.Display?.Cover;
     const hasCover = !!card?.Props?.Props?.Display?.Cover
     const coverSize = card?.Props?.Props?.Display?.Size
-    const isDetailed = hasCover && coverSize === "large"
+    const isDetailed = hasCover && coverSize === "large"*/
+
+    const { cardColor, cardCoverURL, hasCover, coverSize, isDetailed } = useCardBackground({ card })
 
     const cardHasLabels = useLabelsStore((state) => {
         if (!cardID) return false;
@@ -436,6 +438,7 @@ import { useBoardsStore } from "@/stores/boardsStore"
 import { getClassNamesForColorToken, gradientColorTokens } from "@/domain/colorTokens"
 import { useBoardBackground } from "@/hooks/useBoardBackground"
 import { useAsyncKey } from "@/stores/asyncRequestStore"
+import { useCardBackground } from "@/hooks/useCardBackground"
 
 
 

@@ -66,7 +66,10 @@ export const useCardMirrorsStore = create<CardMirrorsState>()((set, get) => ({
                         mirrorData.forEach(md => {
                             const boardId = md.BoardID;
                             const boardListCardId = `${boardId}-${listCard.ID}`
-                            boardListCardIds.push(boardListCardId)
+                            if (!boardListCardIds.includes(boardListCardId)) {
+                                boardListCardIds.push(boardListCardId)
+                            }
+
                             mirrorCardDataByBoardListCardId[boardListCardId] = {
                                 UserID: md.UserID,
                                 BoardID: md.BoardID,

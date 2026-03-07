@@ -11,7 +11,11 @@ export type CardRowCoverWrapperProps = {
     mirrorBackdropBgImage?: string
     mirrorBackdropBgColorClass?: string
     mirrorBackdropFallbackGradientClass?: string
+    mirrorBackdropSize?: string
     children: React.ReactNode
+    wrapperClassName?: string
+    mainDivClassName?: string
+    mirroBgStyle?: React.CSSProperties
 }
 
 
@@ -25,14 +29,20 @@ export const CardRowCoverWrapper = forwardRef<HTMLDivElement, CardRowCoverWrappe
     mirrorBackdropBgImage,
     mirrorBackdropBgColorClass,
     mirrorBackdropFallbackGradientClass,
-    children
+    mirrorBackdropSize,
+    children,
+    wrapperClassName,
+    mainDivClassName,
+    mirroBgStyle
 }, ref) => {
 
 
     return (
-        <div className="relative">
+        <div className={`relative ${wrapperClassName ?? ""}`}>
             {showMirrorBackdrop && (
-                <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-[245px] h-[15px] rounded-lg z-0 overflow-hidden">
+                <div
+                    style={mirroBgStyle}
+                    className={`absolute -bottom-1 left-1/2 -translate-x-1/2 ${mirrorBackdropSize || "w-[245px] h-[15px]"} rounded-lg z-0 overflow-hidden`}>
                     <ImageColorRenderer
                         overrideClassName
                         className="h-full w-full"
@@ -55,7 +65,8 @@ export const CardRowCoverWrapper = forwardRef<HTMLDivElement, CardRowCoverWrappe
                  bg-[#242528]
                 rounded-lg  min-h-[40px] justify-center overflow-hidden shadow-md shadow-black/40
                 group ring-2 ring-white/0 mx-1 hover:ring-white/100
-                `}>
+                ${mainDivClassName ?? ""}`}>
+
 
                 {mode === "detailed" && <div
                     style={{

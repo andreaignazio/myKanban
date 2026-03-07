@@ -12,9 +12,19 @@ export type FeedBodyChunk =
         entityID?: string
     };
 
+export type MainEntityTypeStrict =
+    | "card"
+    | "list"
+    | "board"
+    | "workspace";
+
 export type RenderFeed = {
     Actor: AuditRenderPayload["Actor"];
     BoardID: string;
+    MainEntityRef: {
+        EntityType: MainEntityTypeStrict;
+        EntityID: string;
+    };
     Body: FeedBodyChunk[];
     CreatedAt: string;
 };
@@ -204,11 +214,41 @@ function resolveWorkspaceName(payload: AuditRenderPayload): string {
     return paramString(payload, "workspaceName", "workspace");
 }
 
-function resolveMainEntity(audit: AuditLike): { entityType?: string; entityID?: string } {
+function toMainEntityTypeStrict(entityType?: string): MainEntityTypeStrict | undefined {
+    switch (entityType) {
+        case "card":
+        case "list":
+        case "board":
+        case "workspace":
+            return entityType;
+        default:
+            return undefined;
+    }
+}
+
+function resolveMainEntity(audit: AuditLike): { entityType?: MainEntityTypeStrict; entityID?: string } {
     const event = audit as ApiAuditLogEvent;
+    const strictEventType = toMainEntityTypeStrict(event?.MainEntityType);
+    if (strictEventType && typeof event?.MainEntityID === "string" && event.MainEntityID.length > 0) {
+        return {
+            entityType: strictEventType,
+            entityID: event.MainEntityID,
+        };
+    }
+
+    const payload = toPayload(audit);
+    const fallbackLink = payload?.Links?.card ?? payload?.Links?.list ?? payload?.Links?.board ?? payload?.Links?.workspace;
+    const strictLinkType = toMainEntityTypeStrict(fallbackLink?.EntityType);
+    if (strictLinkType && fallbackLink?.EntityID) {
+        return {
+            entityType: strictLinkType,
+            entityID: fallbackLink.EntityID,
+        };
+    }
+
     return {
-        entityType: event?.MainEntityType,
-        entityID: event?.MainEntityID,
+        entityType: "board",
+        entityID: toBoardID(audit),
     };
 }
 
@@ -259,6 +299,7 @@ export function buildFeedFromAudit(audit: AuditLike): RenderFeed {
     const checklistTitle = resolveChecklistTitle(payload, audit);
     const entryTitle = resolveEntryTitle(payload, audit);
     const labelTitle = resolveLabelTitle(payload, audit);
+    const mainEntityRef = resolveMainEntity(audit);
     const newRole = paramString(payload, "new_role", paramString(payload, "newRole", "ruolo"));
 
     let body: FeedBodyChunk[] = [];
@@ -560,6 +601,10 @@ export function buildFeedFromAudit(audit: AuditLike): RenderFeed {
     return {
         Actor: actor,
         BoardID: toBoardID(audit),
+        MainEntityRef: {
+            EntityType: mainEntityRef.entityType ?? "board",
+            EntityID: mainEntityRef.entityID ?? toBoardID(audit),
+        },
         Body: body,
         CreatedAt: toCreatedAt(audit),
     };

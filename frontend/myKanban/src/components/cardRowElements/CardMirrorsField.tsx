@@ -3,6 +3,7 @@ import { getClassNamesForColorToken } from "@/domain/colorTokens"
 import type { Board } from "@/stores/types"
 import { CardRowMenuBtn } from "../cardMenus/cardRowMenus"
 import { CardMirrorsMenu } from "../cardMenus/cardMirrorsMenu"
+import { useDateTimeParser } from "@/hooks/useDateTimeParser"
 
 type CardMirrorsFieldProps = {
     board?: Board
@@ -24,13 +25,23 @@ export const Mirrors = ({ board, mode, placement = "default", cardId, listCardId
         ? "absolute top-1 left-2 z-20 text-white"
         : "bg-transparent text-white pt-3 px-3"
 
+    const boardCreatedAt = new Date(board.CreatedAt)
+    const boardCreatedAtFormatted = useDateTimeParser().stringifyDatePretty(boardCreatedAt, true)?.date
     return (
         <CardRowMenuBtn
             menuComponent={
                 ({ onClose, ref }) => <CardMirrorsMenu cardId={cardId} listCardId={listCardId} ref={ref} onClose={onClose} />
             }
         >
-            <div className={wrapperClassName}>
+            <DummyMirrorUI
+                name={board.Name}
+                detailLabel={boardCreatedAtFormatted}
+                bgImage={rootBoardBgImage}
+                bgColorClass={rootBoardBgColorClass}
+                bgColorType={rootBoardBackgroundType === "color" ? "color" : rootBoardBackgroundType === "image" ? "image" : null}
+                wrapperClassName={wrapperClassName}
+            />
+            {/*<div className={wrapperClassName}>
                 <div
                     className="h-[30px] max-w-[170px] p-0 gap-1 w-fit pe-2 flex items-center justify-start rounded-[7px] bg-neutral-700/45 text-[11px] font-semibold"
                 >
@@ -48,8 +59,43 @@ export const Mirrors = ({ board, mode, placement = "default", cardId, listCardId
                         <span className="text-[10px] font-extralight">{"X"}</span>
                     </div>
                 </div>
-            </div>
+            </div>*/}
         </CardRowMenuBtn>
 
+    )
+}
+
+type DummyMirrorUIProps = {
+    name?: string;
+    detailLabel?: string;
+    bgImage?: string;
+    bgColorClass?: string;
+    bgColorType?: "image" | "color" | null;
+    wrapperClassName?: string;
+
+}
+
+export const DummyMirrorUI = ({ name, detailLabel, bgImage, bgColorClass, bgColorType, wrapperClassName }: DummyMirrorUIProps) => {
+
+    return (
+        <div className={wrapperClassName}>
+            <div
+                className="h-[30px] max-w-[170px] px-[2px] py-[2px]  gap-1 w-fit pe-2 flex items-center justify-start rounded-[7px] bg-neutral-700/45 text-[11px] font-semibold"
+            >
+                <ImageColorRenderer
+                    style={{ width: "26px", height: "26px" }}
+                    overrideClassName
+                    className="rounded-[6px] overflow-hidden shrink-0"
+                    bgImage={bgImage}
+                    bgColor={bgColorClass}
+
+                    backgroundType={bgColorType ?? null}
+                />
+                <div className="flex flex-col items-start">
+                    <span className="truncate text-[10px] font-medium">{name}</span>
+                    <span className="text-[8px] font-extralight">{detailLabel}</span>
+                </div>
+            </div>
+        </div>
     )
 }

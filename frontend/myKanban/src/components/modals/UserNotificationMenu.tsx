@@ -12,7 +12,7 @@ import { useBoardsStore } from "@/stores/boardsStore";
 import type { Board, Card, List } from "@/stores/types";
 import { useShallow } from "zustand/react/shallow";
 import { UserAvatar } from "../badges/UserAvatar";
-import { UserNotificationsTabByEntity } from "./UserNotificationTabByEntity";
+import { UserNotificationTabPlaceholder } from "./UserNotificationTabPlaceholder";
 import { FloatingTabSelector } from "../menuElements/floatingTabSelector";
 
 type UserNotificationMenuBtnProps = {
@@ -126,7 +126,7 @@ export const UserNotificationMenu = forwardRef<HTMLDivElement, UserNotificationM
                 </div>
 
                 {activeTab === "watched" && <UserWatchedMenu />}
-                {activeTab === "notifications" && <UserNotificationsTabByEntity />}
+                {activeTab === "notifications" && <UserNotificationTabPlaceholder />}
 
             </ActionMenuWrapper>
 

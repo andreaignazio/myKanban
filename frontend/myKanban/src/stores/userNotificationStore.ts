@@ -1,13 +1,14 @@
 ﻿import { create } from "zustand";
 import type { UserAuditNotification, UserNotificationResponse, MarkNotificationsRequest, UserEvent } from "./types";
 import { api } from "@/api/api";
-import type { RenderFeed } from "@/hooks/useFeedFromAudit";
+import type { MainEntityTypeStrict, RenderFeed } from "@/hooks/useFeedFromAudit";
 import { buildFeedFromAudit } from "@/hooks/useFeedFromAudit";
 import { useAuditEntityStore } from "./auditEntityStore";
+import { act } from "react";
 
 export type EntityRef = {
     WorkspaceId: string | null | undefined;
-    BoardID: string;
+    BoardID?: string;
     ListID?: string;
     CardID?: string;
 }
@@ -17,7 +18,6 @@ export type UserNotificationRender = {
     MainEntityType: "card" | "list" | "board";
     MainEntityID: string;
     RelatedEntitiesRef: EntityRef;
-    CreatedAt: string;
     Feeds: FeedsByActor[];
     NotificationRead?: boolean;
     NotificationIDs: string[];
@@ -29,7 +29,91 @@ export type FeedsByActor = {
     Feeds: RenderFeed[];
 }
 
+export type NotificationByEntity = {
+    RenderID: RenderID; //KEY: ${MainEntityID}:${Read}
+    MainEntityType: MainEntityTypeStrict;
+    MainEntityID: string;
+    EntityRef: EntityRef;
+    NotificationIds: string[]; //List of notification IDs that relate to this entity and read status sorted by created date desc
+}
+
+type NotificationsByActorAndTime = Record<ActorTimeKey, string[]> //KEY: ${ActorID}:${LastActivityTime} , Value: List of notification IDs sorted by created date desc
+
+export type ActorUserID = string
+export type ActorTimeKey = `${ActorUserID}:${string}`
+
+function groupNotificationsByActor(ids: string[], notificationsById: Record<string, UserAuditNotification>): { ids: ActorTimeKey[], map: NotificationsByActorAndTime } {
+    const map: NotificationsByActorAndTime = {}
+    const actorTimeKeys: ActorTimeKey[] = []
+    let prevActorID = ""
+    let key: ActorTimeKey = "" as ActorTimeKey
+    ids.forEach(id => {
+        const notification = notificationsById[id]
+        const actorID = notification.ActorUserID
+
+        if (actorID !== prevActorID) {
+            prevActorID = actorID
+            const lastActivityTime = notification.CreatedAt
+            key = `${actorID}:${lastActivityTime}` as ActorTimeKey
+        }
+        if (!map[key]) {
+            map[key] = []
+        }
+        map[key].push(id)
+        actorTimeKeys.push(key)
+    })
+    return { ids: actorTimeKeys, map }
+}
+
+function sortNotificationByEntityAndReadStatusByCreatedDate(renderIDs: RenderID[], notificationsById: Record<string, UserAuditNotification>, map: Record<RenderID, NotificationByEntity>): RenderID[] {
+    const dateFromRenderID = (renderID: RenderID): Date => {
+        const lastNotificationID = map[renderID].NotificationIds[0]
+        return new Date(notificationsById[lastNotificationID].CreatedAt)
+    }
+    return renderIDs.sort((a, b) => dateFromRenderID(b).getTime() - dateFromRenderID(a).getTime())
+}
+
+
+function groupNotificationsByEntityAndReadStatus(ids: string[], notificationsById: Record<string, UserAuditNotification>): { ids: RenderID[], map: Record<RenderID, NotificationByEntity> } {
+    const map: Record<RenderID, NotificationByEntity> = {}
+    const renderIds: RenderID[] = [] //List of render IDs in the order they should be rendered, sorted by created date desc of the most recent notification for that entity and read status
+    ids.forEach(id => {
+        const notification = notificationsById[id]
+        const mainEntityType = notification.MainEntityType
+        const mainEntityID = notification.MainEntityID
+        const readStatus = notification.Read ? "read" : "unread"
+        const key = `${mainEntityID}:${readStatus}` as RenderID
+        const entityRef: EntityRef = {
+            WorkspaceId: notification.WorkspaceID,
+            BoardID: notification.BoardID ? notification.BoardID : undefined,
+            ListID: notification.Payload.Links?.["list"] ? notification.Payload.Links["list"].EntityID : undefined,
+            CardID: notification.Payload.Links?.["card"] ? notification.Payload.Links["card"].EntityID : undefined,
+        }
+        if (!map[key]) {
+            map[key] = {
+                RenderID: key,
+                MainEntityType: mainEntityType as MainEntityTypeStrict,
+                MainEntityID: mainEntityID,
+                EntityRef: entityRef,
+                NotificationIds: []
+
+            }
+        }
+        map[key].NotificationIds.push(id)
+        renderIds.push(key)
+    })
+    return { ids: renderIds, map }
+}
+
+export type RenderID = `${string}:${"read" | "unread"}`
+
+
+
 type UserNotificationStore = {
+
+    sortedRenderIDs: RenderID[]; //List of render IDs in the order they should be rendered, sorted by created date desc of the most recent notification for that entity and read status
+    notificationsByEntityAndReadStatus: Record<RenderID, NotificationByEntity>;
+
     unreadCount: number;
     setUnreadCount: (count: number) => void;
     notificationsById: Record<string, UserAuditNotification>;
@@ -50,10 +134,16 @@ type UserNotificationStore = {
     applyMarkReadEvent: (evt: UserEvent) => void;
     applyMarkUnreadEvent: (evt: UserEvent) => void;
 
+    groupNotificationsByActor: (ids: string[]) => { ids: ActorTimeKey[], map: NotificationsByActorAndTime }
+    generateRenderIdsAndGroupByEntityAndReadStatus: () => void;
+
 
 }
 
 export const useUserNotificationStore = create<UserNotificationStore>((set, get) => ({
+    sortedRenderIDs: [],
+    notificationsByEntityAndReadStatus: {},
+
     unreadCount: 0,
     setUnreadCount: (count: number) => set({ unreadCount: count }),
     notificationsById: {},
@@ -68,11 +158,14 @@ export const useUserNotificationStore = create<UserNotificationStore>((set, get)
             data.UserNotifications.forEach(notification => {
                 notificationsById[notification.NotificationID] = notification;
             });
+
             set({
                 notificationsById,
                 notificationsIDs: notificationsById ? data.UserNotifications.map(n => n.NotificationID) : [],
                 unreadCount: data.UnreadCount,
             });
+            get().generateRenderIdsAndGroupByEntityAndReadStatus();
+            console.log("Fetched user notifications:", data.UserNotifications);
             const { Boards, Lists, Cards } = data;
 
             useAuditEntityStore.getState().mergeAuditEntities({
@@ -85,9 +178,23 @@ export const useUserNotificationStore = create<UserNotificationStore>((set, get)
 
 
         } catch (error) {
-            // console.error("Failed to fetch user notifications:", error);
+            console.error("Failed to fetch user notifications:", error);
         }
     },
+    generateRenderIdsAndGroupByEntityAndReadStatus: () => {
+        const notificationsById = get().notificationsById
+        const notificationsIDs = get().notificationsIDs
+        const { ids, map } = groupNotificationsByEntityAndReadStatus(notificationsIDs, notificationsById)
+        const sortedIDs = sortNotificationByEntityAndReadStatusByCreatedDate(ids, notificationsById, map)
+        set({
+            sortedRenderIDs: sortedIDs,
+            notificationsByEntityAndReadStatus: map,
+        })
+    },
+
+
+
+
     markNotificationAsRead: async (notificationID: string) => { },
 
     markBulkNoticationAsRead: async (notificationIDs: string[]) => {
@@ -114,52 +221,7 @@ export const useUserNotificationStore = create<UserNotificationStore>((set, get)
     },
     generateRenderNotifications: () => {
         return
-        const { notificationsById, notificationsIDs } = get();
-        // console.log("Generating render notifications from user notifications")
-        //   console.log("User notifications by ID:", notificationsById)
-        //  console.log("User notification IDs:", notificationsIDs)
-        const renderNotifications: UserNotificationRender[] = [];
-        notificationsIDs.forEach((id) => {
-            const notification = notificationsById[id];
-            if (renderNotifications.at(-1)?.MainEntityID === notification.MainEntityID
-                && renderNotifications.at(-1)?.MainEntityType === notification.MainEntityType) {
-                if (renderNotifications.at(-1)?.Feeds.at(-1)?.ActorID === notification.Payload.Actor.ID) {
-                    renderNotifications.at(-1)?.Feeds.at(-1)?.Feeds.push(get().renderFeedFromNotification(notification))
-                    renderNotifications.at(-1)?.NotificationIDs.push(notification.NotificationID)
-                } else {
-                    renderNotifications.at(-1)?.Feeds.push({
-                        ActorID: notification.Payload.Actor.ID,
-                        Feeds: [get().renderFeedFromNotification(notification)]
-                    })
-                    renderNotifications.at(-1)?.NotificationIDs.push(notification.NotificationID)
-                    //renderNotifications.at(-1)!.Feeds.push(get().renderFeedFromNotification(notification))
-                }
-                //renderNotifications.at(-1)?.Feeds.push(get().renderFeedFromNotification(notification))
-            }
-            else {
-                renderNotifications.push({
-                    RenderID: notification.NotificationID,
-                    MainEntityID: notification.MainEntityID,
-                    MainEntityType: notification.MainEntityType as "card" | "list" | "board",
-                    CreatedAt: notification.NotificationCreatedAt,
-                    RelatedEntitiesRef: {
-                        WorkspaceId: notification.WorkspaceID,
-                        BoardID: notification?.BoardID ?? "",
-                        ListID: notification.Payload.Links.list?.EntityID,
-                        CardID: notification.Payload.Links.card?.EntityID,
-                    },
-                    Feeds: [{
-                        ActorID: notification.Payload.Actor.ID,
-                        Feeds: [get().renderFeedFromNotification(notification)]
-                    }],
-                    NotificationIDs: [notification.NotificationID],
-                    NotificationRead: notification.Read,
 
-                })
-            }
-        })
-
-        set({ renderNotifications: renderNotifications })
     },
     applyEvent: (evt: any) => {
         // console.log("[userNotificationStore] applying event", evt)
@@ -226,6 +288,11 @@ export const useUserNotificationStore = create<UserNotificationStore>((set, get)
             unreadCount: unreadCount,
         })
         //get().generateRenderNotifications()
-    }
+    },
+    groupNotificationsByActor: (ids: string[]) => {
+        const notificationsById = get().notificationsById;
+        return groupNotificationsByActor(ids, notificationsById)
+    },
+
 
 }))

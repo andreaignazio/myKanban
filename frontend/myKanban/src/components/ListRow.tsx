@@ -42,7 +42,7 @@ export function ListRow({ boardID: boardID, boardListID: boardListID, index: ind
 
     if (!boardList || !listID) return null
 
-    const { listColor, listTheme, listTextColor, hasListTheme, isReadonly } = useListTheme(listID, accessMode)
+    const { listColor, listTheme, listTextColor, hasListTheme, isReadonly } = useListTheme(list, accessMode)
     return (
 
         <Draggable draggableId={boardListID} index={index}>

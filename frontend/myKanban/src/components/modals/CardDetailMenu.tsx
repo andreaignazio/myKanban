@@ -123,7 +123,7 @@ export const CardDetailMenu = forwardRef<HTMLDivElement, CardDetailMenuProps>(({
     const rootList = rootId ? listsById[rootId] : null;
     //const rootList = useListsStore(useShallow((state) => rootId ? state.listsById[rootId] : null));
     const rootListName = rootList?.Title || "Unknown List";
-    const { listColor, listTheme, listTextColor, hasListTheme } = useListTheme(rootId);
+    const { listColor, listTheme, listTextColor, hasListTheme } = useListTheme(rootList);
 
 
     const coverMenuId = "card-cover-menu";
