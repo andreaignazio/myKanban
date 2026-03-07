@@ -1,11 +1,11 @@
 package checklists
 
 import (
-	"GoGORM/internal/authz"
 	"GoGORM/internal/dbx"
 	"GoGORM/internal/domainerr"
 	"GoGORM/internal/dto"
 	EventRegistry "GoGORM/internal/eventregistry"
+	"GoGORM/internal/guard"
 	"GoGORM/internal/rank"
 	"GoGORM/internal/rbac"
 	"GoGORM/models"
@@ -75,7 +75,7 @@ type PositionHelper interface {
 }
 
 func (s *ChecklistsService) CreateChecklist(ctx context.Context, userID, workspaceID, boardID, cardID, correlationID uuid.UUID, req *CreateChecklistRequest) (*dto.ChecklistResponse, error) {
-	if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Member, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Member, s.IncludeDeleted); err != nil {
 		return nil, err
 	}
 
@@ -169,7 +169,7 @@ func (s *ChecklistsService) CreateChecklist(ctx context.Context, userID, workspa
 }
 
 func (s *ChecklistsService) CloneChecklist(ctx context.Context, userID, workspaceID, boardID, cardID, correlationID uuid.UUID, req *CloneChecklistRequest) (*CloneChecklistResponse, error) {
-	if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Member, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Member, s.IncludeDeleted); err != nil {
 		return nil, err
 	}
 
@@ -328,7 +328,7 @@ func (s *ChecklistsService) CloneChecklist(ctx context.Context, userID, workspac
 }
 
 func (s *ChecklistsService) PatchChecklist(ctx context.Context, userID, workspaceID, boardID, cardID, checklistID, correlationID uuid.UUID, req *PatchChecklistRequest) (*dto.ChecklistResponse, error) {
-	if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Member, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Member, s.IncludeDeleted); err != nil {
 		return nil, err
 	}
 
@@ -381,7 +381,7 @@ func (s *ChecklistsService) PatchChecklist(ctx context.Context, userID, workspac
 }
 
 func (s *ChecklistsService) MoveChecklist(ctx context.Context, userID, workspaceID, boardID, cardID, checklistID, correlationID uuid.UUID, req *MoveChecklistRequest) (*dto.CardChecklistResponse, error) {
-	if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Member, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Member, s.IncludeDeleted); err != nil {
 		return nil, err
 	}
 	updateMap := map[string]any{}
@@ -449,7 +449,7 @@ func (s *ChecklistsService) MoveChecklist(ctx context.Context, userID, workspace
 }
 
 func (s *ChecklistsService) DeleteChecklist(ctx context.Context, userID, workspaceID, boardID, cardID, checklistID, correlationID uuid.UUID) (*dto.CardChecklistResponse, *dto.ChecklistResponse, error) {
-	if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Member, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Member, s.IncludeDeleted); err != nil {
 		return nil, nil, err
 	}
 
@@ -512,7 +512,7 @@ func (s *ChecklistsService) DeleteChecklist(ctx context.Context, userID, workspa
 
 func (s *ChecklistsService) CreateChecklistEntry(ctx context.Context, userID, workspaceID, boardID, cardID, checklistID, correlationID uuid.UUID, req *CreateChecklistEntryRequest) (*dto.ChecklistEntryResponse, *dto.EntryResponse, error) {
 	//check permissions
-	if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Member, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Member, s.IncludeDeleted); err != nil {
 		return nil, nil, err
 	}
 
@@ -604,7 +604,7 @@ func (s *ChecklistsService) CreateChecklistEntry(ctx context.Context, userID, wo
 }
 
 func (s *ChecklistsService) PatchChecklistEntry(ctx context.Context, userID, workspaceID, boardID, cardID, checklistID, entryID, correlationID uuid.UUID, req *PatchChecklistEntryRequest) (*dto.EntryResponse, error) {
-	if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Member, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Member, s.IncludeDeleted); err != nil {
 		return nil, err
 	}
 
@@ -668,7 +668,7 @@ func (s *ChecklistsService) PatchChecklistEntry(ctx context.Context, userID, wor
 }
 
 func (s *ChecklistsService) MoveChecklistEntry(ctx context.Context, userID, workspaceID, boardID, cardID, checklistID, entryID, correlationID uuid.UUID, req *MoveChecklistEntryRequest) (*dto.ChecklistEntryResponse, error) {
-	if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Member, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Member, s.IncludeDeleted); err != nil {
 		return nil, err
 	}
 	updateMap := map[string]any{}
@@ -736,7 +736,7 @@ func (s *ChecklistsService) MoveChecklistEntry(ctx context.Context, userID, work
 }
 
 func (s *ChecklistsService) DeleteChecklistEntry(ctx context.Context, userID, workspaceID, boardID, cardID, checklistID, entryID, correlationID uuid.UUID) (*dto.EntryResponse, *dto.ChecklistEntryResponse, error) {
-	if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Member, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Member, s.IncludeDeleted); err != nil {
 		return nil, nil, err
 	}
 	var entry *models.Entry
@@ -794,7 +794,7 @@ func (s *ChecklistsService) DeleteChecklistEntry(ctx context.Context, userID, wo
 }
 
 func (s *ChecklistsService) ConvertChecklistEntryToCard(ctx context.Context, userID, workspaceID, boardID, sourceCardID, checklistID, entryID, correlationID uuid.UUID, req *ConvertChecklistEntryRequest) (*ConvertChecklistEntryResponse, error) {
-	if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Member, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Member, s.IncludeDeleted); err != nil {
 		return nil, err
 	}
 
@@ -978,7 +978,7 @@ func (s *ChecklistsService) ConvertChecklistEntryToCard(ctx context.Context, use
 }
 
 func (s *ChecklistsService) AddMemberToChecklistEntry(ctx context.Context, userID, workspaceID, boardID, cardID, checklistID, entryID, memberID, correlationID uuid.UUID) (*dto.EntryMemberResponse, error) {
-	if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Member, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Member, s.IncludeDeleted); err != nil {
 		return nil, err
 	}
 	entryMember := &models.EntryMember{
@@ -1026,7 +1026,7 @@ func (s *ChecklistsService) AddMemberToChecklistEntry(ctx context.Context, userI
 }
 
 func (s *ChecklistsService) RemoveMemberFromChecklistEntry(ctx context.Context, userID, workspaceID, boardID, cardID, checklistID, entryID, memberID, correlationID uuid.UUID) (*dto.EntryMemberResponse, error) {
-	if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Member, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Member, s.IncludeDeleted); err != nil {
 		return nil, err
 	}
 	entryMember, err := s.MembershipRepo.RemoveMemberFromChecklistEntry(ctx, entryID, memberID)
@@ -1069,7 +1069,7 @@ func (s *ChecklistsService) RemoveMemberFromChecklistEntry(ctx context.Context, 
 
 func (s *ChecklistsService) CrossMoveChecklistEntry(ctx context.Context, userID, workspaceID,
 	boardID, cardID, checklistID, entryID, correlationID uuid.UUID, req *CrossMoveChecklistEntryRequest) (map[uuid.UUID][]dto.ChecklistEntryResponse, error) {
-	if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Member, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Member, s.IncludeDeleted); err != nil {
 		return nil, err
 	}
 

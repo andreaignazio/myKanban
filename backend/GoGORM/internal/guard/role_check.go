@@ -1,4 +1,4 @@
-package authz
+package guard
 
 import (
 	"GoGORM/internal/domainerr"

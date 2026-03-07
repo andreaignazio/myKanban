@@ -1,8 +1,8 @@
 package ws
 
 import (
-	"GoGORM/internal/authz"
 	"GoGORM/internal/domainerr"
+	"GoGORM/internal/guard"
 	"GoGORM/internal/rbac"
 	"GoGORM/models"
 	"context"
@@ -35,7 +35,7 @@ type WorkspaceRepo interface {
 }
 
 func (s *WsService) CanViewBoard(ctx context.Context, userID, boardID uuid.UUID) error {
-	if err := authz.CheckUserMinRole(ctx, s.MembershipsRepo, userID, boardID, rbac.Viewer, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinRole(ctx, s.MembershipsRepo, userID, boardID, rbac.Viewer, s.IncludeDeleted); err != nil {
 		return domainerr.ErrForbidden
 	}
 	return nil

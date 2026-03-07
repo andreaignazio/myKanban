@@ -1,10 +1,10 @@
 package listcards
 
 import (
-	"GoGORM/internal/authz"
 	"GoGORM/internal/domainerr"
 	"GoGORM/internal/dto"
 	EventRegistry "GoGORM/internal/eventregistry"
+	"GoGORM/internal/guard"
 	"GoGORM/internal/rank"
 	"GoGORM/internal/rbac"
 	"GoGORM/internal/ws"
@@ -64,7 +64,7 @@ func (s *ListCardsService) HydrateListCardResponseMirrors(ctx context.Context, r
 func (s *ListCardsService) CreateCardInList(ctx context.Context, userID, workspaceID, boardID, listID uuid.UUID,
 	request CreateCardRequest, correlationID uuid.UUID) (*models.Card, *models.ListCard, error) {
 
-	if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Member, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Member, s.IncludeDeleted); err != nil {
 		return nil, nil, err
 	}
 
@@ -178,7 +178,7 @@ func (s *ListCardsService) CreateCardInList(ctx context.Context, userID, workspa
 }
 
 func (s *ListCardsService) GetListDetail(ctx context.Context, userID, boardID, listID uuid.UUID) (*models.List, []ListCardDetail, error) {
-	if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Member, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Member, s.IncludeDeleted); err != nil {
 		return nil, nil, err
 	}
 	list, err := s.ListRepo.GetListMeta(ctx, listID, s.IncludeDeleted)
@@ -193,7 +193,7 @@ func (s *ListCardsService) GetListDetail(ctx context.Context, userID, boardID, l
 }
 
 func (s *ListCardsService) GetListDetailPatch(ctx context.Context, userID, boardID, listID uuid.UUID) (*ListDetailPatchResponse, error) {
-	if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Viewer, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Viewer, s.IncludeDeleted); err != nil {
 		return nil, err
 	}
 
@@ -261,7 +261,7 @@ func (s *ListCardsService) CrossMoveCard(ctx context.Context,
 	req CrossMoveCardRequest,
 	correlationID uuid.UUID) (*models.ListCard, *models.ListCard, *dto.MoveCardEventPayload, error) {
 
-	if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Member, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Member, s.IncludeDeleted); err != nil {
 		fmt.Println("errore 1")
 		return nil, nil, nil, err
 	}
@@ -449,7 +449,7 @@ func (s *ListCardsService) CrossMoveCard(ctx context.Context,
 func (s *ListCardsService) BulkCrossMoveCards(ctx context.Context,
 	userID, boardID uuid.UUID, req BulkCrossMoveCardsRequest) ([]models.ListCard, []models.ListCard, error) {
 
-	if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Member, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Member, s.IncludeDeleted); err != nil {
 		return nil, nil, err
 	}
 	//Validate all card ids exist in source list
@@ -567,7 +567,7 @@ func (s *ListCardsService) BulkCrossMoveCards(ctx context.Context,
 func (s *ListCardsService) BulkMoveListCardsInBoard(ctx context.Context,
 	userID, boardID uuid.UUID, req BulkMoveListCardsInBoardRequest) ([]models.ListCard, []dto.MoveCardEventPayload, error) {
 
-	if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Member, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Member, s.IncludeDeleted); err != nil {
 		return nil, nil, err
 	}
 
@@ -801,7 +801,7 @@ func (s *ListCardsService) BulkMoveListCardsInBoard(ctx context.Context,
 }
 
 func (s *ListCardsService) GetListCardsByListId(ctx context.Context, userID, boardID, listID uuid.UUID) ([]models.ListCard, error) {
-	if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Viewer, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Viewer, s.IncludeDeleted); err != nil {
 		return nil, err
 	}
 
@@ -814,11 +814,11 @@ func (s *ListCardsService) GetListCardsByListId(ctx context.Context, userID, boa
 }
 
 func (s *ListCardsService) MoveCardToBoard(ctx context.Context, userID, sourceBoardID, cardID uuid.UUID, req MoveCardToBoardRequest) ([]dto.BoardListResponse, *MoveCardToBoardEventData, error) {
-	if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, sourceBoardID, rbac.Member, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, sourceBoardID, rbac.Member, s.IncludeDeleted); err != nil {
 		fmt.Println("MoveCardToBoard return: source board role check failed", err)
 		return nil, nil, err
 	}
-	if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, req.TargetBoardID, rbac.Member, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, req.TargetBoardID, rbac.Member, s.IncludeDeleted); err != nil {
 		fmt.Println("MoveCardToBoard return: target board role check failed", err)
 		return nil, nil, err
 	}
@@ -991,10 +991,10 @@ func (s *ListCardsService) MoveCardToBoard(ctx context.Context, userID, sourceBo
 
 func (s *ListCardsService) MirrorCardToList(ctx context.Context, userID, workspaceUUID, boardID, cardID uuid.UUID,
 	req MirrorCardToListRequest, correlationID uuid.UUID) ([]dto.ListCardResponse, error) {
-	if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Member, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Member, s.IncludeDeleted); err != nil {
 		return nil, err
 	}
-	if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, req.TargetBoardID, rbac.Member, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, req.TargetBoardID, rbac.Member, s.IncludeDeleted); err != nil {
 		return nil, err
 	}
 	allowedRoles := rbac.AllowedAtLeast(rbac.Member)
@@ -1329,10 +1329,10 @@ func (s *ListCardsService) buildExternalRootsPayload(ctx context.Context, rootID
 
 func (s *ListCardsService) CopyCardToList(ctx context.Context, userID, workspaceUUID, boardID, cardID uuid.UUID,
 	req CopyCardToListRequest, correlationID uuid.UUID) (*models.Card, *models.ListCard, error) {
-	if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Member, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Member, s.IncludeDeleted); err != nil {
 		return nil, nil, err
 	}
-	if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, req.TargetBoardID, rbac.Member, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, req.TargetBoardID, rbac.Member, s.IncludeDeleted); err != nil {
 		return nil, nil, err
 	}
 	allowedRoles := rbac.AllowedAtLeast(rbac.Member)
@@ -1885,7 +1885,7 @@ func (s *ListCardsService) GetRootBoardForListCard(ctx context.Context, boardId 
 }
 
 func (s *ListCardsService) DetatchCardFromList(ctx context.Context, userID uuid.UUID, workspaceUUID uuid.UUID, boardID uuid.UUID, listID uuid.UUID, cardID uuid.UUID, correlationID uuid.UUID) ([]uuid.UUID, error) {
-	if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Member, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Member, s.IncludeDeleted); err != nil {
 		return nil, err
 	}
 
@@ -1977,7 +1977,7 @@ func (s *ListCardsService) DetatchCardFromList(ctx context.Context, userID uuid.
 }
 
 func (s *ListCardsService) BulkDetatchCardsFromList(ctx context.Context, userID uuid.UUID, workspaceUUID uuid.UUID, boardID uuid.UUID, listID uuid.UUID, correlationID uuid.UUID) ([]uuid.UUID, error) {
-	if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Member, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Member, s.IncludeDeleted); err != nil {
 		return nil, err
 	}
 
@@ -2148,7 +2148,7 @@ func (s *ListCardsService) BulkDeleteListCardsByIDsTX(ctx context.Context, tx *g
 }
 
 func (s *ListCardsService) GetWorkspaceCardMirrors(ctx context.Context, userID, workspaceID, cardID uuid.UUID) (*MirrorCardsResponse, error) {
-	if err := authz.CheckUserMinWorkspaceRole(ctx, s.MembershipRepo, userID, workspaceID, rbac.Viewer, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinWorkspaceRole(ctx, s.MembershipRepo, userID, workspaceID, rbac.Viewer, s.IncludeDeleted); err != nil {
 		return nil, err
 	}
 

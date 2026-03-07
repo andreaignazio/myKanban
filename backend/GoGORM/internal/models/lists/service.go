@@ -1,10 +1,10 @@
 package lists
 
 import (
-	"GoGORM/internal/authz"
 	"GoGORM/internal/domainerr"
 	"GoGORM/internal/dto"
 	EventRegistry "GoGORM/internal/eventregistry"
+	"GoGORM/internal/guard"
 	"GoGORM/internal/rbac"
 	"GoGORM/internal/ws"
 	"GoGORM/models"
@@ -108,7 +108,7 @@ func (s *ListsService) GetUserLists(ctx context.Context, userID uuid.UUID) ([]mo
 
 func (s *ListsService) PatchListProps(ctx context.Context, userID, workspaceID, boardID, listID, correlationID uuid.UUID,
 	req PatchListPropsRequest) (*models.List, error) {
-	if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Member, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Member, s.IncludeDeleted); err != nil {
 		return nil, err
 	}
 
@@ -190,7 +190,7 @@ func (s *ListsService) PatchListProps(ctx context.Context, userID, workspaceID, 
 
 func (s *ListsService) PatchListDetails(ctx context.Context, userID, workspaceID, boardID, listID, correlationID uuid.UUID,
 	req PatchListDetailsRequest) (*models.List, error) {
-	if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Member, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Member, s.IncludeDeleted); err != nil {
 		return nil, err
 	}
 

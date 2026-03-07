@@ -1,10 +1,10 @@
 package cards
 
 import (
-	"GoGORM/internal/authz"
 	"GoGORM/internal/domainerr"
 	"GoGORM/internal/dto"
 	EventRegistry "GoGORM/internal/eventregistry"
+	"GoGORM/internal/guard"
 	"GoGORM/internal/rbac"
 	"GoGORM/internal/ws"
 	"GoGORM/models"
@@ -96,7 +96,7 @@ type CapabilitiesRepo interface {
 func (s *CardsService) PatchCardDetails(ctx context.Context, userID, workspaceID, boardID, cardID uuid.UUID,
 	req PatchCardDetailsRequest, correlationID uuid.UUID) (*models.Card, error) {
 
-	if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Member, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Member, s.IncludeDeleted); err != nil {
 		return nil, err
 	}
 
@@ -183,7 +183,7 @@ func (s *CardsService) GetUserCards(ctx context.Context, userID uuid.UUID) ([]mo
 
 func (s *CardsService) PatchCardProps(ctx context.Context, userID, workspaceID, boardID, cardID uuid.UUID,
 	req PatchCardPropsRequest, correlationID uuid.UUID) (*models.Card, error) {
-	if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Member, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Member, s.IncludeDeleted); err != nil {
 		return nil, err
 	}
 	allowedRoles := rbac.AllowedAtLeast(rbac.Member)
@@ -264,7 +264,7 @@ func (s *CardsService) PatchCardProps(ctx context.Context, userID, workspaceID, 
 
 func (s *CardsService) GetCardsWhereUserIsMember(ctx context.Context, userID uuid.UUID) (*UserMemberCardsResponse, error) {
 
-	//User is already checked or is the same as the userID in the token, so we can skip authz here
+	// User is already checked or is the same as the userID in the token, so we can skip the guard here.
 	inboxCards, err := s.GetInboxCardsForUser(ctx, userID)
 	if err != nil {
 		return nil, domainerr.MapRepoErr(err, false)

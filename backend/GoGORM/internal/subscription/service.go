@@ -1,8 +1,8 @@
 package subscription
 
 import (
-	"GoGORM/internal/authz"
 	"GoGORM/internal/domainerr"
+	"GoGORM/internal/guard"
 	"GoGORM/internal/rbac"
 	"GoGORM/models"
 	"context"
@@ -68,7 +68,7 @@ func (s *SubscriptionService) CheckWorkspaceMembershipLimit(ctx context.Context,
 
 func (s *SubscriptionService) StartCheckoutForWorkspace(ctx context.Context, workspaceID, actorUserID uuid.UUID,
 	req *RequestSubscriptionCheckout) (*SubscriptionCheckoutResponse, error) {
-	if err := authz.CheckUserMinWorkspaceRole(ctx, s.MembershipRepo, actorUserID, workspaceID, rbac.Owner, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinWorkspaceRole(ctx, s.MembershipRepo, actorUserID, workspaceID, rbac.Owner, s.IncludeDeleted); err != nil {
 		return nil, err
 	}
 	input := CreateCheckoutSessionInput{

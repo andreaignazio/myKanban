@@ -1,10 +1,10 @@
 package cardcomments
 
 import (
-	"GoGORM/internal/authz"
 	"GoGORM/internal/domainerr"
 	"GoGORM/internal/dto"
 	EventRegistry "GoGORM/internal/eventregistry"
+	"GoGORM/internal/guard"
 	"GoGORM/internal/rbac"
 	"GoGORM/models"
 	"context"
@@ -49,7 +49,7 @@ type MembershipRepo interface {
 
 func (s *CardCommentsService) CreateCardComment(ctx context.Context, userID, workspaceID, boardID, cardID, correlationID uuid.UUID,
 	req *CreateCardCommentRequest) (*dto.CardCommentResponse, error) {
-	if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Viewer, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Viewer, s.IncludeDeleted); err != nil {
 		return nil, err
 	}
 
@@ -118,7 +118,7 @@ func (s *CardCommentsService) CreateCardComment(ctx context.Context, userID, wor
 }
 
 func (s *CardCommentsService) DeleteCardComment(ctx context.Context, userID, workspaceID, boardID, cardID, commentID, correlationID uuid.UUID) (*dto.CardCommentResponse, error) {
-	if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Viewer, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Viewer, s.IncludeDeleted); err != nil {
 		return nil, err
 	}
 	commentToBeDeleted, err := s.Repo.GetCardCommentByID(ctx, commentID, s.IncludeDeleted)
@@ -161,7 +161,7 @@ func (s *CardCommentsService) DeleteCardComment(ctx context.Context, userID, wor
 
 func (s *CardCommentsService) EditCardComment(ctx context.Context, userID, workspaceID, boardID, cardID, commentID, correlationID uuid.UUID,
 	req *EditCardCommentRequest) (*dto.CardCommentResponse, error) {
-	if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Viewer, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Viewer, s.IncludeDeleted); err != nil {
 		return nil, err
 	}
 	comment, err := s.Repo.GetCardCommentByID(ctx, commentID, s.IncludeDeleted)
@@ -273,7 +273,7 @@ func (s *CardCommentsService) EditCardComment(ctx context.Context, userID, works
 }
 
 func (s *CardCommentsService) GetCardComments(ctx context.Context, userID, workspaceID, boardID, cardID uuid.UUID) (*CardCommentResponse, error) {
-	if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Viewer, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Viewer, s.IncludeDeleted); err != nil {
 		return nil, err
 	}
 	comments, err := s.Repo.GetCardCommentsByCardID(ctx, cardID, s.IncludeDeleted)

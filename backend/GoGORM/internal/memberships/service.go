@@ -1,10 +1,10 @@
 package memberships
 
 import (
-	"GoGORM/internal/authz"
 	"GoGORM/internal/domainerr"
 	"GoGORM/internal/dto"
 	EventRegistry "GoGORM/internal/eventregistry"
+	"GoGORM/internal/guard"
 	"GoGORM/internal/rbac"
 	"GoGORM/internal/ws"
 	"GoGORM/models"
@@ -62,7 +62,7 @@ func NewMembershipService(db *gorm.DB, MembershipRepo MembershipRepo, Subscripti
 }
 
 func (s *MembershipService) GetBoardMembers(ctx context.Context, userID, boardID, workspaceID uuid.UUID) ([]BoardUserRow, error) {
-	if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Viewer, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Viewer, s.IncludeDeleted); err != nil {
 		return nil, err
 	}
 	boardUserRows, err := s.MembershipRepo.GetUsersBoardRows(ctx, boardID, workspaceID, s.IncludeDeleted)
@@ -74,7 +74,7 @@ func (s *MembershipService) GetBoardMembers(ctx context.Context, userID, boardID
 
 func (s *MembershipService) AddBoardMember(ctx context.Context, userID, boardID uuid.UUID,
 	req AddBoardMemberRequest) (*models.UserBoard, error) {
-	if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Admin, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Admin, s.IncludeDeleted); err != nil {
 		return nil, err
 	}
 	if req.Role == rbac.Owner.String() {
@@ -100,7 +100,7 @@ func (s *MembershipService) AddBoardMember(ctx context.Context, userID, boardID 
 
 func (s *MembershipService) ChangeBoardMemberRole(ctx context.Context, userID, boardID, targetMemberID uuid.UUID,
 	req ChangeBoardMemberRoleRequest) (*models.UserBoard, error) {
-	if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Admin, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Admin, s.IncludeDeleted); err != nil {
 		return nil, err
 	}
 	if req.Role == rbac.Owner.String() {
@@ -134,7 +134,7 @@ func (s *MembershipService) DeleteBoardMember(ctx context.Context, userID, board
 			return domainerr.New(domainerr.ErrForbidden, "board owner cannot leave board")
 		}
 	} else {
-		if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Admin, s.IncludeDeleted); err != nil {
+		if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Admin, s.IncludeDeleted); err != nil {
 			return err
 		}
 	}

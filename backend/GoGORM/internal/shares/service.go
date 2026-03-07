@@ -1,11 +1,11 @@
 package shares
 
 import (
-	"GoGORM/internal/authz"
 	"GoGORM/internal/dbx"
 	"GoGORM/internal/domainerr"
 	"GoGORM/internal/dto"
 	EventRegistry "GoGORM/internal/eventregistry"
+	"GoGORM/internal/guard"
 	"GoGORM/internal/memberships"
 	"GoGORM/internal/models/workspaces"
 	"GoGORM/internal/ws"
@@ -140,7 +140,7 @@ func NewShareService(db *gorm.DB, listShareRepo ListShareRepo, shareRepo ShareRe
 func (s *ShareService) CreateListShareOffer(ctx context.Context, shareOffer ShareOfferDomain) (*models.BoardListShareOffer, error) {
 
 	//User board access
-	if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, shareOffer.UserID, shareOffer.SourceBoardID, rbac.Admin, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, shareOffer.UserID, shareOffer.SourceBoardID, rbac.Admin, s.IncludeDeleted); err != nil {
 		return nil, err
 	}
 	//Board list access
@@ -175,7 +175,7 @@ func (s *ShareService) CreateListShareOffer(ctx context.Context, shareOffer Shar
 
 func (s *ShareService) GetListShareOffers(ctx context.Context, userID, targetBoardID uuid.UUID) ([]models.BoardListShareOffer, error) {
 
-	if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, targetBoardID, rbac.Admin, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, targetBoardID, rbac.Admin, s.IncludeDeleted); err != nil {
 		return nil, err
 	}
 
@@ -217,7 +217,7 @@ func toJSON[T any](data T) (datatypes.JSON, error) {
 
 func (s *ShareService) RespondToListShareOffer(ctx context.Context, respondDomain ShareOfferRespondDomain) (*models.BoardListShareOffer, *models.BoardList, error) {
 
-	if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, respondDomain.UserID, respondDomain.TargetBoardID, rbac.Admin, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, respondDomain.UserID, respondDomain.TargetBoardID, rbac.Admin, s.IncludeDeleted); err != nil {
 		return nil, nil, err
 	}
 	if respondDomain.Decision != "accepted" && respondDomain.Decision != "rejected" {
@@ -427,7 +427,7 @@ func (s *ShareService) RevokeListShareOffer(ctx context.Context, revokeDomain Sh
 		return nil, domainerr.ErrForbidden
 	}
 	//Allow revoke only to admin+
-	if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, revokeDomain.RequesterUserID, revokeDomain.RequesterBoardID, rbac.Admin, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, revokeDomain.RequesterUserID, revokeDomain.RequesterBoardID, rbac.Admin, s.IncludeDeleted); err != nil {
 		return nil, err
 	}
 	var updatedShareOffer *models.BoardListShareOffer
@@ -902,7 +902,7 @@ func (s *ShareService) CreateWorkspaceAccessRequest(ctx context.Context, userID,
 }
 
 func (s *ShareService) GetBoardRequestsIncomingByBoard(ctx context.Context, userID, boardID uuid.UUID) ([]models.ShareOffer, error) {
-	if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Admin, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Admin, s.IncludeDeleted); err != nil {
 		return nil, err
 	}
 	shareOffers, err := s.ShareRepo.GetBoardRequestShareOffers(ctx, boardID, s.IncludeDeleted)
@@ -913,7 +913,7 @@ func (s *ShareService) GetBoardRequestsIncomingByBoard(ctx context.Context, user
 }
 
 func (s *ShareService) GetBoardRequestsIncomingByBoardWithUsers(ctx context.Context, userID, boardID uuid.UUID) ([]dto.BoardShareOffersResponse, error) {
-	if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Admin, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Admin, s.IncludeDeleted); err != nil {
 		return nil, err
 	}
 	shareOffers, err := s.ShareRepo.GetBoardRequestShareOffers(ctx, boardID, s.IncludeDeleted)
@@ -924,7 +924,7 @@ func (s *ShareService) GetBoardRequestsIncomingByBoardWithUsers(ctx context.Cont
 }
 
 func (s *ShareService) GetWorkspaceRequestsIncomingByWorkspaceWithUsers(ctx context.Context, userID, workspaceID uuid.UUID) ([]dto.BoardShareOffersResponse, error) {
-	if err := authz.CheckUserMinWorkspaceRole(ctx, s.MembershipRepo, userID, workspaceID, rbac.Member, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinWorkspaceRole(ctx, s.MembershipRepo, userID, workspaceID, rbac.Member, s.IncludeDeleted); err != nil {
 		return nil, err
 	}
 	shareOffers, err := s.ShareRepo.GetWorkspaceRequestShareOffers(ctx, workspaceID, s.IncludeDeleted)
@@ -1171,11 +1171,11 @@ func (s *ShareService) GetShareOfferDetailsByID(ctx context.Context, userID, sha
 	if !isInvolved {
 		switch shareOffer.TargetType {
 		case "board":
-			if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, shareOffer.TargetID, rbac.Admin, s.IncludeDeleted); err != nil {
+			if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, shareOffer.TargetID, rbac.Admin, s.IncludeDeleted); err != nil {
 				return nil, err
 			}
 		case "workspace":
-			if err := authz.CheckUserMinWorkspaceRole(ctx, s.MembershipRepo, userID, shareOffer.TargetID, rbac.Admin, s.IncludeDeleted); err != nil {
+			if err := guard.CheckUserMinWorkspaceRole(ctx, s.MembershipRepo, userID, shareOffer.TargetID, rbac.Admin, s.IncludeDeleted); err != nil {
 				return nil, err
 			}
 		default:
@@ -1348,11 +1348,11 @@ func (s *ShareService) RespondToShareOffer(ctx context.Context, userID uuid.UUID
 	if shareoffer.Kind == models.ShareOfferKindRequest {
 		switch shareoffer.TargetType {
 		case "board":
-			if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, shareoffer.TargetID, rbac.Admin, s.IncludeDeleted); err != nil {
+			if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, shareoffer.TargetID, rbac.Admin, s.IncludeDeleted); err != nil {
 				return nil, nil, nil, err
 			}
 		case "workspace":
-			if err := authz.CheckUserMinWorkspaceRole(ctx, s.MembershipRepo, userID, shareoffer.TargetID, rbac.Admin, s.IncludeDeleted); err != nil {
+			if err := guard.CheckUserMinWorkspaceRole(ctx, s.MembershipRepo, userID, shareoffer.TargetID, rbac.Admin, s.IncludeDeleted); err != nil {
 				return nil, nil, nil, err
 			}
 		default:
@@ -2094,7 +2094,7 @@ func (s *ShareService) GetUserWorkspaceRequestsOutgoing(ctx context.Context, use
 }
 
 func (s *ShareService) GetPendingOfferTargetBoardsByWorkspaceForUser(ctx context.Context, userID, workspaceID uuid.UUID) (PendingWorkspaceBoardTargetsResponse, error) {
-	if err := authz.CheckUserMinWorkspaceRole(ctx, s.MembershipRepo, userID, workspaceID, rbac.Viewer, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinWorkspaceRole(ctx, s.MembershipRepo, userID, workspaceID, rbac.Viewer, s.IncludeDeleted); err != nil {
 		return PendingWorkspaceBoardTargetsResponse{}, err
 	}
 
@@ -2178,7 +2178,7 @@ func (s *ShareService) GetPendingOfferTargetBoardsByWorkspaceForUser(ctx context
 }
 
 func (s *ShareService) GetPendingBoardAccessRequestCountsByWorkspaceForAdminOwner(ctx context.Context, userID, workspaceID uuid.UUID) (PendingWorkspaceBoardAccessRequestsResponse, error) {
-	if err := authz.CheckUserMinWorkspaceRole(ctx, s.MembershipRepo, userID, workspaceID, rbac.Viewer, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinWorkspaceRole(ctx, s.MembershipRepo, userID, workspaceID, rbac.Viewer, s.IncludeDeleted); err != nil {
 		return PendingWorkspaceBoardAccessRequestsResponse{}, err
 	}
 

@@ -1,10 +1,10 @@
 package links
 
 import (
-	"GoGORM/internal/authz"
 	"GoGORM/internal/domainerr"
 	"GoGORM/internal/dto"
 	EventRegistry "GoGORM/internal/eventregistry"
+	"GoGORM/internal/guard"
 	"GoGORM/internal/listcards"
 	"GoGORM/internal/rank"
 	"GoGORM/internal/rbac"
@@ -84,7 +84,7 @@ func (s *LinksService) CopyBulkListsInBoard(
 		return nil, domainerr.ErrInternal
 	}
 
-	if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Member, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Member, s.IncludeDeleted); err != nil {
 		return nil, err
 	}
 
@@ -295,7 +295,7 @@ func (s *LinksService) MoveListInBoard(ctx context.Context,
 	req MoveListInBoardDTO,
 	correlationID uuid.UUID) (*models.BoardList, error) {
 
-	if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Admin, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Admin, s.IncludeDeleted); err != nil {
 		return nil, err
 	}
 	boardLists, err := s.LinksRepo.GetListsInBoard(ctx, boardID, s.IncludeDeleted)
@@ -472,12 +472,12 @@ func (s *LinksService) MoveBoardList(
 		targetBoardID = *req.TargetBoardID
 	}
 
-	if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, sourceBoardID, rbac.Member, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, sourceBoardID, rbac.Member, s.IncludeDeleted); err != nil {
 		fmt.Println("Error checking user role for source board:", err)
 		return nil, nil, err
 	}
 	if targetBoardID != sourceBoardID {
-		if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, targetBoardID, rbac.Member, s.IncludeDeleted); err != nil {
+		if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, targetBoardID, rbac.Member, s.IncludeDeleted); err != nil {
 			fmt.Println("Error checking user role for target board:", err)
 			return nil, nil, err
 		}
@@ -642,10 +642,10 @@ func (s *LinksService) MirrorBoardList(
 		return nil, nil, domainerr.ErrValidation
 	}
 
-	if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, sourceBoardID, rbac.Member, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, sourceBoardID, rbac.Member, s.IncludeDeleted); err != nil {
 		return nil, nil, err
 	}
-	if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, targetBoardID, rbac.Member, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, targetBoardID, rbac.Member, s.IncludeDeleted); err != nil {
 		return nil, nil, err
 	}
 
@@ -919,7 +919,7 @@ func (s *LinksService) MoveBulkListInBoard(ctx context.Context,
 }
 
 func (s *LinksService) CreateListInBoard(ctx context.Context, userID, workspaceID, boardID uuid.UUID, req CreateListInBoardRequest, correlationID uuid.UUID) (*models.List, *models.BoardList, error) {
-	if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Member, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Member, s.IncludeDeleted); err != nil {
 		return nil, nil, err
 	}
 
@@ -1020,7 +1020,7 @@ func (s *LinksService) CreateListInBoard(ctx context.Context, userID, workspaceI
 }
 
 func (s *LinksService) DetatchList(ctx context.Context, userID, workspaceID, boardID, listID uuid.UUID, correlationID uuid.UUID) (*models.BoardList, error) {
-	if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Admin, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Admin, s.IncludeDeleted); err != nil {
 		return nil, err
 	}
 
@@ -1190,7 +1190,7 @@ func (s *LinksService) DetatchList(ctx context.Context, userID, workspaceID, boa
 }
 
 func (s *LinksService) RestoreListToBoard(ctx context.Context, userID, boardID, listID uuid.UUID) (*models.BoardList, error) {
-	if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Admin, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Admin, s.IncludeDeleted); err != nil {
 		return nil, err
 	}
 
@@ -1220,7 +1220,7 @@ func (s *LinksService) RestoreListToBoard(ctx context.Context, userID, boardID, 
 }
 
 func (s *LinksService) PatchListAccessMode(ctx context.Context, userID, workspaceID, boardID, listID uuid.UUID, accessMode string, correlationID uuid.UUID) (*models.BoardList, error) {
-	if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Admin, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Admin, s.IncludeDeleted); err != nil {
 		return nil, err
 	}
 	_, err := s.ListRepo.GetListMeta(ctx, listID, s.IncludeDeleted)
@@ -1654,7 +1654,7 @@ func toDTOCardMemberResponses(members []models.CardMember) []dto.CardMemberRespo
 }
 
 func (s *LinksService) GetListsByBoardID(ctx context.Context, userID, boardID, workspaceID uuid.UUID) (*dto.BoardDetailResponse, error) {
-	if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Viewer, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Viewer, s.IncludeDeleted); err != nil {
 		return nil, err
 	}
 	boardLists, err := s.LinksRepo.GetBoardListLinks(ctx, boardID, s.IncludeDeleted)
@@ -1687,7 +1687,7 @@ func (s *LinksService) GetListsByBoardID(ctx context.Context, userID, boardID, w
 }
 
 func (s *LinksService) GetBoardListMirrors(ctx context.Context, userID, boardID, boardListID uuid.UUID) (*BoardListMirrorsResponse, error) {
-	if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Viewer, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Viewer, s.IncludeDeleted); err != nil {
 		return nil, err
 	}
 
@@ -1759,7 +1759,7 @@ func (s *LinksService) GetBoardListMirrors(ctx context.Context, userID, boardID,
 }
 
 func (s *LinksService) GetDeletedBoardRelations(ctx context.Context, userID, boardID uuid.UUID) (*DeletedBoardRelationsResponse, error) {
-	if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Admin, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Admin, s.IncludeDeleted); err != nil {
 		return nil, err
 	}
 
@@ -1832,7 +1832,7 @@ func (s *LinksService) GetDeletedBoardRelations(ctx context.Context, userID, boa
 }
 
 func (s *LinksService) RestoreBoardListsByIDs(ctx context.Context, userID, workspaceID, boardID uuid.UUID, boardListIDs []uuid.UUID, correlationID uuid.UUID) ([]models.BoardList, error) {
-	if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Admin, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Admin, s.IncludeDeleted); err != nil {
 		return nil, err
 	}
 	if len(boardListIDs) == 0 {
@@ -1883,7 +1883,7 @@ func (s *LinksService) RestoreBoardListsByIDs(ctx context.Context, userID, works
 }
 
 func (s *LinksService) RestoreListCardsByIDs(ctx context.Context, userID, workspaceID, boardID uuid.UUID, listCardIDs []uuid.UUID, correlationID uuid.UUID) ([]models.ListCard, error) {
-	if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Admin, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Admin, s.IncludeDeleted); err != nil {
 		return nil, err
 	}
 	if len(listCardIDs) == 0 {
@@ -2020,7 +2020,7 @@ func (s *LinksService) RestoreListCardsByIDs(ctx context.Context, userID, worksp
 }
 
 func (s *LinksService) PurgeBoardListsByIDs(ctx context.Context, userID, workspaceID, boardID uuid.UUID, boardListIDs []uuid.UUID, correlationID uuid.UUID) ([]models.BoardList, error) {
-	if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Admin, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Admin, s.IncludeDeleted); err != nil {
 		return nil, err
 	}
 	if len(boardListIDs) == 0 {
@@ -2071,7 +2071,7 @@ func (s *LinksService) PurgeBoardListsByIDs(ctx context.Context, userID, workspa
 }
 
 func (s *LinksService) PurgeListCardsByIDs(ctx context.Context, userID, workspaceID, boardID uuid.UUID, listCardIDs []uuid.UUID, correlationID uuid.UUID) ([]models.ListCard, error) {
-	if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Admin, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Admin, s.IncludeDeleted); err != nil {
 		return nil, err
 	}
 	if len(listCardIDs) == 0 {

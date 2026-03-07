@@ -1,9 +1,9 @@
 package EventRegistry
 
 import (
-	"GoGORM/internal/authz"
 	"GoGORM/internal/domainerr"
 	"GoGORM/internal/dto"
+	"GoGORM/internal/guard"
 	"GoGORM/internal/rbac"
 	"context"
 
@@ -12,7 +12,7 @@ import (
 
 func (s *EventRegistryService) GetBoardAuditLog(ctx context.Context, boardID uuid.UUID, userID uuid.UUID) (dto.AuditLogResponse, error) {
 
-	if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Viewer, false); err != nil {
+	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Viewer, false); err != nil {
 		return dto.AuditLogResponse{}, err
 	}
 	auditlogevent, err := s.repo.GetBoardAuditLog(ctx, boardID)
@@ -23,7 +23,7 @@ func (s *EventRegistryService) GetBoardAuditLog(ctx context.Context, boardID uui
 }
 
 func (s *EventRegistryService) GetBoardAuditLogPaginated(ctx context.Context, boardID uuid.UUID, userID uuid.UUID, cursor *dto.AuditCursor, limit int) (dto.AuditLogPaginatedResponse, error) {
-	if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Viewer, false); err != nil {
+	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Viewer, false); err != nil {
 		return dto.AuditLogPaginatedResponse{}, err
 	}
 	auditlogevent, err := s.repo.GetBoardAuditLogPaginated(ctx, boardID, limit, cursor)
@@ -42,7 +42,7 @@ func (s *EventRegistryService) GetBoardAuditLogPaginated(ctx context.Context, bo
 }
 
 func (s *EventRegistryService) GetWorkspaceAuditLog(ctx context.Context, workspaceID uuid.UUID, userID uuid.UUID) (dto.AuditLogResponse, error) {
-	if err := authz.CheckUserMinWorkspaceRole(ctx, s.MembershipRepo, userID, workspaceID, rbac.Viewer, false); err != nil {
+	if err := guard.CheckUserMinWorkspaceRole(ctx, s.MembershipRepo, userID, workspaceID, rbac.Viewer, false); err != nil {
 		return dto.AuditLogResponse{}, err
 	}
 	auditlogevent, err := s.repo.GetWorkspaceAuditLog(ctx, workspaceID)
@@ -53,11 +53,11 @@ func (s *EventRegistryService) GetWorkspaceAuditLog(ctx context.Context, workspa
 }
 
 func (s *EventRegistryService) GetWorkspaceUserActivity(ctx context.Context, workspaceID, requesterUserID, actorUserID uuid.UUID) (dto.AuditLogResponse, error) {
-	if err := authz.CheckUserMinWorkspaceRole(ctx, s.MembershipRepo, requesterUserID, workspaceID, rbac.Viewer, false); err != nil {
+	if err := guard.CheckUserMinWorkspaceRole(ctx, s.MembershipRepo, requesterUserID, workspaceID, rbac.Viewer, false); err != nil {
 		return dto.AuditLogResponse{}, err
 	}
 	if requesterUserID != actorUserID {
-		if err := authz.CheckUserMinWorkspaceRole(ctx, s.MembershipRepo, requesterUserID, workspaceID, rbac.Member, false); err != nil {
+		if err := guard.CheckUserMinWorkspaceRole(ctx, s.MembershipRepo, requesterUserID, workspaceID, rbac.Member, false); err != nil {
 			return dto.AuditLogResponse{}, err
 		}
 	}
@@ -70,11 +70,11 @@ func (s *EventRegistryService) GetWorkspaceUserActivity(ctx context.Context, wor
 }
 
 func (s *EventRegistryService) GetWorkspaceUserActivityPaginated(ctx context.Context, workspaceID, requesterUserID, actorUserID uuid.UUID, cursor *dto.AuditCursor, limit int) (dto.AuditLogPaginatedResponse, error) {
-	if err := authz.CheckUserMinWorkspaceRole(ctx, s.MembershipRepo, requesterUserID, workspaceID, rbac.Viewer, false); err != nil {
+	if err := guard.CheckUserMinWorkspaceRole(ctx, s.MembershipRepo, requesterUserID, workspaceID, rbac.Viewer, false); err != nil {
 		return dto.AuditLogPaginatedResponse{}, err
 	}
 	if requesterUserID != actorUserID {
-		if err := authz.CheckUserMinWorkspaceRole(ctx, s.MembershipRepo, requesterUserID, workspaceID, rbac.Member, false); err != nil {
+		if err := guard.CheckUserMinWorkspaceRole(ctx, s.MembershipRepo, requesterUserID, workspaceID, rbac.Member, false); err != nil {
 			return dto.AuditLogPaginatedResponse{}, err
 		}
 	}
@@ -95,7 +95,7 @@ func (s *EventRegistryService) GetWorkspaceUserActivityPaginated(ctx context.Con
 }
 
 func (s *EventRegistryService) GetWorkspaceCardActivity(ctx context.Context, workspaceID, cardID, userID uuid.UUID) (dto.AuditLogResponse, error) {
-	if err := authz.CheckUserMinWorkspaceRole(ctx, s.MembershipRepo, userID, workspaceID, rbac.Viewer, false); err != nil {
+	if err := guard.CheckUserMinWorkspaceRole(ctx, s.MembershipRepo, userID, workspaceID, rbac.Viewer, false); err != nil {
 		return dto.AuditLogResponse{}, err
 	}
 
@@ -107,7 +107,7 @@ func (s *EventRegistryService) GetWorkspaceCardActivity(ctx context.Context, wor
 }
 
 func (s *EventRegistryService) GetWorkspaceCardActivityPaginated(ctx context.Context, workspaceID, cardID, userID uuid.UUID, cursor *dto.AuditCursor, limit int) (dto.AuditLogPaginatedResponse, error) {
-	if err := authz.CheckUserMinWorkspaceRole(ctx, s.MembershipRepo, userID, workspaceID, rbac.Viewer, false); err != nil {
+	if err := guard.CheckUserMinWorkspaceRole(ctx, s.MembershipRepo, userID, workspaceID, rbac.Viewer, false); err != nil {
 		return dto.AuditLogPaginatedResponse{}, err
 	}
 

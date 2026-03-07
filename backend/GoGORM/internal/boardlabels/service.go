@@ -1,10 +1,10 @@
 package BoardLabels
 
 import (
-	"GoGORM/internal/authz"
 	"GoGORM/internal/domainerr"
 	"GoGORM/internal/dto"
 	EventRegistry "GoGORM/internal/eventregistry"
+	"GoGORM/internal/guard"
 	"GoGORM/internal/rbac"
 	"GoGORM/models"
 	"context"
@@ -59,7 +59,7 @@ func normalizeOptionalString(value *string) *string {
 }
 
 func (s *BoardLabelsService) GetBoardLabels(ctx context.Context, userID, workspaceID, boardID, correlationID uuid.UUID) ([]models.BoardLabel, error) {
-	if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Viewer, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Viewer, s.IncludeDeleted); err != nil {
 		return nil, err
 	}
 
@@ -72,7 +72,7 @@ func (s *BoardLabelsService) GetBoardLabels(ctx context.Context, userID, workspa
 }
 
 func (s *BoardLabelsService) CreateBoardLabel(ctx context.Context, userID, workspaceID, boardID, correlationID uuid.UUID, req CreateBoardLabelRequest) (*models.BoardLabel, error) {
-	if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Member, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Member, s.IncludeDeleted); err != nil {
 		return nil, err
 	}
 	normalizedTitle := normalizeOptionalString(req.Title)
@@ -120,7 +120,7 @@ func (s *BoardLabelsService) CreateBoardLabel(ctx context.Context, userID, works
 }
 
 func (s *BoardLabelsService) DeleteBoardLabel(ctx context.Context, userID, workspaceID, boardID, labelID, correlationID uuid.UUID) error {
-	if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Admin, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Admin, s.IncludeDeleted); err != nil {
 		return err
 	}
 	label, err := s.repo.DeleteBoardLabel(ctx, labelID)
@@ -157,7 +157,7 @@ func (s *BoardLabelsService) DeleteBoardLabel(ctx context.Context, userID, works
 
 func (s *BoardLabelsService) PatchBoardLabel(ctx context.Context,
 	userID, workspaceID, boardID, labelID, correlationID uuid.UUID, req PatchBoardLabelRequest) (*dto.BoardLabelResponse, error) {
-	if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Member, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Member, s.IncludeDeleted); err != nil {
 		return nil, err
 	}
 	if !req.Title.Set && !req.Color.Set {
@@ -231,7 +231,7 @@ func (s *BoardLabelsService) PatchBoardLabel(ctx context.Context,
 }
 
 func (s *BoardLabelsService) AddLabelToCard(ctx context.Context, userID, workspaceID, boardID, cardID, labelID, correlationID uuid.UUID) (*dto.CardLabelLinkResponse, error) {
-	if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Member, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Member, s.IncludeDeleted); err != nil {
 		return nil, err
 	}
 	label, err := s.repo.GetBoardLabelByID(ctx, labelID)
@@ -283,7 +283,7 @@ func (s *BoardLabelsService) AddLabelToCard(ctx context.Context, userID, workspa
 }
 
 func (s *BoardLabelsService) RemoveLabelFromCard(ctx context.Context, userID, workspaceID, boardID, cardID, labelID, correlationID uuid.UUID) (*dto.CardLabelLinkResponse, error) {
-	if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Member, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Member, s.IncludeDeleted); err != nil {
 		return nil, err
 	}
 	label, err := s.repo.GetBoardLabelByID(ctx, labelID)

@@ -1,10 +1,10 @@
 package workspaces
 
 import (
-	"GoGORM/internal/authz"
 	"GoGORM/internal/domainerr"
 	"GoGORM/internal/dto"
 	EventRegistry "GoGORM/internal/eventregistry"
+	"GoGORM/internal/guard"
 	"GoGORM/internal/models/boards"
 	"GoGORM/internal/rbac"
 	"GoGORM/internal/tokens"
@@ -645,7 +645,7 @@ func (s *WorkspaceService) CloseBoardInWorkspace(ctx context.Context, userID, wo
 		fmt.Println("User does not have permission to close board. User role:", userworkspace.Role)
 		return nil, domainerr.ErrForbidden
 	}
-	if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Admin, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Admin, s.IncludeDeleted); err != nil {
 		fmt.Println("User does not have minimum role to perform this action:", err)
 		return nil, err
 	}
@@ -710,10 +710,10 @@ func (s *WorkspaceService) CloseBoardInWorkspace(ctx context.Context, userID, wo
 }
 
 func (s *WorkspaceService) RestoreBoardInWorkspace(ctx context.Context, userID, workspaceID, boardID, correlationID uuid.UUID) (*dto.UserBoardRowsResponse, error) {
-	if err := authz.CheckUserMinWorkspaceRole(ctx, s.MembershipRepo, userID, workspaceID, rbac.Member, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinWorkspaceRole(ctx, s.MembershipRepo, userID, workspaceID, rbac.Member, s.IncludeDeleted); err != nil {
 		return nil, err
 	}
-	if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Admin, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Admin, s.IncludeDeleted); err != nil {
 		return nil, err
 	}
 	board, err := s.BoardsRepo.GetBoard(ctx, boardID, true)
@@ -787,10 +787,10 @@ func (s *WorkspaceService) RestoreBoardInWorkspace(ctx context.Context, userID, 
 }
 
 func (s *WorkspaceService) PurgeBoardInWorkspace(ctx context.Context, userID, workspaceID, boardID, correlationID uuid.UUID) (map[uuid.UUID]dto.BoardResponse, error) {
-	if err := authz.CheckUserMinWorkspaceRole(ctx, s.MembershipRepo, userID, workspaceID, rbac.Member, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinWorkspaceRole(ctx, s.MembershipRepo, userID, workspaceID, rbac.Member, s.IncludeDeleted); err != nil {
 		return nil, err
 	}
-	if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Admin, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Admin, s.IncludeDeleted); err != nil {
 		return nil, err
 	}
 	board, err := s.BoardsRepo.GetBoard(ctx, boardID, true)
@@ -852,7 +852,7 @@ func (s *WorkspaceService) PurgeBoardInWorkspace(ctx context.Context, userID, wo
 }
 
 func (s *WorkspaceService) GetClosedBoardsInWorkspace(ctx context.Context, userID, workspaceID uuid.UUID) ([]dto.BoardResponse, []dto.UserBoardResponse, error) {
-	if err := authz.CheckUserMinWorkspaceRole(ctx, s.MembershipRepo, userID, workspaceID, rbac.Viewer, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinWorkspaceRole(ctx, s.MembershipRepo, userID, workspaceID, rbac.Viewer, s.IncludeDeleted); err != nil {
 		return nil, nil, err
 	}
 	rows, err := s.WorkspaceRepo.GetClosedWorkspaceBoardsForUserID(ctx, userID, workspaceID)

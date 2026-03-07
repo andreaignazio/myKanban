@@ -1,10 +1,10 @@
 package cardmembers
 
 import (
-	"GoGORM/internal/authz"
 	"GoGORM/internal/domainerr"
 	"GoGORM/internal/dto"
 	EventRegistry "GoGORM/internal/eventregistry"
+	"GoGORM/internal/guard"
 	"GoGORM/internal/rbac"
 	"GoGORM/internal/ws"
 	"GoGORM/models"
@@ -92,7 +92,7 @@ func NewCardMemberService(repo CardMembersRepo, cardsRepo CardsRepo, listCardsRe
 }
 
 func (s *CardMembersService) GetCardMembersForBoard(ctx context.Context, userID, boardID, correlationID uuid.UUID) ([]CardMemberResponse, error) {
-	if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Member, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Member, s.IncludeDeleted); err != nil {
 		return nil, err
 	}
 	cardMembers, err := s.repo.GetCardMembersForBoard(ctx, boardID, s.IncludeDeleted)
@@ -103,7 +103,7 @@ func (s *CardMembersService) GetCardMembersForBoard(ctx context.Context, userID,
 }
 
 func (s *CardMembersService) GetCardMembersForCard(ctx context.Context, userID, boardID, cardID, correlationID uuid.UUID) ([]CardMemberResponse, error) {
-	if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Member, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Member, s.IncludeDeleted); err != nil {
 		return nil, err
 	}
 	cardMembers, err := s.repo.GetCardMembersForCard(ctx, cardID, s.IncludeDeleted)
@@ -154,7 +154,7 @@ func (s *CardMembersService) toCardMemberResponses(ctx context.Context, members 
 }
 
 func (s *CardMembersService) AddCardMember(ctx context.Context, userID, workspaceID, boardID, cardID, memberID, correlationID uuid.UUID) (*CardMemberResponse, error) {
-	if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Member, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Member, s.IncludeDeleted); err != nil {
 		return nil, err
 	}
 	if err := s.ensureMemberInBoard(ctx, memberID, boardID); err != nil {
@@ -233,7 +233,7 @@ func (s *CardMembersService) AddCardMember(ctx context.Context, userID, workspac
 }
 
 func (s *CardMembersService) RemoveCardMember(ctx context.Context, userID, workspaceID, boardID, cardID, memberID, correlationID uuid.UUID) (*CardMemberResponse, error) {
-	if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Member, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Member, s.IncludeDeleted); err != nil {
 		return nil, err
 	}
 	if err := s.ensureMemberInBoard(ctx, memberID, boardID); err != nil {

@@ -1,10 +1,10 @@
 package sharelinks
 
 import (
-	"GoGORM/internal/authz"
 	"GoGORM/internal/domainerr"
 	"GoGORM/internal/dto"
 	EventRegistry "GoGORM/internal/eventregistry"
+	"GoGORM/internal/guard"
 	"GoGORM/internal/rbac"
 	"GoGORM/models"
 	"context"
@@ -100,12 +100,12 @@ func NewShareLinkService(db *gorm.DB, repo ShareLinkRepository, eventRegistry *E
 func (s *ShareLinkService) CreateShareLink(ctx context.Context, userID uuid.UUID, req CreateShareLinkRequest) (*models.PublicShareLink, error) {
 
 	if req.TargetType == "board" {
-		if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, req.TargetID, rbac.Admin, s.IncludeDeleted); err != nil {
+		if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, req.TargetID, rbac.Admin, s.IncludeDeleted); err != nil {
 			return nil, err
 		}
 
 	} else if req.TargetType == "workspace" {
-		if err := authz.CheckUserMinWorkspaceRole(ctx, s.MembershipRepo, userID, req.TargetID, rbac.Admin, s.IncludeDeleted); err != nil {
+		if err := guard.CheckUserMinWorkspaceRole(ctx, s.MembershipRepo, userID, req.TargetID, rbac.Admin, s.IncludeDeleted); err != nil {
 			return nil, err
 		}
 	}
@@ -373,11 +373,11 @@ func (s *ShareLinkService) RevokeShareLink(ctx context.Context, userID uuid.UUID
 	}
 	switch shareLink.TargetType {
 	case "board":
-		if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, shareLink.TargetID, rbac.Admin, s.IncludeDeleted); err != nil {
+		if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, shareLink.TargetID, rbac.Admin, s.IncludeDeleted); err != nil {
 			return nil, err
 		}
 	case "workspace":
-		if err := authz.CheckUserMinWorkspaceRole(ctx, s.MembershipRepo, userID, shareLink.TargetID, rbac.Admin, s.IncludeDeleted); err != nil {
+		if err := guard.CheckUserMinWorkspaceRole(ctx, s.MembershipRepo, userID, shareLink.TargetID, rbac.Admin, s.IncludeDeleted); err != nil {
 			return nil, err
 		}
 	default:
@@ -465,7 +465,7 @@ func (s *ShareLinkService) GetAuthenticatedShareLinkByToken(ctx context.Context,
 
 	switch shareLink.TargetType {
 	case "board":
-		if err := authz.CheckUserMinRole(ctx, s.MembershipRepo, userID, shareLink.TargetID, rbac.Viewer, s.IncludeDeleted); err != nil {
+		if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, shareLink.TargetID, rbac.Viewer, s.IncludeDeleted); err != nil {
 			return nil, err
 		}
 
@@ -496,7 +496,7 @@ func (s *ShareLinkService) GetAuthenticatedShareLinkByToken(ctx context.Context,
 		}
 
 	case "workspace":
-		if err := authz.CheckUserMinWorkspaceRole(ctx, s.MembershipRepo, userID, shareLink.TargetID, rbac.Viewer, s.IncludeDeleted); err != nil {
+		if err := guard.CheckUserMinWorkspaceRole(ctx, s.MembershipRepo, userID, shareLink.TargetID, rbac.Viewer, s.IncludeDeleted); err != nil {
 			return nil, err
 		}
 
