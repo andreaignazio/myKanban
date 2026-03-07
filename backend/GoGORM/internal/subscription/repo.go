@@ -14,58 +14,8 @@ type GormSubscriptionRepo struct {
 	db *gorm.DB
 }
 
-type derivedLevelRow struct {
-	Level string `gorm:"column:derived_level"`
-}
-
 func NewGormSubscriptionRepo(db *gorm.DB) *GormSubscriptionRepo {
 	return &GormSubscriptionRepo{db: db}
-}
-
-func (r *GormSubscriptionRepo) GetDerivedUserLevel(ctx context.Context, userID uuid.UUID) (string, error) {
-	var row derivedLevelRow
-	sql := `
-SELECT
-  CASE
-    WHEN EXISTS (
-      SELECT 1
-      FROM user_workspaces uw
-      JOIN workspace_subscriptions ws
-        ON ws.workspace_id = uw.workspace_id
-      WHERE uw.user_id = ?
-        AND uw.deleted_at IS NULL
-        AND ws.plan = 'pro'
-        AND ws.status IN ('trial', 'active')
-        AND ws.deleted_at IS NULL
-    ) THEN 'pro'
-    WHEN EXISTS (
-      SELECT 1
-      FROM user_workspaces uw
-      JOIN workspace_subscriptions ws
-        ON ws.workspace_id = uw.workspace_id
-      WHERE uw.user_id = ?
-        AND uw.deleted_at IS NULL
-        AND ws.plan = 'premium'
-        AND ws.status IN ('trial', 'active')
-        AND ws.deleted_at IS NULL
-    ) THEN 'premium'
-    ELSE 'free'
-  END AS derived_level
-`
-	if err := r.db.WithContext(ctx).Raw(sql, userID, userID).Scan(&row).Error; err != nil {
-		return "", err
-	}
-	return row.Level, nil
-}
-
-func (r *GormSubscriptionRepo) CountActiveUserWorkspaces(ctx context.Context, userID uuid.UUID) (int64, error) {
-	var count int64
-	if err := r.db.WithContext(ctx).Table("user_workspaces uw").
-		Where("uw.user_id = ? AND uw.deleted_at IS NULL", userID).
-		Count(&count).Error; err != nil {
-		return 0, err
-	}
-	return count, nil
 }
 
 func (r *GormSubscriptionRepo) GetWorkspaceSubscription(ctx context.Context, workspaceID uuid.UUID) (*models.WorkspaceSubscription, error) {

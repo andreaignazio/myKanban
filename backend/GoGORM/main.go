@@ -168,7 +168,7 @@ func main() {
 	)
 	shareHandler := shares.NewShareHandler(shareService)
 	shareLinksRepo := sharelinks.NewGormShareLinksRepo(db)
-	membershipService := memberships.NewMembershipService(db, membarshipsRepo, subscriptionService, subscriptionRepo, workspacesRepo, wsHub, eventRegistryService)
+	membershipService := memberships.NewMembershipService(db, membarshipsRepo, subscriptionService, workspacesRepo, wsHub, eventRegistryService)
 	shareLinksService := sharelinks.NewShareLinkService(
 		db,
 		shareLinksRepo,

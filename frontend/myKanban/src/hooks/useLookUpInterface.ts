@@ -9,7 +9,7 @@ import { useUserWatchStore } from "@/stores/userWatchStore";
 
 export type Lookup<T> = {
     isActive: (id: string) => boolean;
-    getTitle: (id: string) => String;
+    getTitle: (id: string) => string;
     getWorkspace?: (id: string) => Workspace | undefined;
     patchActive?: (id: string, active: boolean) => Promise<void>;
     restore?: (id: string) => Promise<void>;

@@ -4,7 +4,11 @@ import { api } from "@/api/api";
 import type { MainEntityTypeStrict, RenderFeed } from "@/hooks/useFeedFromAudit";
 import { buildFeedFromAudit } from "@/hooks/useFeedFromAudit";
 import { useAuditEntityStore } from "./auditEntityStore";
-import { act } from "react";
+import { act, use } from "react";
+import { useBoardsStore } from "./boardsStore";
+import { useListsStore } from "./listsStore";
+import { useCardsStore } from "./cardsStore";
+import { useWorkspaceStore } from "./workspaceStore";
 
 export type EntityRef = {
     WorkspaceId: string | null | undefined;
@@ -37,7 +41,7 @@ export type NotificationByEntity = {
     NotificationIds: string[]; //List of notification IDs that relate to this entity and read status sorted by created date desc
 }
 
-type NotificationsByActorAndTime = Record<ActorTimeKey, string[]> //KEY: ${ActorID}:${LastActivityTime} , Value: List of notification IDs sorted by created date desc
+export type NotificationsByActorAndTime = Record<ActorTimeKey, string[]> //KEY: ${ActorID}:${LastActivityTime} , Value: List of notification IDs sorted by created date desc
 
 export type ActorUserID = string
 export type ActorTimeKey = `${ActorUserID}:${string}`
@@ -55,12 +59,13 @@ function groupNotificationsByActor(ids: string[], notificationsById: Record<stri
             prevActorID = actorID
             const lastActivityTime = notification.CreatedAt
             key = `${actorID}:${lastActivityTime}` as ActorTimeKey
+            actorTimeKeys.push(key)
         }
         if (!map[key]) {
             map[key] = []
         }
         map[key].push(id)
-        actorTimeKeys.push(key)
+
     })
     return { ids: actorTimeKeys, map }
 }
@@ -98,9 +103,10 @@ function groupNotificationsByEntityAndReadStatus(ids: string[], notificationsByI
                 NotificationIds: []
 
             }
+            renderIds.push(key)
         }
         map[key].NotificationIds.push(id)
-        renderIds.push(key)
+
     })
     return { ids: renderIds, map }
 }
@@ -136,6 +142,7 @@ type UserNotificationStore = {
 
     groupNotificationsByActor: (ids: string[]) => { ids: ActorTimeKey[], map: NotificationsByActorAndTime }
     generateRenderIdsAndGroupByEntityAndReadStatus: () => void;
+    applyLocalPatch: (notificationIDs: string[], read: boolean, unreadCount?: number) => void;
 
 
 }
@@ -166,13 +173,18 @@ export const useUserNotificationStore = create<UserNotificationStore>((set, get)
             });
             get().generateRenderIdsAndGroupByEntityAndReadStatus();
             console.log("Fetched user notifications:", data.UserNotifications);
-            const { Boards, Lists, Cards } = data;
+            const { Workspaces, Boards, Lists, Cards } = data;
 
             useAuditEntityStore.getState().mergeAuditEntities({
+                Workspaces: Workspaces as Array<Record<string, unknown> & { ID: string }>,
                 Boards: Boards as Array<Record<string, unknown> & { ID: string }>,
                 Lists: Lists as Array<Record<string, unknown> & { ID: string }>,
                 Cards: Cards as Array<Record<string, unknown> & { ID: string }>,
             })
+            useWorkspaceStore.getState().mergeWorkspaces(Workspaces)
+            useBoardsStore.getState().mergeBoards(Boards)
+            useListsStore.getState().mergeLists(Lists)
+            useCardsStore.getState().mergeCards(Cards)
 
 
 
@@ -201,6 +213,8 @@ export const useUserNotificationStore = create<UserNotificationStore>((set, get)
         try {
             const payload: MarkNotificationsRequest = { NotificationIDs: notificationIDs }
             await api.patch("/users/notifications/markread", payload)
+            get().applyLocalPatch(notificationIDs, true)
+
         } catch (error) {
             // console.error("Failed to mark notifications as read:", error)
         }
@@ -210,6 +224,8 @@ export const useUserNotificationStore = create<UserNotificationStore>((set, get)
         try {
             const payload: MarkNotificationsRequest = { NotificationIDs: notificationIDs }
             await api.patch("/users/notifications/markunread", payload)
+            get().applyLocalPatch(notificationIDs, false)
+
         } catch (error) {
             // console.error("Failed to mark notifications as unread:", error)
         }
@@ -256,43 +272,38 @@ export const useUserNotificationStore = create<UserNotificationStore>((set, get)
     applyMarkReadEvent: (evt: UserEvent) => {
         const IDs = evt.Payload.UserNotificationReadPayload?.NotificationIDs ?? []
         const unreadCount = evt.Payload.UserNotificationReadPayload?.UnreadCount ?? get().unreadCount
-        const prevNotificationsById = get().notificationsById
-        const prevNotificationsIDs = get().notificationsIDs
-        const newNotificationsById = { ...prevNotificationsById }
-        const newNotificationsIDs = [...prevNotificationsIDs]
-        IDs.forEach(id => {
-            newNotificationsById[id].Read = true
-            // console.log("Marked notification as read in store for ID:", id)
-        })
-        set({
-            notificationsById: newNotificationsById,
-            notificationsIDs: newNotificationsIDs,
-            unreadCount: unreadCount,
-        })
-        //get().generateRenderNotifications()
+
+        get().applyLocalPatch(IDs, true, unreadCount)
     },
     applyMarkUnreadEvent: (evt: UserEvent) => {
         const IDs = evt.Payload.UserNotificationReadPayload?.NotificationIDs ?? []
         const unreadCount = evt.Payload.UserNotificationReadPayload?.UnreadCount ?? get().unreadCount
-        const prevNotificationsById = get().notificationsById
-        const prevNotificationsIDs = get().notificationsIDs
-        const newNotificationsById = { ...prevNotificationsById }
-        const newNotificationsIDs = [...prevNotificationsIDs]
-        IDs.forEach(id => {
-            newNotificationsById[id].Read = false
-            // console.log("Marked notification as unread in store for ID:", id)
-        })
-        set({
-            notificationsById: newNotificationsById,
-            notificationsIDs: newNotificationsIDs,
-            unreadCount: unreadCount,
-        })
-        //get().generateRenderNotifications()
+
+        get().applyLocalPatch(IDs, false, unreadCount)
     },
     groupNotificationsByActor: (ids: string[]) => {
         const notificationsById = get().notificationsById;
         return groupNotificationsByActor(ids, notificationsById)
     },
+
+    applyLocalPatch(notificationIDs: string[], read: boolean, unreadCount?: number) {
+        const prevNotificationsById = get().notificationsById
+        const prevNotificationsIDs = get().notificationsIDs
+        const newNotificationsById = { ...prevNotificationsById }
+        const newNotificationsIDs = [...prevNotificationsIDs]
+        notificationIDs.forEach(id => {
+            if (newNotificationsById[id]) {
+                newNotificationsById[id].Read = read
+            }
+        })
+        set({
+            notificationsById: newNotificationsById,
+            notificationsIDs: newNotificationsIDs,
+            unreadCount: unreadCount !== undefined ? unreadCount : get().unreadCount + (read ? -notificationIDs.length : notificationIDs.length),
+        })
+        get().generateRenderIdsAndGroupByEntityAndReadStatus();
+    }
+
 
 
 }))

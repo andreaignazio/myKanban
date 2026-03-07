@@ -23,7 +23,6 @@ import (
 type MembershipService struct {
 	MembershipRepo      MembershipRepo
 	SubscriptionService SubscriptionService
-	SubscriptionRepo    SubsctriptionRepo
 	WorkspaceRepo       WorkspaceRepo
 	Hub                 WorkspaceEventBroadcaster
 	EventRegistry       *EventRegistry.EventRegistryService
@@ -53,17 +52,13 @@ type SubscriptionService interface {
 	CheckWorkspaceMembershipLimit(ctx context.Context, userID uuid.UUID) (bool, error)
 }
 
-type SubsctriptionRepo interface {
-	GetDerivedUserLevel(ctx context.Context, userID uuid.UUID) (string, error)
-}
-
 type WorkspaceRepo interface {
 	GetWorkspaceIDByBoardID(ctx context.Context, boardID uuid.UUID) (uuid.UUID, error)
 	CheckUserWorkspaceMembership(ctx context.Context, userID, workspaceID uuid.UUID, includeDeleted bool) (bool, error)
 }
 
-func NewMembershipService(db *gorm.DB, MembershipRepo MembershipRepo, SubscriptionService SubscriptionService, SubscriptionRepo SubsctriptionRepo, WorkspaceRepo WorkspaceRepo, Hub WorkspaceEventBroadcaster, eventRegistry *EventRegistry.EventRegistryService) *MembershipService {
-	return &MembershipService{db: db, MembershipRepo: MembershipRepo, SubscriptionService: SubscriptionService, SubscriptionRepo: SubscriptionRepo, WorkspaceRepo: WorkspaceRepo, Hub: Hub, EventRegistry: eventRegistry, IncludeDeleted: false}
+func NewMembershipService(db *gorm.DB, MembershipRepo MembershipRepo, SubscriptionService SubscriptionService, WorkspaceRepo WorkspaceRepo, Hub WorkspaceEventBroadcaster, eventRegistry *EventRegistry.EventRegistryService) *MembershipService {
+	return &MembershipService{db: db, MembershipRepo: MembershipRepo, SubscriptionService: SubscriptionService, WorkspaceRepo: WorkspaceRepo, Hub: Hub, EventRegistry: eventRegistry, IncludeDeleted: false}
 }
 
 func (s *MembershipService) GetBoardMembers(ctx context.Context, userID, boardID, workspaceID uuid.UUID) ([]BoardUserRow, error) {
@@ -219,13 +214,8 @@ func (s *MembershipService) GetMe(ctx context.Context, userID uuid.UUID) (*dto.D
 	if err != nil {
 		return nil, domainerr.MapRepoErr(err, false)
 	}
-	subscription, err := s.SubscriptionRepo.GetDerivedUserLevel(ctx, userID)
-	if err != nil {
-		return nil, domainerr.MapRepoErr(err, false)
-	}
 	return &dto.DetailedUserResponse{
-		User:            dto.UserToResponse(&user[0]),
-		UserDerivedData: dto.UserDerivedDataResponse{Subscription: subscription},
+		User: dto.UserToResponse(&user[0]),
 	}, nil
 }
 

@@ -1,20 +1,15 @@
 import { api } from "@/api/api";
 import { create } from "zustand";
 
-import type { SubscriptionPlan, User } from "./types";
+import type { User } from "./types";
 import { useUserStore } from "./userStore";
 type UserResponse = {
     User: User
-    UserDerivedData: {
-        Subscription: SubscriptionPlan
-
-    }
 }
 
 type AuthStore = {
     userID: string | null
     user: User | null
-    userSubscription: SubscriptionPlan | null
     setUserID: (user: string) => void
     setUserData: (user: User) => void
     hydrate: () => Promise<void>
@@ -26,7 +21,6 @@ type AuthStore = {
 export const useAuthStore = create<AuthStore>((set, get) => ({
     userID: null,
     user: null,
-    userSubscription: null,
     setUserID: (user) => set(() => ({ userID: user })),
     setUserData: (user) => set(() => ({ user })),
     clearAuthSession: () => {
@@ -37,7 +31,6 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         set(() => ({
             userID: null,
             user: null,
-            userSubscription: null,
         }));
     },
 
@@ -59,7 +52,6 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
             useUserStore.getState().mergeUsers([data.User])
             set(() => ({
                 user: data.User,
-                userSubscription: data.UserDerivedData.Subscription
             }));
         } catch (error) {
             // console.error("Failed to fetch user:", error);

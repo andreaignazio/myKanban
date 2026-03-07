@@ -9,6 +9,8 @@ type AuditBodyRendererProps = {
 
     ActorAsLink?: boolean
 
+    hideLeadingActorChunk?: boolean
+
     TextClasses?: TextClasses
 }
 
@@ -19,10 +21,54 @@ export type TextClasses = {
 }
 
 
-export const AuditBodyRenderer = ({ Body, ActorAsLink = true, TextClasses }: AuditBodyRendererProps) => {
+function uppercaseFirstCharacter(value: string): string {
+    if (!value) return value;
+    return value.charAt(0).toLocaleUpperCase() + value.slice(1);
+}
+
+function formatBodyChunks(body: FeedBodyChunk[], hideLeadingActorChunk: boolean): FeedBodyChunk[] {
+    if (!hideLeadingActorChunk) {
+        return body;
+    }
+
+    const firstChunk = body[0];
+    if (!(firstChunk?.kind === "link" && firstChunk.entityType === "actor")) {
+        return body;
+    }
+
+    const nextBody = body.slice(1);
+    const firstVisibleChunkIndex = nextBody.findIndex((chunk) => chunk.text.trim().length > 0);
+
+    if (firstVisibleChunkIndex === -1) {
+        return nextBody;
+    }
+
+    return nextBody.map((chunk, index) => {
+        if (index !== firstVisibleChunkIndex) {
+            return chunk;
+        }
+
+        if (chunk.kind === "text") {
+            const trimmedText = chunk.text.trimStart();
+            return {
+                ...chunk,
+                text: uppercaseFirstCharacter(trimmedText),
+            };
+        }
+
+        return {
+            ...chunk,
+            text: uppercaseFirstCharacter(chunk.text),
+        };
+    });
+}
+
+
+export const AuditBodyRenderer = ({ Body, ActorAsLink = true, hideLeadingActorChunk = false, TextClasses }: AuditBodyRendererProps) => {
     const navigate = useNavigate();
     const openOverlay = useOverlayStore((state) => state.open)
     const userHoverRef = useRef<HTMLDivElement>(null)
+    const formattedBody = formatBodyChunks(Body, hideLeadingActorChunk)
 
     let { ActorClassName, TextClassName, LinkClassName } = TextClasses || {};
     ActorClassName = ActorClassName || "font-semibold text-gray-800 dark:text-gray-200"
@@ -88,7 +134,7 @@ export const AuditBodyRenderer = ({ Body, ActorAsLink = true, TextClasses }: Aud
 
     return (
         <div className="flex-1 min-w-0 whitespace-pre-wrap break-words text-sm">
-            {Body.map((chunk: FeedBodyChunk, index: number) => {
+            {formattedBody.map((chunk: FeedBodyChunk, index: number) => {
                 if (chunk.kind === "text") {
                     return <span key={index} className={TextClassName}>{chunk.text}</span>;
                 } else if (chunk.kind === "link") {

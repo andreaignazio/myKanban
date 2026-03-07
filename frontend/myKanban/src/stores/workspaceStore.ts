@@ -75,6 +75,7 @@ export type WorkspaceStore = {
     searchPublicWorkspaces: (params?: SearchPublicWorkspacesParams) => Promise<SearchPublicWorkspacesResponse>;
     fetchPendingOfferTargetWorkspaces: () => Promise<PendingOfferTargetWorkspacesResponse>;
     mergeWorkspaceData: (data: UserWorkspaceData) => void;
+    mergeWorkspaces: (workspaces: Workspace[]) => void;
     createWorkspace: (Name: string) => Promise<void>
     applyWorkspaceEventDelta: (delta: DeltaPayload) => void;
     applyWorkspaceCreated: (payload: UserWorkspaceData) => void;
@@ -287,6 +288,21 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
                 workspacesById: nextWorkspacesById,
                 workspaceIds: Array.from(nextWorkspaceIds),
                 wSubscriptionsById: nextSubscriptionsById
+            };
+        });
+    },
+    mergeWorkspaces: (workspaces) => {
+        if (workspaces.length === 0) return;
+
+        set((state) => {
+            const nextWorkspacesById = { ...state.workspacesById };
+
+            workspaces.forEach((workspace) => {
+                nextWorkspacesById[workspace.ID] = workspace;
+            });
+
+            return {
+                workspacesById: nextWorkspacesById,
             };
         });
     },

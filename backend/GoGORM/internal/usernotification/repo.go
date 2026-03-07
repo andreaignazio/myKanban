@@ -32,14 +32,23 @@ func (r *GormNotifcationRepo) GetUserNotifications(ctx context.Context, userID u
 	return notifications, nil
 }
 
-func (r *GormNotifcationRepo) GetEntitiesDetails(ctx context.Context, entitiesIdsMap map[string][]uuid.UUID) ([]models.Board, []models.List, []models.Card, error) {
+func (r *GormNotifcationRepo) GetEntitiesDetails(ctx context.Context, entitiesIdsMap map[string][]uuid.UUID) ([]models.Workspace, []models.Board, []models.List, []models.Card, error) {
+	var workspaces []models.Workspace
+	if len(entitiesIdsMap["workspace"]) > 0 {
+		if err := r.db.WithContext(ctx).
+			Table("workspaces").
+			Where("id IN ? AND deleted_at IS NULL", entitiesIdsMap["workspace"]).
+			Find(&workspaces).Error; err != nil {
+			return nil, nil, nil, nil, err
+		}
+	}
 	var boards []models.Board
 	if len(entitiesIdsMap["board"]) > 0 {
 		if err := r.db.WithContext(ctx).
 			Table("boards").
 			Where("id IN ? AND deleted_at IS NULL", entitiesIdsMap["board"]).
 			Find(&boards).Error; err != nil {
-			return nil, nil, nil, err
+			return nil, nil, nil, nil, err
 		}
 	}
 	var lists []models.List
@@ -48,7 +57,7 @@ func (r *GormNotifcationRepo) GetEntitiesDetails(ctx context.Context, entitiesId
 			Table("lists").
 			Where("id IN ? AND deleted_at IS NULL", entitiesIdsMap["list"]).
 			Find(&lists).Error; err != nil {
-			return nil, nil, nil, err
+			return nil, nil, nil, nil, err
 		}
 	}
 	var cards []models.Card
@@ -57,10 +66,10 @@ func (r *GormNotifcationRepo) GetEntitiesDetails(ctx context.Context, entitiesId
 			Table("cards").
 			Where("id IN ? AND deleted_at IS NULL", entitiesIdsMap["card"]).
 			Find(&cards).Error; err != nil {
-			return nil, nil, nil, err
+			return nil, nil, nil, nil, err
 		}
 	}
-	return boards, lists, cards, nil
+	return workspaces, boards, lists, cards, nil
 }
 
 func (r *GormNotifcationRepo) MarkNotifications(ctx context.Context, userID uuid.UUID, notificationIDs []uuid.UUID, read bool) error {

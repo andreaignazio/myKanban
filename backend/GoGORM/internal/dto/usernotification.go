@@ -19,6 +19,7 @@ type UserNotificationRow struct {
 type UserNotificationResponse struct {
 	UnreadCount       int
 	UserNotifications []UserAuditNotificationResponse
+	Workspaces        []WorkspaceResponse
 	Boards            []BoardResponse
 	Lists             []ListResponse
 	Cards             []CardResponse

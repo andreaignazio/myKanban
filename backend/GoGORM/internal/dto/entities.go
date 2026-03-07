@@ -184,12 +184,7 @@ type WorkspaceDetailsResponse struct {
 }
 
 type DetailedUserResponse struct {
-	User            UserResponse            `json:"User"`
-	UserDerivedData UserDerivedDataResponse `json:"UserDerivedData"`
-}
-
-type UserDerivedDataResponse struct {
-	Subscription string `json:"Subscription"`
+	User UserResponse `json:"User"`
 }
 
 type RespondToShareOfferResponse struct {

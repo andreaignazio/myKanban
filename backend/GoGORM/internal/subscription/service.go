@@ -23,8 +23,6 @@ type SubscriptionService struct {
 }
 
 type SubscriptionRepo interface {
-	GetDerivedUserLevel(ctx context.Context, userID uuid.UUID) (string, error)
-	CountActiveUserWorkspaces(ctx context.Context, userID uuid.UUID) (int64, error)
 	GetWorkspaceSubscription(ctx context.Context, workspaceID uuid.UUID) (*models.WorkspaceSubscription, error)
 	CountWorkspaceBoards(ctx context.Context, workspaceID uuid.UUID) (int64, error)
 	UpsertFromWebhook(ctx context.Context, tx *gorm.DB, workspaceID uuid.UUID, event BillingWebhookEvent) error
@@ -65,19 +63,7 @@ func NewSubscriptionService(
 }
 
 func (s *SubscriptionService) CheckWorkspaceMembershipLimit(ctx context.Context, userID uuid.UUID) (bool, error) {
-	active, err := s.SubscriptionRepo.CountActiveUserWorkspaces(ctx, userID)
-	if err != nil {
-		return false, err
-	}
-	userLevel, err := s.SubscriptionRepo.GetDerivedUserLevel(ctx, userID)
-	if err != nil {
-		return false, err
-	}
-	maxWorkspaces := MaxWorkspacesForUserLevel(UserLevel(userLevel))
-	if maxWorkspaces == -1 {
-		return true, nil // unlimited
-	}
-	return int(active) < maxWorkspaces, nil
+	return true, nil
 }
 
 func (s *SubscriptionService) StartCheckoutForWorkspace(ctx context.Context, workspaceID, actorUserID uuid.UUID,

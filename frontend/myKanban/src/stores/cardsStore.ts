@@ -41,6 +41,7 @@ type CardsStore = {
     // fetchCards: () => Promise<void>
     addCardToList: (boardID: string, listID: string, payload: CreateCardPayload) => Promise<Card | null>
     mergeCardsPatch: (payload: Record<string, Card>) => void
+    mergeCards: (cards: Card[]) => void
     removeCards: (cardIDs: string[]) => void
     removeCardFromList: (boardID: string, listID: string, cardID: string) => Promise<void | null>
     patchCardProps: (boardID: string, cardId: string, props: CardProps) => Promise<Card | null>
@@ -76,6 +77,20 @@ export const useCardsStore = create<CardsStore>((set, get) => ({
                 ...payload,
             }
         }))
+    },
+    mergeCards: (cards) => {
+        if (cards.length === 0) return
+
+        set((state) => {
+            const nextCardsById = { ...state.cardsById }
+            cards.forEach((card) => {
+                nextCardsById[card.ID] = card
+            })
+
+            return {
+                cardsById: nextCardsById,
+            }
+        })
     },
 
     removeCards: (cardIDs: string[]) => {

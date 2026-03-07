@@ -71,6 +71,7 @@ export type BoardsStore = {
     applyCrateBoard: (data: UserBoardData) => void;
 
     mergeBoardsPatch: (payload: Record<string, Partial<Board>>) => void;
+    mergeBoards: (boards: Board[]) => void;
     mergeUserBoardPatch: (userBoards: Record<string, UserBoard>) => void;
 
     mergeUserBoardRelation: (userBoard: UserBoard) => void;
@@ -400,6 +401,18 @@ export const useBoardsStore = create<BoardsStore>((set, get) => ({
             return { boardsById: nextBoardsById };
         });
         // console.log("Boards after merge", get().boardsById)
+    },
+    mergeBoards: (boards) => {
+        if (boards.length === 0) return;
+
+        set((state) => {
+            const nextBoardsById = { ...state.boardsById };
+            boards.forEach((board) => {
+                nextBoardsById[board.ID] = board;
+            });
+
+            return { boardsById: nextBoardsById };
+        });
     },
     mergeUserBoardPatch: (userBoards) => {
         set((state) => {

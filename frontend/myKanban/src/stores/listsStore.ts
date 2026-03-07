@@ -18,6 +18,7 @@ type ListsStore = {
     getListById: (listID: string) => List | undefined
     // fetchLists: () => Promise<void>
     mergeListsPatch: (payload: Record<string, List>) => void
+    mergeLists: (lists: List[]) => void
     removeLists: (listIds: string[]) => void
     createList: (payload: CreateListRequest, boardID: string) => Promise<void | null>
     copyBulkListsRaw: (boardID: string, payload: BulkCopyListsRequest) => Promise<BulkCopyListsResponse | null>
@@ -44,6 +45,20 @@ export const useListsStore = create<ListsStore>((set, get) => ({
                 ...payload,
             }
         }))
+    },
+    mergeLists: (lists) => {
+        if (lists.length === 0) return
+
+        set((state) => {
+            const nextListsById = { ...state.listsById }
+            lists.forEach((list) => {
+                nextListsById[list.ID] = list
+            })
+
+            return {
+                listsById: nextListsById,
+            }
+        })
     },
     removeLists: (listIds) => {
         if (listIds.length === 0) return

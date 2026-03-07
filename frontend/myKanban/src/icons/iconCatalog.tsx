@@ -1,5 +1,5 @@
 import { Cog6ToothIcon, Squares2X2Icon, UsersIcon, CreditCardIcon, } from "@heroicons/react/24/solid";
-import { CircleUser, ListTodo, Eye } from "lucide-react";
+import { CircleUser, ListTodo, Eye, LayoutList, Building2 } from "lucide-react";
 import type { ComponentProps } from "react";
 
 export const iconCatalog = {
@@ -11,6 +11,10 @@ export const iconCatalog = {
     cards: CreditCardIcon,
     watched: Eye,
     subscriptions: CreditCardIcon,
+    lists: LayoutList,
+    workspaces: Building2,
+    default: Squares2X2Icon,
+
 } as const;
 
 export type IconId = keyof typeof iconCatalog;

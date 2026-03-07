@@ -7,27 +7,6 @@ import (
 	"github.com/google/uuid"
 )
 
-type UserLevel string
-
-const (
-	UserLevelFree    UserLevel = "free"
-	UserLevelPro     UserLevel = "pro"
-	UserLevelPremium UserLevel = "premium"
-)
-
-func MaxWorkspacesForUserLevel(level UserLevel) int {
-	switch level {
-	case UserLevelFree:
-		return 5
-	case UserLevelPro:
-		return 10
-	case UserLevelPremium:
-		return -1 // unlimited
-	default:
-		return 0
-	}
-}
-
 func MaxBoardsForWorkspaceSubscription(plan models.SubscriptionPlan) int {
 	switch plan {
 	case models.FreePlan:

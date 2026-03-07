@@ -381,6 +381,7 @@ export type UserAuditNotification = ApiAuditLogEvent & {
 export type UserNotificationResponse = {
     UnreadCount: number;
     UserNotifications: UserAuditNotification[]
+    Workspaces: Workspace[];
     Boards: Board[];
     Lists: List[];
     Cards: Card[];

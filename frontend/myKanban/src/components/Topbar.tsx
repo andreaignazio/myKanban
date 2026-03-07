@@ -61,10 +61,6 @@ import { UserAvatar } from "./badges/UserAvatar"
 
 function UserHeader({ context }: { context: string | null }) {
     const user = useAuthStore((state) => state.user)
-    let subscription = useAuthStore((state) => state.userSubscription)
-    subscription = "pro"
-    const subscriptionClass = getSubscriptionBadgeClass(subscription)
-    subscription = subscription.toUpperCase() ?? null;
 
     const open = useOverlayStore((state) => state.open)
     const close = useOverlayStore((state) => state.close)
@@ -104,9 +100,6 @@ function UserHeader({ context }: { context: string | null }) {
                 onClick={handleCloseInbox}
                 className="w-5 h-5 text-gray-500" />
             <UserNotificationMenuBtn />
-            <span className={`w-fit flex items-center justify-center rounded-md border px-2 py-1 pb-1.5 max-h-6 text-xs font-medium ${subscriptionClass}`}>
-                {subscription}
-            </span>
             <div className="flex flex-col gap-0 items-end">
                 <p className="font-semibold text-text">{user?.Name}</p>
                 {context !== "board" && (<p className="text-xs text-text-text/70">@{user?.Username === "" ? "username" : user?.Username}</p>)}
@@ -198,19 +191,6 @@ function getRoleBadgeClass(role: Role) {
             return "border-emerald-500/40 bg-emerald-500/15 text-emerald-200";
         case "viewer":
             return "border-slate-500/40 bg-slate-500/15 text-slate-200";
-        default:
-            return "border-border/40 bg-surface/40 text-text";
-    }
-}
-
-function getSubscriptionBadgeClass(subscription: string | null) {
-    switch (subscription) {
-        case "free":
-            return "border-gray-500/40 bg-gray-500/15 text-gray-200";
-        case "pro":
-            return "border-blue-500/40 bg-blue-500/15 text-blue-200";
-        case "premium":
-            return "border-yellow-500/40 bg-yellow-500/15 text-yellow-200";
         default:
             return "border-border/40 bg-surface/40 text-text";
     }

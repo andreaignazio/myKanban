@@ -20,7 +20,7 @@ func NewUserNotificationService(repo UserNotificationRepo, eventRegistry *EventR
 
 type UserNotificationRepo interface {
 	GetUserNotifications(ctx context.Context, userID uuid.UUID) ([]dto.UserNotificationRow, error)
-	GetEntitiesDetails(ctx context.Context, entitiesIdsMap map[string][]uuid.UUID) ([]models.Board, []models.List, []models.Card, error)
+	GetEntitiesDetails(ctx context.Context, entitiesIdsMap map[string][]uuid.UUID) ([]models.Workspace, []models.Board, []models.List, []models.Card, error)
 	MarkNotifications(ctx context.Context, userID uuid.UUID, notificationIDs []uuid.UUID, read bool) error
 }
 
@@ -48,9 +48,13 @@ func (s *UserNotificationService) GetUserNotifications(ctx context.Context, user
 		}
 		entitiesIdsMap[key] = append(entitiesIdsMap[key], notification.MainEntityID)
 	}
-	boards, lists, cards, err := s.repo.GetEntitiesDetails(ctx, entitiesIdsMap)
+	workspaces, boards, lists, cards, err := s.repo.GetEntitiesDetails(ctx, entitiesIdsMap)
 	if err != nil {
 		return nil, err
+	}
+	workspaceResponse := make([]dto.WorkspaceResponse, 0, len(workspaces))
+	for _, workspace := range workspaces {
+		workspaceResponse = append(workspaceResponse, dto.WorkspaceToResponse(&workspace))
 	}
 	boardResponse := make([]dto.BoardResponse, 0, len(boards))
 	for _, board := range boards {
@@ -68,6 +72,7 @@ func (s *UserNotificationService) GetUserNotifications(ctx context.Context, user
 	response := &dto.UserNotificationResponse{
 		UnreadCount:       unreadCount,
 		UserNotifications: notificationsResponse,
+		Workspaces:        workspaceResponse,
 		Boards:            boardResponse,
 		Lists:             listResponse,
 		Cards:             cardResponse,

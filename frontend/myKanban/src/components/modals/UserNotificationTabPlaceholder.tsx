@@ -1,13 +1,26 @@
 import { useNotificationBackground } from "@/hooks/useNotificationBackground";
-import { useUserNotificationStore, type RenderID } from "@/stores/userNotificationStore";
+import { useUserNotificationStore, type ActorTimeKey, type NotificationsByActorAndTime, type RenderID } from "@/stores/userNotificationStore";
 import { useShallow } from "zustand/shallow";
 import { ImageColorRenderer } from "../menuElements/ImageColorRenderer";
 
 import { useLookUpInterface } from "@/hooks/useLookUpInterface"
 import type { MainEntityTypeStrict } from "@/hooks/useFeedFromAudit";
-import { act, useEffect } from "react";
+import { act, use, useEffect, useState } from "react";
+import type { A } from "node_modules/react-router/dist/development/router-5iOvts3c.d.mts";
+import { useUserStore } from "@/stores/userStore";
+import { UserAvatar } from "../badges/UserAvatar";
+import { AuditBodyRenderer } from "../menuElements/AuditBodyRenderer";
+import { AuditActivityItem } from "../activityfeed/AuditActivityItem";
+import { Icon } from "lucide-react";
+import { CatalogIcon } from "@/icons/iconCatalog";
+import { AnimatePresence, motion } from "framer-motion";
 
-export const UserNotificationTabPlaceholder = () => {
+
+type UserNotificationTabPlaceholderProps = {
+    onlyShowUnread?: boolean
+}
+
+export const UserNotificationTabPlaceholder = ({ onlyShowUnread }: UserNotificationTabPlaceholderProps) => {
     const fetchUserNotifications = useUserNotificationStore((state) => state.fetchUserNotifications)
 
     const handleFetchNotifications = async () => {
@@ -23,7 +36,8 @@ export const UserNotificationTabPlaceholder = () => {
         handleFetchNotifications();
     }, [fetchUserNotifications])
     const RenderIds = useUserNotificationStore(useShallow((state) => state.sortedRenderIDs));
-    const visibleIds = RenderIds.slice(0, 20)
+    const filteredRenderIds = onlyShowUnread ? RenderIds.filter((renderId) => renderId.split(":")[1] === "unread") : RenderIds;
+    const visibleIds = filteredRenderIds.slice(0, 10)
 
 
 
@@ -40,13 +54,23 @@ export const UserNotificationTabPlaceholder = () => {
                         <p className="text-gray-600">You have no notifications at the moment.</p>
                     </div>
                 ) : (
-                    <div className="min-h-0 flex-1 overflow-y-auto w-full flex flex-col  pr-1 ps-8 py-2 gap-4">
-                        {visibleIds.map((renderId) => (
-                            <>
-
-                                <NotificationEntityRenderer key={renderId} renderId={renderId} />
-                            </>
-                        ))}
+                    <div className="min-h-0 flex-1 overflow-y-auto scrollbar-hidden w-full flex flex-col
+                      pr-1  py-0 gap-0">
+                        <AnimatePresence initial={false} mode="popLayout">
+                            {visibleIds.map((renderId) => (
+                                <motion.div
+                                    key={renderId}
+                                    layout
+                                    initial={{ opacity: 0, y: -8, scale: 0.98 }}
+                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                    exit={{ opacity: 0, y: -8, scale: 0.98 }}
+                                    transition={{ duration: 0.4, ease: "easeOut" }}
+                                    className="origin-top"
+                                >
+                                    <NotificationEntityRenderer renderId={renderId} />
+                                </motion.div>
+                            ))}
+                        </AnimatePresence>
                     </div>
                 )
             }
@@ -71,7 +95,26 @@ const NotificationEntityRenderer = ({ renderId }: NotificationEntityRendererProp
     const lookup = getLookupForType(notification?.MainEntityType);
     const entityTitle = notification?.MainEntityID ? lookup.getTitle(notification.MainEntityID) : null
     const groupNotificationsByActor = useUserNotificationStore((state) => state.groupNotificationsByActor);
-    const { map: notificationByActorMap, ids: notificationByActorIds } = groupNotificationsByActor(notification?.NotificationIds ?? [])
+
+
+    const [limit, setLimit] = useState(8)
+    const renderedIds = notification?.NotificationIds?.slice(0, limit) ?? []
+    const { map: notificationByActorMap, ids: notificationByActorIds } = groupNotificationsByActor(renderedIds ?? [])
+
+    const isRead = renderId.split(":")[1] === "read"
+
+    const markBulkAsRead = useUserNotificationStore((state) => state.markBulkNoticationAsRead)
+    const markBulkAsUnread = useUserNotificationStore((state) => state.markBulkNotificationAsUnread)
+
+    const toggleReadStatus = () => {
+        if (!notification?.NotificationIds) return;
+        if (isRead) {
+            markBulkAsUnread(notification.NotificationIds)
+        } else {
+            markBulkAsRead(notification.NotificationIds)
+        }
+    }
+
 
     const label = (entityType: MainEntityTypeStrict, entityID: string): { bold: string | null, normal: string | null } => {
         if (!entityID) return { bold: null, normal: null };
@@ -91,8 +134,8 @@ const NotificationEntityRenderer = ({ renderId }: NotificationEntityRendererProp
         }
         if (entityType === "card") {
             const boardId = notification?.EntityRef?.BoardID
-            let boardName: String = ""
-            let listName: String = ""
+            let boardName = ""
+            let listName = ""
             if (!boardId) return { bold: null, normal: null }
             const boardLookup = getLookupForType("board")
             boardName = boardLookup.getTitle(boardId)
@@ -114,23 +157,42 @@ const NotificationEntityRenderer = ({ renderId }: NotificationEntityRendererProp
 
     const entityLabel = notification?.MainEntityType && notification?.MainEntityID ? label(notification.MainEntityType, notification.MainEntityID) : null
 
+    const moreToShow = (notification?.NotificationIds?.length ?? 0) > limit
+
+    const handleShowMore = () => {
+        if (moreToShow) {
+            setLimit((prev) => prev + 8)
+        }
+        console.log("Show more clicked. New limit:", limit + 8);
+    }
+    const entityType = notification?.MainEntityType
+    const iconId = entityType === "board" ? "boards" : entityType === "card" ? "cards" : entityType === "list" ? "lists" : entityType === "workspace" ? "workspaces" : "default"
+
     return (
-        <div className="grid grid-cols-[1fr_60px]">
+        <div className={`grid grid-cols-[1fr_70px] ${!isRead ? "bg-blue-600/10" : ""} pb-4 pt-4 ps-6`}>
+
             <div style={{ borderRadius: radius }}
-                className="flex flex-col gap-0 overflow-hidden">
+                className="flex flex-col gap-0 overflow-hidden bg-menusec
+                shadow-lg shadow-black/30
+                ">
                 <ImageColorRenderer
                     overrideClassName
                     className="w-full h-[90px]  overflow-hidden relative"
-
-                    backgroundType="color" bgColor={color}
+                    backgroundType={backgroundType}
+                    bgColor={color}
+                    bgImage={imageUrl}
                 >
                     <div style={{ padding: padding }}
                         className="absolute inset-0 flex flex-col items-center justify-start ">
 
                         <div style={{ borderRadius: radius - padding / 2 }}
-                            className="bg-menusec w-full  ps-2 h-12 flex flex-row items-center ">
+                            className="bg-menusec w-full
+                                shadow-md shadow-black/30
+                              ps-3 h-12  gap-2 flex flex-row items-center ">
+                            <CatalogIcon id={iconId} className="w-6 h-6 text-gray-300" />
                             <span className="text-sm font-semibold text-left text-neutral-300 line-clamp-1">
-                                {entityTitle}</span>
+                                {entityTitle}
+                            </span>
                         </div>
                         <div className="flex flex-row text-[12px] items-center gap-0.5 mt-2 w-full">
                             <span className=" font-bold text-gray-300 line-clamp-1">
@@ -143,23 +205,74 @@ const NotificationEntityRenderer = ({ renderId }: NotificationEntityRendererProp
                     </div>
 
                 </ImageColorRenderer>
-                <div className="flex flex-col bg-black gap-0">
-                    <span>ciao</span>
+                <div className="flex flex-col  gap-3 pt-4 pb-4 ps-2 pe-4">
+
                     {notificationByActorIds.map((actorTimeKey) => {
                         return (
-                            <span>
-                                {actorTimeKey}
+                            <span key={actorTimeKey}>
+                                <ActorNotificationRenderer id={actorTimeKey} map={notificationByActorMap} />
                             </span>
                         )
                     })}
 
                 </div>
-
+                <div className="border-t border-gray-700/50 mt-2 pt-2 pb-2 flex items-center justify-center">
+                    <span className="text-xs text-gray-500 italic">
+                        Showing {renderedIds.length} of {notification?.NotificationIds?.length ?? 0} notifications
+                    </span>
+                    {moreToShow && <button
+                        onClickCapture={() => handleShowMore()}
+                        className="text-xs text-neutral-300 font-semibold ms-4 px-2 py-1 rounded hover:bg-gray-700/50 transition-colors">
+                        Show More
+                    </button>}
+                </div>
+            </div>
+            <div className="flex flex-col justify-start items-center pt-4">
+                <div
+                    onClick={() => toggleReadStatus()}
+                    className={`rounded-full hover:scale-110 transition-transform cursor-pointer
+                ${isRead
+                            ? "bg-transparent border-2 border-gray-500/80"
+                            : "bg-blue-600"} 
+                w-4 h-4 shadow-md shadow-black/30`}></div>
             </div>
 
         </div>
     )
 
+}
+
+type ActorNotificationRendererProps = {
+    id: ActorTimeKey;
+    map: NotificationsByActorAndTime;
+}
+
+const ActorNotificationRenderer = ({ id, map }: ActorNotificationRendererProps) => {
+    const notificationsForActor = map[id]
+    const notificationsById = useUserNotificationStore((state) => state.notificationsById)
+
+    const actorID = id.split(":")[0]
+    const user = useUserStore(useShallow((state) => state.usersById[actorID]))
+
+    return (
+        <div className="grid grid-cols-[32px_1fr] items-center gap-3">
+            <UserAvatar user={user}
+                className="shadow-sm shadow-black/80"
+            />
+            <span className="text-sm font-semibold ">{user?.Name || "Unknown User"}</span>
+            <div className="flex flex-col col-start-2 gap-3 -mt-2">
+
+                {notificationsForActor.map((notificationId) => {
+                    const notification = notificationsById[notificationId]
+                    return (
+                        <AuditActivityItem audit={notification} showAvatar={false} hideLeadingActorChunk />
+                    )
+                })}
+            </div>
+
+
+        </div>
+    )
 }
 
 

@@ -33,9 +33,10 @@ type ActionMenuWrapperProps = {
     show?: AsyncRequestState[];
     maxWidth?: number;
     requestGroups?: RequestGroup[];
+    hideX?: boolean;
 }
 
-export const ActionMenuWrapper = forwardRef<HTMLDivElement, ActionMenuWrapperProps>(({ children, Title, onClose, onBack, width, titleStyle, style, requestKey, minLoadingMs, minSuccessMs, maxSuccessMs, maxErrorMs, show, maxWidth, requestGroups }, ref) => {
+export const ActionMenuWrapper = forwardRef<HTMLDivElement, ActionMenuWrapperProps>(({ children, Title, onClose, onBack, width, titleStyle, style, requestKey, minLoadingMs, minSuccessMs, maxSuccessMs, maxErrorMs, show, maxWidth, requestGroups, hideX = false }, ref) => {
 
     const resolvedStyle: React.CSSProperties = {
         ...style,
@@ -53,9 +54,9 @@ export const ActionMenuWrapper = forwardRef<HTMLDivElement, ActionMenuWrapperPro
 
     const menuInner = (
         <>
-            <div onClick={onClose} className="absolute top-3 right-3 rounded-md p-1 hover:bg-gray-500 hover:bg-opacity-20 cursor-pointer">
+            {!hideX && <div onClick={onClose} className="absolute top-3 right-3 rounded-md p-1 hover:bg-gray-500 hover:bg-opacity-20 cursor-pointer">
                 <XMarkIcon className="w-5 h-5 text-white" />
-            </div>
+            </div>}
             {onBack && <div onClick={onBack} className="absolute top-3 left-3 rounded-md p-1 hover:bg-gray-500 hover:bg-opacity-20 cursor-pointer">
                 <ChevronLeftIcon className="w-5 h-5 text-white" />
             </div>}

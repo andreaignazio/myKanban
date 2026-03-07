@@ -1,6 +1,6 @@
 import { useOverlayStore, type OverlayDescriptor } from "@/overlays/overlayStore";
 import { BaseBtn } from "@/pages/BoardView";
-import { BellIcon } from "@heroicons/react/24/outline";
+import { BellIcon, CheckIcon } from "@heroicons/react/24/outline";
 import { forwardRef, use, useEffect, useRef, useState, type MutableRefObject } from "react";
 import { ActionMenuWrapper } from "./ListActionsMenu";
 import { useUserWatchStore } from "@/stores/userWatchStore";
@@ -14,6 +14,7 @@ import { useShallow } from "zustand/react/shallow";
 import { UserAvatar } from "../badges/UserAvatar";
 import { UserNotificationTabPlaceholder } from "./UserNotificationTabPlaceholder";
 import { FloatingTabSelector } from "../menuElements/floatingTabSelector";
+import { CrossIcon, XIcon } from "lucide-react";
 
 type UserNotificationMenuBtnProps = {
     className?: string;
@@ -106,16 +107,21 @@ export const UserNotificationMenu = forwardRef<HTMLDivElement, UserNotificationM
         { id: "notifications", label: "Notifications" },
     ]
 
+    const [showOnlyUnread, setShowOnlyUnread] = useState(false)
 
     return (
         <>
-            <ActionMenuWrapper ref={ref} Title={""} onClose={onClose} width={600}>
+            <ActionMenuWrapper
+                hideX={true}
+                style={{ padding: 0, }}
+                ref={ref} Title={""} onClose={onClose} width={480}>
 
                 <div className="relative flex justify-between items-center min-h-[60px] ">
                     <div className="font-grotesk tracking-wide font-bold text-lg px-4">{Title}</div>
                     <div className="flex px-5 items-center gap-3" >
-                        <div className="text-sm font-helvetica -translate-y-0 text-gray-400">Only show unread</div>
-                        <div className=" bg-green-400 rounded-full w-10 h-5">    </div>
+                        <div className="text-sm font-helvetica -translate-y-0 text-gray-400">
+                            Only show unread</div>
+                        <Switcher isOn={showOnlyUnread} onToggle={() => setShowOnlyUnread(!showOnlyUnread)} />
                     </div>
                 </div>
                 <div className="border-t border-gray-600 my-2 mx-4" />
@@ -126,7 +132,7 @@ export const UserNotificationMenu = forwardRef<HTMLDivElement, UserNotificationM
                 </div>
 
                 {activeTab === "watched" && <UserWatchedMenu />}
-                {activeTab === "notifications" && <UserNotificationTabPlaceholder />}
+                {activeTab === "notifications" && <UserNotificationTabPlaceholder onlyShowUnread={showOnlyUnread} />}
 
             </ActionMenuWrapper>
 
@@ -134,6 +140,33 @@ export const UserNotificationMenu = forwardRef<HTMLDivElement, UserNotificationM
 
     )
 })
+
+type SwitcherProps = {
+    isOn: boolean;
+    onToggle: () => void;
+}
+
+const Switcher = ({ isOn, onToggle }: SwitcherProps) => {
+
+
+    return (
+        <div className={` flex flex-row items-center justify-between cursor-pointer
+         ${isOn ? "bg-lime-500" : "bg-gray-300"} rounded-full w-10 h-[20px] ps-[2px] pr-[2px] relative`}
+            onClick={onToggle}
+        >
+            <div className={`w-4 h-4 bg-black/90 rounded-full shadow-md transform transition-transform duration-200 ease-in-out ${isOn ? "translate-x-5" : "translate-x-0"}`}></div>
+            <CheckIcon className={`w-3 h-3 absolute left-[6px] text-black/90
+                 transition-opacity duration-200 ease-in-out 
+                ${isOn ? "opacity-100" : "opacity-0"}`}
+                strokeWidth={3} />
+            <XIcon className={`w-[12px] h-[12px]  absolute right-[6px] text-black/90
+                 transition-opacity duration-200 ease-in-out 
+                ${isOn ? "opacity-0" : "opacity-100"}`}
+                strokeWidth={3} />
+        </div>
+    )
+}
+
 
 export const UserNotificationsTab = () => {
     const fetchUserNotifications = useUserNotificationStore((state) => state.fetchUserNotifications)
