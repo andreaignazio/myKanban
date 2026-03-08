@@ -1,4 +1,5 @@
 import { api } from "@/api/api";
+import { getSubscriptionMaxBoards } from "@/domain/plans";
 import { create } from "zustand";
 
 import type { BoardDetailPatch, DeltaPayload } from "./boardDetailStore";
@@ -12,20 +13,7 @@ import { useAuthStore } from "./auth";
 import { use } from "react";
 import type { RequestSubscriptionCheckout, SubscriptionCheckoutResponse } from "@/types/subscriptiontypes";
 import type { ShareOffer } from "./shareOfferTypes";
-
-
-function maxBoardsForPlan(plan: string): number {
-    switch (plan) {
-        case "free":
-            return 5;
-        case "pro":
-            return 15;
-        case "premium":
-            return -1; // -1 indicates unlimited
-        default:
-            return 5; // Default to free plan limits if unknown
-    }
-}
+import { useAsyncRequestStore } from "./asyncRequestStore";
 
 export type WorkspaceMembers = {
     User: AnyUser;
@@ -86,6 +74,8 @@ export type WorkspaceStore = {
     applyWorkspaceEvent: (evt: WorkspaceEvent | UserEvent) => void;
     applyBoardClosed: (evt: WorkspaceEvent) => void;
     createUpgradeSubscriptionRequest: (plan: SubscriptionPlan, seats: number, workspaceID: string) => Promise<void>;
+    cancelWorkspaceSubscription: (workspaceID: string) => Promise<WorkspaceSubscription | null>;
+    resumeWorkspaceSubscription: (workspaceID: string) => Promise<WorkspaceSubscription | null>;
     patchWorkspaceProps: (workspaceID: string, payload: PatchWorkspacePropsRequest) => Promise<Workspace>;
     getWorkspaceWhereUserIsMember: (userId: string) => Workspace[];
     isWorkspaceAccessible: (workspaceId: string) => boolean;
@@ -324,10 +314,10 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     getMaxBoardsByWorkspaceId: (workspaceId: string) => {
         const subscription = get().wSubscriptionsById[workspaceId];
         if (!subscription) {
-            return [0, maxBoardsForPlan("free")]; // Default to free plan limits if no subscription found
+            return [0, getSubscriptionMaxBoards("free")]; // Default to free plan limits if no subscription found
         }
         const totalBoardsCount = useBoardsStore.getState().boardIdsByWorkspaceId[workspaceId]?.length || 0;
-        return [totalBoardsCount, maxBoardsForPlan(subscription.Plan)];
+        return [totalBoardsCount, getSubscriptionMaxBoards(subscription.Plan)];
     },
     applyWorkspaceEvent: (evt: WorkspaceEvent | UserEvent) => {
         console.log("Applying workspace event", evt)
@@ -431,9 +421,77 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
             SuccessUrl: `http://localhost:5173/workspaces/${workspaceID}/settings/subscription/success`,
             CancelUrl: `http://localhost:5173/workspaces/${workspaceID}/settings/subscription/failed`
         }
-        const response = await api.post(`/workspaces/${workspaceID}/subscription/checkout`, request)
-        const data = response.data as SubscriptionCheckoutResponse
-        window.location.href = data.CheckoutUrl
+
+
+        await useAsyncRequestStore.getState().execute("subscription:checkout",
+            () => api.post(`/workspaces/${workspaceID}/subscription/checkout`, request),
+            {
+                onSuccess: (data) => {
+                    applySubscription(data)
+                }
+            }
+        )
+
+        //const response = await api.post(`/workspaces/${workspaceID}/subscription/checkout`, request)
+
+        function applySubscription(response: any) {
+            const data = response.data as SubscriptionCheckoutResponse
+
+            if (data.Subscription) {
+                const subscription = data.Subscription
+
+                set((state) => ({
+                    wSubscriptionsById: {
+                        ...state.wSubscriptionsById,
+                        [workspaceID]: subscription,
+                    },
+                }))
+            }
+
+            if (data.Action === "checkout" && data.CheckoutUrl) {
+                window.location.href = data.CheckoutUrl
+            }
+        }
+    },
+    cancelWorkspaceSubscription: async (workspaceID: string) => {
+        const response = await useAsyncRequestStore.getState().execute(
+            "subscription:cancel",
+            () => api.post(`/workspaces/${workspaceID}/subscription/cancel`),
+            {
+                onSuccess: (result) => {
+                    const subscription = result.data as WorkspaceSubscription
+
+                    set((state) => ({
+                        wSubscriptionsById: {
+                            ...state.wSubscriptionsById,
+                            [workspaceID]: subscription,
+                        },
+                    }))
+                }
+            }
+        )
+
+        return response?.data as WorkspaceSubscription | null
+    },
+    resumeWorkspaceSubscription: async (workspaceID: string) => {
+        const response = await useAsyncRequestStore.getState().execute(
+            "subscription:resume",
+            () => api.post(`/workspaces/${workspaceID}/subscription/resume`),
+            {
+                onSuccess: (result) => {
+                    const subscription = result.data as WorkspaceSubscription
+
+                    set((state) => ({
+                        wSubscriptionsById: {
+                            ...state.wSubscriptionsById,
+                            [workspaceID]: subscription,
+                        },
+                    }))
+                }
+            }
+        )
+
+        return response?.data as WorkspaceSubscription | null
     },
     patchWorkspaceProps: async (workspaceID: string, payload: PatchWorkspacePropsRequest) => {
         const response = await api.patch(`/workspaces/${workspaceID}/props`, payload);

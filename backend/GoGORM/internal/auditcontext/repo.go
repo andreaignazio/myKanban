@@ -115,21 +115,7 @@ func (r *AuditContextRepo) GetWorkspaceDetailsByID(ctx context.Context, workspac
 	}
 
 	if len(subscriptions) > 0 {
-		subscription := subscriptions[0]
-		periodEnd := subscription.CurrentPeriodStart
-		if subscription.CurrentPeriodEnd != nil {
-			periodEnd = *subscription.CurrentPeriodEnd
-		}
-
-		workspaceDetails.WorkspaceSubscription = dto.SubscriptionResponse{
-			WorkspaceID:      subscription.WorkspaceID,
-			Plan:             string(subscription.Plan),
-			Status:           subscription.Status,
-			CurrentPeriodEnd: periodEnd,
-			CreatedAt:        subscription.CreatedAt,
-			UpdatedAt:        subscription.UpdatedAt,
-			DeletedAt:        dto.DeletedAtPtr(subscription.DeletedAt),
-		}
+		workspaceDetails.WorkspaceSubscription = dto.WorkspaceSubscriptionToResponse(&subscriptions[0])
 	}
 
 	return &workspaceDetails, nil
@@ -145,7 +131,7 @@ func (r *AuditContextRepo) getWorkspaceSubscriptionsByWorkspaceIDs(ctx context.C
 		Table("workspace_subscriptions").
 		Where("deleted_at IS NULL").
 		Where("workspace_id IN ?", workspaceIDs).
-		Where("status IN ('trial', 'active')").
+		Where("status IN ('trial', 'trialing', 'active')").
 		Find(&subscriptions).Error; err != nil {
 		return nil, dbx.WrapDBErr(err, "auditcontext: error fetching workspace subscriptions")
 	}

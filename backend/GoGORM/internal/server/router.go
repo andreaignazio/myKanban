@@ -311,6 +311,8 @@ func NewRouter(db *gorm.DB,
 				workspaces.GET("/:workspaceID/shareoffers", shareHandler.GetWorkspaceOutgoingShareOffers)
 
 				workspaces.POST("/:workspaceID/subscription/checkout", subscriptionHandler.StartCheckoutForWorkspace)
+				workspaces.POST("/:workspaceID/subscription/cancel", subscriptionHandler.CancelWorkspaceSubscription)
+				workspaces.POST("/:workspaceID/subscription/resume", subscriptionHandler.ResumeWorkspaceSubscription)
 			}
 			activity := api.Group("/activity")
 			{

@@ -3,12 +3,10 @@ import { BoardCard } from "../components/workspaceView/BoardCard";
 import { BoardCardAdd } from "../components/workspaceView/BoardCardAdd";
 import { WorkspaceHeader } from "@/components/workspaceView/WorkspaceHeader";
 import { useBoardsStore } from "@/stores/boardsStore";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { useParams } from "react-router";
 import { UserRound } from "lucide-react";
-import { useBoardWebSocket } from "@/hooks/ws/useBoardWS";
 import { useShallow } from "zustand/shallow";
-import { useWorkspaceStore } from "@/stores/workspaceStore";
 import { LabeledButtonPresetA } from "@/components/buttons/labeledButton";
 import { ViewDeletedBoards } from "@/components/modals/ViewDeletedBoards";
 import { CardRowMenuBtn } from "@/components/cardMenus/cardRowMenus";
@@ -63,12 +61,6 @@ export function WorkspaceView() {
     }, [boardIds, userBoardsById, boardsById, sortByPosition]);
     const { isAdminOrOwner, isMember } = useCurrentWorkspaceRole(workspaceId ?? null);
 
-
-    useEffect(() => {
-        if (workspaceId) {
-            useBoardsStore.getState().fetchBoardsForWorkspace(workspaceId);
-        }
-    }, [workspaceId]);
 
     useEffect(() => {
         if (workspaceId && boardsIdsByWorkspaceId[workspaceId]) {

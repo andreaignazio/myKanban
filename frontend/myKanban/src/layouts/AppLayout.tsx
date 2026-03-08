@@ -6,6 +6,7 @@ import { useAuthStore } from "@/stores/auth";
 import { use, useEffect, useRef, useState } from "react"
 import { useBoardsStore } from "@/stores/boardsStore";
 import { useWorkspaceStore } from "@/stores/workspaceStore";
+import { useWsMembersStore } from "@/stores/wsMembersStore";
 import { OverlayRoot } from "@/overlays/OverlayRoot";
 import { createPortal } from "react-dom";
 import { useOverlayStore, type OverlayDescriptor } from "@/overlays/overlayStore";
@@ -32,9 +33,10 @@ export default function AppLayout() {
     const hydrateWorkspaces = useWorkspaceStore((state) => state.hydrateWorkspaces)
     const hasHydratedWorkspaces = useWorkspaceStore((state) => state.hasHydratedWorkspaces)
     const getWorkspaceStatus = useWorkspaceStore((state) => state.getWorkspaceStatus)
-    const workspaceIds = useWorkspaceStore((state) => state.workspaceIds)
-    const boardIdsByWorkspaceId = useBoardsStore((state) => state.boardIdsByWorkspaceId)
     const fetchBoardsForWorkspace = useBoardsStore((state) => state.fetchBoardsForWorkspace)
+    const fetchWorkspaceMembers = useWsMembersStore((state) => state.fetchWorkspaceMembers)
+    const fetchedWorkspaceBoardsRef = useRef<Set<string>>(new Set())
+    const fetchedWorkspaceMembersRef = useRef<Set<string>>(new Set())
     const [showBackdrop, setShowBackdrop] = useState(false)
     const [backdropVisible, setBackdropVisible] = useState(false)
     const isOverlayLocked = useOverlayStore((state) => state.isOverlayBackdropLocked)
@@ -93,6 +95,38 @@ export default function AppLayout() {
             navigate("/workspaces", { replace: true })
         }
     }, [hasHydratedWorkspaces, routeWorkspaceID, getWorkspaceStatus, navigate])
+
+    useEffect(() => {
+        if (!hasHydratedWorkspaces || !routeWorkspaceID) {
+            return
+        }
+        if (getWorkspaceStatus(routeWorkspaceID) !== "accessible") {
+            return
+        }
+        if (fetchedWorkspaceBoardsRef.current.has(routeWorkspaceID)) {
+            return
+        }
+        fetchedWorkspaceBoardsRef.current.add(routeWorkspaceID)
+        void fetchBoardsForWorkspace(routeWorkspaceID).catch(() => {
+            fetchedWorkspaceBoardsRef.current.delete(routeWorkspaceID)
+        })
+    }, [hasHydratedWorkspaces, routeWorkspaceID, getWorkspaceStatus, fetchBoardsForWorkspace])
+
+    useEffect(() => {
+        if (!hasHydratedWorkspaces || !routeWorkspaceID) {
+            return
+        }
+        if (getWorkspaceStatus(routeWorkspaceID) !== "accessible") {
+            return
+        }
+        if (fetchedWorkspaceMembersRef.current.has(routeWorkspaceID)) {
+            return
+        }
+        fetchedWorkspaceMembersRef.current.add(routeWorkspaceID)
+        void fetchWorkspaceMembers(routeWorkspaceID).catch(() => {
+            fetchedWorkspaceMembersRef.current.delete(routeWorkspaceID)
+        })
+    }, [hasHydratedWorkspaces, routeWorkspaceID, getWorkspaceStatus, fetchWorkspaceMembers])
 
 
     const openOverlay = useOverlayStore((state) => state.open)

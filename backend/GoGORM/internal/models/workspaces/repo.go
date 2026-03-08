@@ -118,7 +118,20 @@ func (r *GormWorkspaceRepo) GetWorkspacesByUserID(ctx context.Context, userID uu
 			ws.workspace_id AS subscription_workspace_id,
 			ws.plan AS subscription_plan,
 			ws.status AS subscription_status,
+			ws.provider AS subscription_provider,
+			ws.provider_customer_id AS subscription_provider_customer_id,
+			ws.provider_subscription_id AS subscription_provider_subscription_id,
+			ws.provider_schedule_id AS subscription_provider_schedule_id,
+			ws.provider_price_id AS subscription_provider_price_id,
+			ws.seat_quantity AS subscription_seat_quantity,
+			ws.cancel_at_period_end AS subscription_cancel_at_period_end,
+			ws.pending_plan AS subscription_pending_plan,
+			ws.pending_seat_quantity AS subscription_pending_seat_quantity,
+			ws.pending_change_effective_at AS subscription_pending_change_effective_at,
+			ws.current_period_start AS subscription_current_period_start,
 			ws.current_period_end AS subscription_current_period_end,
+			ws.last_webhook_at AS subscription_last_webhook_at,
+			ws.last_provider_event_id AS subscription_last_provider_event_id,
 			ws.created_at AS subscription_created_at,
 			ws.updated_at AS subscription_updated_at,
 			ws.deleted_at AS subscription_deleted_at
@@ -345,7 +358,6 @@ func (r *GormWorkspaceRepo) GetWorkspaceSubscriptionsByWorkspaceIDs(ctx context.
 	}
 	if err := query.
 		Where("workspace_id IN ?", workspaceIDs).
-		Where("status IN ('trial', 'active')").
 		Find(&subscriptions).Error; err != nil {
 		return nil, err
 	}

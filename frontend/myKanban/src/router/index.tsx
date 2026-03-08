@@ -24,6 +24,8 @@ import { WorkspaceSubscriptions } from "@/pages/WorkspaceSettings/WorkspaceSubsc
 import { WorkspaceSettings } from "@/pages/WorkspaceSettings/WorkspaceSettings";
 import { WorkspacesLanding } from "@/pages/WorkspacesLanding";
 import { JoinPageMain } from "@/pages/Join/joinPageMain";
+import { WorkspaceSubscriptionMain } from "@/pages/WorkspaceSettings/WorkspaceSubscriptionMain";
+import { WorkspaceSubscriptionManage } from "@/pages/WorkspaceSettings/WorkspaceSubscriptionManage";
 
 
 function WorkspaceIndexRedirect() {
@@ -57,7 +59,12 @@ export const router = createBrowserRouter([
             {
                 path: "/workspaces/:workspaceId/settings", element: <WorkspaceSettingsMain />, children: [
                     { path: "", element: <WorkspaceSettings /> },
-                    { path: "subscription", element: <WorkspaceSubscriptions /> },
+                    {
+                        path: "subscription", element: <WorkspaceSubscriptionMain />, children: [
+                            { path: "upgrade", element: <WorkspaceSubscriptions /> },
+                            { path: "", element: <WorkspaceSubscriptionManage /> }
+                        ]
+                    },
                     { path: "subscription/failed", element: <SubscriptionFailedPage /> },
                     { path: "subscription/success", element: <SubscriptionSuccessPage /> },
                 ]

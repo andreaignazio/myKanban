@@ -79,6 +79,9 @@ export const ASYNC_REQUEST_BASE_KEYS = [
     "checklist:entry:crossmove",
     "checklist:entry:member:add",
     "checklist:entry:member:remove",
+    "subscription:checkout",
+    "subscription:cancel",
+    "subscription:resume"
 ] as const;
 
 export type AsyncRequestBaseKey = typeof ASYNC_REQUEST_BASE_KEYS[number];

@@ -1,11 +1,13 @@
 package dto
 
 import (
+	"GoGORM/internal/subscriptionplan"
 	"GoGORM/models"
 	"encoding/json"
 	"fmt"
 	"time"
 
+	"github.com/google/uuid"
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
@@ -179,6 +181,99 @@ func UserWorkspaceToResponse(userWorkspace *models.UserWorkspace) UserWorkspaceR
 		UpdatedAt:   userWorkspace.UpdatedAt,
 		DeletedAt:   DeletedAtPtr(userWorkspace.DeletedAt),
 	}
+}
+
+func WorkspaceSubscriptionToResponse(subscription *models.WorkspaceSubscription) SubscriptionResponse {
+	return SubscriptionResponse{
+		WorkspaceID:              subscription.WorkspaceID,
+		Plan:                     string(subscription.Plan),
+		Status:                   subscription.Status,
+		Provider:                 subscription.Provider,
+		ProviderCustomerID:       subscription.ProviderCustomerID,
+		ProviderSubscriptionID:   subscription.ProviderSubscriptionID,
+		ProviderScheduleID:       subscription.ProviderScheduleID,
+		ProviderPriceID:          subscription.ProviderPriceID,
+		SeatQuantity:             subscription.SeatQuantity,
+		CancelAtPeriodEnd:        subscription.CancelAtPeriodEnd,
+		PendingPlan:              planPtrToStringPtr(subscription.PendingPlan),
+		PendingSeatQuantity:      subscription.PendingSeatQuantity,
+		PendingChangeEffectiveAt: subscription.PendingChangeEffectiveAt,
+		CurrentPeriodStart:       subscription.CurrentPeriodStart,
+		CurrentPeriodEnd:         subscription.CurrentPeriodEnd,
+		LastWebhookAt:            subscription.LastWebhookAt,
+		LastProviderEventID:      subscription.LastProviderEventID,
+		CreatedAt:                subscription.CreatedAt,
+		UpdatedAt:                subscription.UpdatedAt,
+		DeletedAt:                DeletedAtPtr(subscription.DeletedAt),
+	}
+}
+
+func UserWorkspaceRowSubscriptionToResponse(row *models.UserWorkspaceRow) SubscriptionResponse {
+	return SubscriptionResponse{
+		WorkspaceID:              valueOrUUID(row.SubscriptionWorkspaceID, row.WorkspaceID),
+		Plan:                     valueOrString(row.SubscriptionPlan, "free"),
+		Status:                   valueOrString(row.SubscriptionStatus, "none"),
+		Provider:                 valueOrString(row.SubscriptionProvider, "stripe"),
+		ProviderCustomerID:       row.SubscriptionProviderCustomerID,
+		ProviderSubscriptionID:   row.SubscriptionProviderSubscriptionID,
+		ProviderScheduleID:       row.SubscriptionProviderScheduleID,
+		ProviderPriceID:          row.SubscriptionProviderPriceID,
+		SeatQuantity:             valueOrInt(row.SubscriptionSeatQuantity, 0),
+		CancelAtPeriodEnd:        valueOrBool(row.SubscriptionCancelAtPeriodEnd, false),
+		PendingPlan:              row.SubscriptionPendingPlan,
+		PendingSeatQuantity:      row.SubscriptionPendingSeatQuantity,
+		PendingChangeEffectiveAt: row.SubscriptionPendingChangeEffectiveAt,
+		CurrentPeriodStart:       valueOrTime(row.SubscriptionCurrentPeriodStart),
+		CurrentPeriodEnd:         row.SubscriptionCurrentPeriodEnd,
+		LastWebhookAt:            row.SubscriptionLastWebhookAt,
+		LastProviderEventID:      row.SubscriptionLastProviderEventID,
+		CreatedAt:                valueOrTime(row.SubscriptionCreatedAt),
+		UpdatedAt:                valueOrTime(row.SubscriptionUpdatedAt),
+		DeletedAt:                row.SubscriptionDeletedAt,
+	}
+}
+
+func valueOrString(value *string, fallback string) string {
+	if value == nil {
+		return fallback
+	}
+	return *value
+}
+
+func planPtrToStringPtr(value *subscriptionplan.Plan) *string {
+	if value == nil {
+		return nil
+	}
+	stringValue := value.String()
+	return &stringValue
+}
+
+func valueOrInt(value *int, fallback int) int {
+	if value == nil {
+		return fallback
+	}
+	return *value
+}
+
+func valueOrBool(value *bool, fallback bool) bool {
+	if value == nil {
+		return fallback
+	}
+	return *value
+}
+
+func valueOrTime(value *time.Time) time.Time {
+	if value == nil {
+		return time.Time{}
+	}
+	return *value
+}
+
+func valueOrUUID(value *uuid.UUID, fallback uuid.UUID) uuid.UUID {
+	if value == nil {
+		return fallback
+	}
+	return *value
 }
 
 func UserWorkspaceRowToResponses(row *models.UserWorkspaceRow) (WorkspaceResponse, UserWorkspaceResponse) {

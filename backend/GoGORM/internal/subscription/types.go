@@ -2,6 +2,7 @@ package subscription
 
 import (
 	"GoGORM/internal/subscriptionplan"
+	"GoGORM/models"
 	"time"
 
 	"github.com/google/uuid"
@@ -46,7 +47,10 @@ const (
 type ProviderEventTypes string
 
 const (
-	CheckoutSessionCompleted ProviderEventTypes = "checkout.session.completed"
+	CheckoutSessionCompleted    ProviderEventTypes = "checkout.session.completed"
+	CustomerSubscriptionCreated ProviderEventTypes = "customer.subscription.created"
+	CustomerSubscriptionUpdated ProviderEventTypes = "customer.subscription.updated"
+	CustomerSubscriptionDeleted ProviderEventTypes = "customer.subscription.deleted"
 )
 
 type ProviderSubscriptionSnapshot struct {
@@ -59,8 +63,9 @@ type ProviderSubscriptionSnapshot struct {
 	Status       BillingStatus
 	PriceID      string
 
-	CancelAtPeriodEnd bool
-	CurrentPeriodEnd  *time.Time
+	CancelAtPeriodEnd  bool
+	CurrentPeriodStart *time.Time
+	CurrentPeriodEnd   *time.Time
 }
 
 type BillingWebhookEvent struct {
@@ -79,6 +84,70 @@ type CreateCheckoutSessionOutput struct {
 	CheckoutUrl  string
 	ClientSecret *string
 	ExpiresAt    *time.Time
+}
+
+type SubscriptionAction string
+
+const (
+	SubscriptionActionCheckout  SubscriptionAction = "checkout"
+	SubscriptionActionUpdated   SubscriptionAction = "updated"
+	SubscriptionActionScheduled SubscriptionAction = "scheduled"
+)
+
+type StartSubscriptionResult struct {
+	Action       SubscriptionAction
+	CheckoutURL  *string
+	SessionID    *string
+	Subscription *models.WorkspaceSubscription
+}
+
+type UpdateSubscriptionPlanInput struct {
+	WorkspaceID    uuid.UUID
+	SubscriptionID string
+	PlanCode       subscriptionplan.Plan
+	SeatQuantity   int
+}
+
+type CreateSubscriptionUpdateConfirmationSessionInput struct {
+	WorkspaceID    uuid.UUID
+	CustomerID     string
+	SubscriptionID string
+	PlanCode       subscriptionplan.Plan
+	SeatQuantity   int
+	SuccessURL     string
+	CancelURL      string
+	PortalConfigID string
+}
+
+type GetSubscriptionStateInput struct {
+	WorkspaceID    uuid.UUID
+	SubscriptionID string
+	EventType      string
+	EventID        string
+	OccurredAt     time.Time
+}
+
+type ScheduleSubscriptionPlanChangeInput struct {
+	WorkspaceID         uuid.UUID
+	SubscriptionID      string
+	CurrentPlanCode     subscriptionplan.Plan
+	CurrentPriceID      string
+	CurrentSeatQuantity int
+	TargetPlanCode      subscriptionplan.Plan
+	TargetSeatQuantity  int
+	Metadata            map[string]string
+}
+
+type ScheduleSubscriptionPlanChangeOutput struct {
+	ScheduleID  string
+	EffectiveAt time.Time
+}
+
+type PendingSubscriptionChange struct {
+	ProviderScheduleID       *string
+	PendingPlan              *subscriptionplan.Plan
+	PendingSeatQuantity      *int
+	PendingChangeEffectiveAt *time.Time
 }
 
 type CreateCheckoutSessionInput struct {

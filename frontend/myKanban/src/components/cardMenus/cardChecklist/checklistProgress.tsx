@@ -1,3 +1,4 @@
+import { ProgressBar } from "@/components/common/progressBar";
 import { PADDING_L } from "../../modals/CardDetailMenu";
 
 type ChecklistProgressProps = {
@@ -11,9 +12,7 @@ export const ChecklistProgress = ({ doneEntriesPercentage }: ChecklistProgressPr
                 {doneEntriesPercentage}%
             </div>
             <div className="w-full" style={{ paddingLeft: PADDING_L }}>
-                <div className="h-1.5 rounded-full bg-neutral-500/30 w-full" >
-                    <div className="h-1.5 rounded-full bg-neutral-400 transition-all" style={{ width: `${doneEntriesPercentage}%` }}></div>
-                </div>
+                <ProgressBar percentage={doneEntriesPercentage} />
             </div>
         </div>
     )

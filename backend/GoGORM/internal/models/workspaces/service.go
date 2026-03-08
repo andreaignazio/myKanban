@@ -183,25 +183,21 @@ func (s *WorkspaceService) GetUserWorkspaces(ctx context.Context, userID uuid.UU
 		workspaces = append(workspaces, dto.WorkspaceToResponse(&w))
 		userWorkspaces = append(userWorkspaces, dto.UserWorkspaceToResponse(&uw))
 		if row.SubscriptionWorkspaceID != nil {
-			subscription := dto.SubscriptionResponse{
-				WorkspaceID:      *row.SubscriptionWorkspaceID,
-				Plan:             valueOrDefault(row.SubscriptionPlan, string(subscriptionplan.Free)),
-				Status:           valueOrDefault(row.SubscriptionStatus, "none"),
-				CurrentPeriodEnd: valueOrZeroTime(row.SubscriptionPeriodEnd),
-				CreatedAt:        valueOrZeroTime(row.SubscriptionCreatedAt),
-				UpdatedAt:        valueOrZeroTime(row.SubscriptionUpdatedAt),
-				DeletedAt:        row.SubscriptionDeletedAt,
-			}
+			subscription := dto.UserWorkspaceRowSubscriptionToResponse(&row)
 			subscriptions = append(subscriptions, subscription)
 		} else {
 			subscriptions = append(subscriptions, dto.SubscriptionResponse{
-				WorkspaceID:      w.ID,
-				Plan:             string(subscriptionplan.Free),
-				Status:           "none",
-				CurrentPeriodEnd: time.Time{},
-				CreatedAt:        time.Time{},
-				UpdatedAt:        time.Time{},
-				DeletedAt:        nil,
+				WorkspaceID:        w.ID,
+				Plan:               string(subscriptionplan.Free),
+				Status:             "none",
+				Provider:           "stripe",
+				SeatQuantity:       0,
+				CancelAtPeriodEnd:  false,
+				CurrentPeriodStart: time.Time{},
+				CurrentPeriodEnd:   nil,
+				CreatedAt:          time.Time{},
+				UpdatedAt:          time.Time{},
+				DeletedAt:          nil,
 			})
 		}
 	}
@@ -236,24 +232,20 @@ func (s *WorkspaceService) SearchPublicWorkspaces(ctx context.Context, query str
 	for i := range workspaceModels {
 		workspaceID := workspaceModels[i].ID
 		if sub, ok := subscriptionMap[workspaceID]; ok {
-			subscriptions = append(subscriptions, dto.SubscriptionResponse{
-				WorkspaceID:      sub.WorkspaceID,
-				Plan:             string(sub.Plan),
-				Status:           sub.Status,
-				CurrentPeriodEnd: valueOrZeroTime(sub.CurrentPeriodEnd),
-				CreatedAt:        sub.CreatedAt,
-				UpdatedAt:        sub.UpdatedAt,
-				DeletedAt:        dto.DeletedAtPtr(sub.DeletedAt),
-			})
+			subscriptions = append(subscriptions, dto.WorkspaceSubscriptionToResponse(&sub))
 		} else {
 			subscriptions = append(subscriptions, dto.SubscriptionResponse{
-				WorkspaceID:      workspaceID,
-				Plan:             string(subscriptionplan.Free),
-				Status:           "none",
-				CurrentPeriodEnd: time.Time{},
-				CreatedAt:        time.Time{},
-				UpdatedAt:        time.Time{},
-				DeletedAt:        nil,
+				WorkspaceID:        workspaceID,
+				Plan:               string(subscriptionplan.Free),
+				Status:             "none",
+				Provider:           "stripe",
+				SeatQuantity:       0,
+				CancelAtPeriodEnd:  false,
+				CurrentPeriodStart: time.Time{},
+				CurrentPeriodEnd:   nil,
+				CreatedAt:          time.Time{},
+				UpdatedAt:          time.Time{},
+				DeletedAt:          nil,
 			})
 		}
 	}
@@ -304,24 +296,20 @@ func (s *WorkspaceService) GetPendingOfferTargetWorkspacesForUser(ctx context.Co
 	for i := range workspaceModels {
 		workspaceID := workspaceModels[i].ID
 		if sub, ok := subscriptionMap[workspaceID]; ok {
-			subscriptions = append(subscriptions, dto.SubscriptionResponse{
-				WorkspaceID:      sub.WorkspaceID,
-				Plan:             string(sub.Plan),
-				Status:           sub.Status,
-				CurrentPeriodEnd: valueOrZeroTime(sub.CurrentPeriodEnd),
-				CreatedAt:        sub.CreatedAt,
-				UpdatedAt:        sub.UpdatedAt,
-				DeletedAt:        dto.DeletedAtPtr(sub.DeletedAt),
-			})
+			subscriptions = append(subscriptions, dto.WorkspaceSubscriptionToResponse(&sub))
 		} else {
 			subscriptions = append(subscriptions, dto.SubscriptionResponse{
-				WorkspaceID:      workspaceID,
-				Plan:             string(subscriptionplan.Free),
-				Status:           "none",
-				CurrentPeriodEnd: time.Time{},
-				CreatedAt:        time.Time{},
-				UpdatedAt:        time.Time{},
-				DeletedAt:        nil,
+				WorkspaceID:        workspaceID,
+				Plan:               string(subscriptionplan.Free),
+				Status:             "none",
+				Provider:           "stripe",
+				SeatQuantity:       0,
+				CancelAtPeriodEnd:  false,
+				CurrentPeriodStart: time.Time{},
+				CurrentPeriodEnd:   nil,
+				CreatedAt:          time.Time{},
+				UpdatedAt:          time.Time{},
+				DeletedAt:          nil,
 			})
 		}
 	}
@@ -329,20 +317,6 @@ func (s *WorkspaceService) GetPendingOfferTargetWorkspacesForUser(ctx context.Co
 	shareOfferResponses := dto.ShareOffersToResponses(shareOffers)
 
 	return workspaces, subscriptions, shareOfferResponses, nil
-}
-
-func valueOrDefault(value *string, fallback string) string {
-	if value == nil {
-		return fallback
-	}
-	return *value
-}
-
-func valueOrZeroTime(value *time.Time) time.Time {
-	if value == nil {
-		return time.Time{}
-	}
-	return *value
 }
 
 func (s *WorkspaceService) GetWorkspaceBoardsForUserID(ctx context.Context, userID uuid.UUID, workspaceID uuid.UUID) ([]dto.BoardResponse, []dto.UserBoardResponse, error) {

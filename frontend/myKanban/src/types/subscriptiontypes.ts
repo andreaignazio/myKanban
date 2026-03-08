@@ -1,4 +1,6 @@
+import type { SubscriptionPlan, WorkspaceSubscription } from "@/stores/types"
 
+export type { SubscriptionPlan } from "@/stores/types"
 
 export type RequestSubscriptionCheckout = {
     PlanCode: SubscriptionPlan
@@ -8,8 +10,8 @@ export type RequestSubscriptionCheckout = {
 }
 
 export type SubscriptionCheckoutResponse = {
-    CheckoutUrl: string
-    SessionID: string
+    Action: "checkout" | "updated" | "scheduled"
+    CheckoutUrl?: string
+    SessionID?: string
+    Subscription?: WorkspaceSubscription
 }
-
-export type SubscriptionPlan = "free" | "pro" | "premium"

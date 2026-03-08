@@ -1,6 +1,7 @@
 package subscription
 
 import (
+	"GoGORM/internal/dto"
 	"GoGORM/internal/server/httperr"
 	"errors"
 	"fmt"
@@ -34,20 +35,89 @@ func (h *SubscriptionHandler) StartCheckoutForWorkspace(c *gin.Context) {
 	workspaceID, err := uuid.Parse(workspaceIDStr)
 	if err != nil {
 		httperr.WriteParamsError(c, err, "subscription.handler.StartCheckoutForWorkspace")
+		fmt.Println("Invalid workspace ID:", err)
 		return
 	}
 	userID := c.MustGet("userID").(uuid.UUID)
 	var req RequestSubscriptionCheckout
 	if err := c.ShouldBindJSON(&req); err != nil {
 		httperr.WriteParamsError(c, err, "subscription.handler.StartCheckoutForWorkspace")
+		fmt.Println("Invalid request body:", err)
 		return
 	}
 	response, err := h.Service.StartCheckoutForWorkspace(ctx, workspaceID, userID, &req)
 	if err != nil {
 		httperr.WriteOp(c, err, "subscription.handler.StartCheckoutForWorkspace")
+		fmt.Println("Error starting checkout for workspace:", err)
 		return
 	}
 	c.JSON(http.StatusOK, response)
+}
+
+func (h *SubscriptionHandler) CancelWorkspaceSubscription(c *gin.Context) {
+	ctx := c.Request.Context()
+	workspaceIDStr := c.Param("workspaceID")
+	workspaceID, err := uuid.Parse(workspaceIDStr)
+	if err != nil {
+		httperr.WriteParamsError(c, err, "subscription.handler.CancelWorkspaceSubscription")
+		return
+	}
+	userID := c.MustGet("userID").(uuid.UUID)
+
+	if h.Service == nil {
+		httperr.WriteOp(c, errors.New("subscription service not configured"), "subscription.handler.CancelWorkspaceSubscription")
+		return
+	}
+
+	if err := h.Service.CancelWorkspaceSubscription(ctx, workspaceID, userID); err != nil {
+		httperr.WriteOp(c, err, "subscription.handler.CancelWorkspaceSubscription")
+		return
+	}
+
+	subscription, err := h.Service.SubscriptionRepo.GetWorkspaceSubscription(ctx, workspaceID)
+	if err != nil {
+		httperr.WriteOp(c, err, "subscription.handler.CancelWorkspaceSubscription: fetch updated subscription")
+		return
+	}
+	if subscription == nil {
+		c.Status(http.StatusNoContent)
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.WorkspaceSubscriptionToResponse(subscription))
+}
+
+func (h *SubscriptionHandler) ResumeWorkspaceSubscription(c *gin.Context) {
+	ctx := c.Request.Context()
+	workspaceIDStr := c.Param("workspaceID")
+	workspaceID, err := uuid.Parse(workspaceIDStr)
+	if err != nil {
+		httperr.WriteParamsError(c, err, "subscription.handler.ResumeWorkspaceSubscription")
+		return
+	}
+	userID := c.MustGet("userID").(uuid.UUID)
+
+	if h.Service == nil {
+		httperr.WriteOp(c, errors.New("subscription service not configured"), "subscription.handler.ResumeWorkspaceSubscription")
+		return
+	}
+
+	if err := h.Service.ResumeWorkspaceSubscription(ctx, workspaceID, userID); err != nil {
+		httperr.WriteOp(c, err, "subscription.handler.ResumeWorkspaceSubscription")
+		return
+	}
+
+	subscription, err := h.Service.SubscriptionRepo.GetWorkspaceSubscription(ctx, workspaceID)
+	if err != nil {
+		httperr.WriteOp(c, err, "subscription.handler.ResumeWorkspaceSubscription: fetch updated subscription")
+		return
+	}
+	if subscription == nil {
+		c.Status(http.StatusNoContent)
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.WorkspaceSubscriptionToResponse(subscription))
 }
 
 func (h *SubscriptionHandler) HandleStripeBillingWebhook(c *gin.Context) {
@@ -99,6 +169,12 @@ func (h *SubscriptionHandler) HandleStripeBillingWebhook(c *gin.Context) {
 		fmt.Println("Error handling billing webhook:", err)
 		return
 	}
+	fmt.Printf("Processed Stripe webhook: type=%s event_id=%s workspace_id=%s subscription_id=%s\n",
+		evt.EventType,
+		evt.EventID,
+		evt.WorkspaceID,
+		evt.ProviderSubscriptionSnapshot.SubscriptionID,
+	)
 
 	c.Status(http.StatusOK)
 }

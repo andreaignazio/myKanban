@@ -27,10 +27,6 @@ export function WorkspaceMembersMain() {
     const isMembersRoute = useMatch("/workspaces/:workspaceId/members/");
     const isGuestsRoute = useMatch("/workspaces/:workspaceId/members/guests/*");
 
-    useEffect(() => {
-        useWsMembersStore.getState().fetchWorkspaceMembers(workspaceID);
-
-    }, [workspaceID, membersIds]);
     const panelRef = useRef<HTMLDivElement | null>(null)
 
     const roles = ["member", "admin", "owner"] as const;
@@ -51,7 +47,6 @@ export function WorkspaceMembersMain() {
     }
 
 
-    const searchInputRef = useRef<HTMLInputElement>(null);
     useEffect(() => {
         console.log("Filtering members with search term", currentSearch, "using membersIds", membersIds, "and membersById", membersById);
         const handleSearch = () => {
@@ -86,7 +81,7 @@ export function WorkspaceMembersMain() {
             <CustomInput
                 value={currentSearch}
                 onInputChange={(input) => setCurrentSearch(input?.current?.value ?? "")}
-                placeholder="Search members..." className="w-full mt-4 mb-3 max-w-72 h-9" ref={searchInputRef}
+                placeholder="Search members..." className="w-full mt-4 mb-3 max-w-72 h-9"
 
             />
 

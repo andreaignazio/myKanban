@@ -37,10 +37,14 @@ type WorkspaceSubscription struct {
 
 	ProviderCustomerID     *string `gorm:"type:text;"`
 	ProviderSubscriptionID *string `gorm:"type:text;index"`
+	ProviderScheduleID     *string `gorm:"type:text;index"`
 	ProviderPriceID        *string `gorm:"type:text;"`
 
-	SeatQuantity      int  `gorm:"type:int;not null;default:0"`
-	CancelAtPeriodEnd bool `gorm:"type:boolean;not null;default:false"`
+	SeatQuantity             int                    `gorm:"type:int;not null;default:0"`
+	CancelAtPeriodEnd        bool                   `gorm:"type:boolean;not null;default:false"`
+	PendingPlan              *subscriptionplan.Plan `gorm:"type:text;"`
+	PendingSeatQuantity      *int                   `gorm:"type:int;"`
+	PendingChangeEffectiveAt *time.Time             `gorm:"type:timestamp;"`
 
 	CurrentPeriodStart  time.Time  `gorm:"type:timestamp;"`
 	CurrentPeriodEnd    *time.Time `gorm:"type:timestamp;"`
@@ -62,30 +66,43 @@ type BillingWebhookEvent struct {
 }
 
 type UserWorkspaceRow struct {
-	WorkspaceID              uuid.UUID           `gorm:"column:workspace_id"`
-	WorkspaceName            string              `gorm:"column:workspace_name"`
-	WorkspaceCreatedByUserID uuid.UUID           `gorm:"column:workspace_created_by_user_id"`
-	WorkspaceVisibility      WorkspaceVisibility `gorm:"column:workspace_visibility"`
-	WorkspacePublicToken     string              `gorm:"column:workspace_public_token"`
-	WorkspaceProps           datatypes.JSON      `gorm:"column:workspace_props"`
-	WorkspaceCreatedAt       time.Time           `gorm:"column:workspace_created_at"`
-	WorkspaceUpdatedAt       time.Time           `gorm:"column:workspace_updated_at"`
-	WorkspaceDeletedAt       gorm.DeletedAt      `gorm:"column:workspace_deleted_at"`
-	UserWorkspaceID          uuid.UUID           `gorm:"column:workspace_user_id"`
-	UserWorkspaceWorkspaceID uuid.UUID           `gorm:"column:workspace_user_workspace_id"`
-	UserWorkspaceUserID      uuid.UUID           `gorm:"column:workspace_user_user_id"`
-	UserWorkspacePos         string              `gorm:"column:workspace_user_pos"`
-	UserWorkspaceRole        string              `gorm:"column:workspace_user_role"`
-	UserWorkspaceCreatedAt   time.Time           `gorm:"column:workspace_user_created_at"`
-	UserWorkspaceUpdatedAt   time.Time           `gorm:"column:workspace_user_updated_at"`
-	UserWorkspaceDeletedAt   gorm.DeletedAt      `gorm:"column:workspace_user_deleted_at"`
-	SubscriptionWorkspaceID  *uuid.UUID          `gorm:"column:subscription_workspace_id"`
-	SubscriptionPlan         *string             `gorm:"column:subscription_plan"`
-	SubscriptionStatus       *string             `gorm:"column:subscription_status"`
-	SubscriptionPeriodEnd    *time.Time          `gorm:"column:subscription_current_period_end"`
-	SubscriptionCreatedAt    *time.Time          `gorm:"column:subscription_created_at"`
-	SubscriptionUpdatedAt    *time.Time          `gorm:"column:subscription_updated_at"`
-	SubscriptionDeletedAt    *time.Time          `gorm:"column:subscription_deleted_at"`
+	WorkspaceID                          uuid.UUID           `gorm:"column:workspace_id"`
+	WorkspaceName                        string              `gorm:"column:workspace_name"`
+	WorkspaceCreatedByUserID             uuid.UUID           `gorm:"column:workspace_created_by_user_id"`
+	WorkspaceVisibility                  WorkspaceVisibility `gorm:"column:workspace_visibility"`
+	WorkspacePublicToken                 string              `gorm:"column:workspace_public_token"`
+	WorkspaceProps                       datatypes.JSON      `gorm:"column:workspace_props"`
+	WorkspaceCreatedAt                   time.Time           `gorm:"column:workspace_created_at"`
+	WorkspaceUpdatedAt                   time.Time           `gorm:"column:workspace_updated_at"`
+	WorkspaceDeletedAt                   gorm.DeletedAt      `gorm:"column:workspace_deleted_at"`
+	UserWorkspaceID                      uuid.UUID           `gorm:"column:workspace_user_id"`
+	UserWorkspaceWorkspaceID             uuid.UUID           `gorm:"column:workspace_user_workspace_id"`
+	UserWorkspaceUserID                  uuid.UUID           `gorm:"column:workspace_user_user_id"`
+	UserWorkspacePos                     string              `gorm:"column:workspace_user_pos"`
+	UserWorkspaceRole                    string              `gorm:"column:workspace_user_role"`
+	UserWorkspaceCreatedAt               time.Time           `gorm:"column:workspace_user_created_at"`
+	UserWorkspaceUpdatedAt               time.Time           `gorm:"column:workspace_user_updated_at"`
+	UserWorkspaceDeletedAt               gorm.DeletedAt      `gorm:"column:workspace_user_deleted_at"`
+	SubscriptionWorkspaceID              *uuid.UUID          `gorm:"column:subscription_workspace_id"`
+	SubscriptionPlan                     *string             `gorm:"column:subscription_plan"`
+	SubscriptionStatus                   *string             `gorm:"column:subscription_status"`
+	SubscriptionProvider                 *string             `gorm:"column:subscription_provider"`
+	SubscriptionProviderCustomerID       *string             `gorm:"column:subscription_provider_customer_id"`
+	SubscriptionProviderSubscriptionID   *string             `gorm:"column:subscription_provider_subscription_id"`
+	SubscriptionProviderScheduleID       *string             `gorm:"column:subscription_provider_schedule_id"`
+	SubscriptionProviderPriceID          *string             `gorm:"column:subscription_provider_price_id"`
+	SubscriptionSeatQuantity             *int                `gorm:"column:subscription_seat_quantity"`
+	SubscriptionCancelAtPeriodEnd        *bool               `gorm:"column:subscription_cancel_at_period_end"`
+	SubscriptionPendingPlan              *string             `gorm:"column:subscription_pending_plan"`
+	SubscriptionPendingSeatQuantity      *int                `gorm:"column:subscription_pending_seat_quantity"`
+	SubscriptionPendingChangeEffectiveAt *time.Time          `gorm:"column:subscription_pending_change_effective_at"`
+	SubscriptionCurrentPeriodStart       *time.Time          `gorm:"column:subscription_current_period_start"`
+	SubscriptionCurrentPeriodEnd         *time.Time          `gorm:"column:subscription_current_period_end"`
+	SubscriptionLastWebhookAt            *time.Time          `gorm:"column:subscription_last_webhook_at"`
+	SubscriptionLastProviderEventID      *string             `gorm:"column:subscription_last_provider_event_id"`
+	SubscriptionCreatedAt                *time.Time          `gorm:"column:subscription_created_at"`
+	SubscriptionUpdatedAt                *time.Time          `gorm:"column:subscription_updated_at"`
+	SubscriptionDeletedAt                *time.Time          `gorm:"column:subscription_deleted_at"`
 }
 
 func (r UserWorkspaceRow) ToWorkspaceAndUser() (Workspace, UserWorkspace) {

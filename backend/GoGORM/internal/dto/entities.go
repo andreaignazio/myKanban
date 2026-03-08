@@ -109,13 +109,26 @@ type UserWorkspaceResponse struct {
 }
 
 type SubscriptionResponse struct {
-	WorkspaceID      uuid.UUID  `json:"WorkspaceID"`
-	Plan             string     `json:"Plan"`
-	Status           string     `json:"Status"`
-	CurrentPeriodEnd time.Time  `json:"CurrentPeriodEnd"`
-	CreatedAt        time.Time  `json:"CreatedAt"`
-	UpdatedAt        time.Time  `json:"UpdatedAt"`
-	DeletedAt        *time.Time `json:"DeletedAt,omitempty"`
+	WorkspaceID              uuid.UUID  `json:"WorkspaceID"`
+	Plan                     string     `json:"Plan"`
+	Status                   string     `json:"Status"`
+	Provider                 string     `json:"Provider"`
+	ProviderCustomerID       *string    `json:"ProviderCustomerID,omitempty"`
+	ProviderSubscriptionID   *string    `json:"ProviderSubscriptionID,omitempty"`
+	ProviderScheduleID       *string    `json:"ProviderScheduleID,omitempty"`
+	ProviderPriceID          *string    `json:"ProviderPriceID,omitempty"`
+	SeatQuantity             int        `json:"SeatQuantity"`
+	CancelAtPeriodEnd        bool       `json:"CancelAtPeriodEnd"`
+	PendingPlan              *string    `json:"PendingPlan,omitempty"`
+	PendingSeatQuantity      *int       `json:"PendingSeatQuantity,omitempty"`
+	PendingChangeEffectiveAt *time.Time `json:"PendingChangeEffectiveAt,omitempty"`
+	CurrentPeriodStart       time.Time  `json:"CurrentPeriodStart"`
+	CurrentPeriodEnd         *time.Time `json:"CurrentPeriodEnd,omitempty"`
+	LastWebhookAt            *time.Time `json:"LastWebhookAt,omitempty"`
+	LastProviderEventID      *string    `json:"LastProviderEventID,omitempty"`
+	CreatedAt                time.Time  `json:"CreatedAt"`
+	UpdatedAt                time.Time  `json:"UpdatedAt"`
+	DeletedAt                *time.Time `json:"DeletedAt,omitempty"`
 }
 
 type UserWorkspaceRowsResponse struct {

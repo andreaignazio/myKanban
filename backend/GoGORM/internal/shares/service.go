@@ -1322,15 +1322,7 @@ type workspaceMembersAggregate struct {
 }
 
 func subscriptionToResponse(subscription *models.WorkspaceSubscription) dto.SubscriptionResponse {
-	return dto.SubscriptionResponse{
-		WorkspaceID: subscription.WorkspaceID,
-		Plan:        string(subscription.Plan),
-		Status:      subscription.Status,
-
-		CreatedAt: subscription.CreatedAt,
-		UpdatedAt: subscription.UpdatedAt,
-		DeletedAt: dto.DeletedAtPtr(subscription.DeletedAt),
-	}
+	return dto.WorkspaceSubscriptionToResponse(subscription)
 }
 
 func (s *ShareService) RespondToShareOffer(ctx context.Context, userID uuid.UUID,

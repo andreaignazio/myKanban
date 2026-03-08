@@ -1,6 +1,9 @@
 package subscription
 
-import "GoGORM/internal/subscriptionplan"
+import (
+	"GoGORM/internal/dto"
+	"GoGORM/internal/subscriptionplan"
+)
 
 type CreateSubscriptionRequest struct {
 	PlanCode subscriptionplan.Plan `json:"planCode" validate:"required,oneof=free pro premium"`
@@ -15,6 +18,8 @@ type RequestSubscriptionCheckout struct {
 }
 
 type SubscriptionCheckoutResponse struct {
-	CheckoutUrl string `json:"CheckoutUrl"`
-	SessionID   string `json:"SessionID"`
+	Action       string                    `json:"Action"`
+	CheckoutUrl  *string                   `json:"CheckoutUrl,omitempty"`
+	SessionID    *string                   `json:"SessionID,omitempty"`
+	Subscription *dto.SubscriptionResponse `json:"Subscription,omitempty"`
 }

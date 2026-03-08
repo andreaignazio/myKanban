@@ -1,5 +1,6 @@
 import { useBoardsStore } from "@/stores/boardsStore"
 import { useWorkspaceStore } from "@/stores/workspaceStore"
+import type { SubscriptionPlan } from "@/stores/types"
 import { useMatch } from "react-router-dom"
 
 export function useResolveSubscriptionPlan() {
@@ -12,7 +13,7 @@ export function useResolveSubscriptionPlan() {
     const workspaceId = boardId
         ? workspaceIdByBoardId(boardId)
         : (isWorkspace?.params.workspaceId as string | undefined)
-    const subscription = workspaceId ? wSubscriptionsById[workspaceId]?.Plan ?? "free" : "free"
+    const subscription: SubscriptionPlan = workspaceId ? wSubscriptionsById[workspaceId]?.Plan ?? "free" : "free"
     const getMaxBoardsByWorkspaceId = useWorkspaceStore((state) => state.getMaxBoardsByWorkspaceId);
     const boardCount = workspaceId ? getMaxBoardsByWorkspaceId(workspaceId) : 0
     return { subscription, boardCount }
