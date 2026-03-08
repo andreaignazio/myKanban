@@ -2,33 +2,13 @@ package models
 
 import (
 	"GoGORM/internal/rbac"
+	"GoGORM/internal/subscriptionplan"
 	"time"
 
 	"github.com/google/uuid"
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
-
-type SubscriptionPlan string
-
-const (
-	FreePlan    SubscriptionPlan = "free"
-	ProPlan     SubscriptionPlan = "pro"
-	PremiumPlan SubscriptionPlan = "premium"
-)
-
-func ParseSubscriptionPlan(planStr string) (SubscriptionPlan, bool) {
-	switch planStr {
-	case string(FreePlan):
-		return FreePlan, true
-	case string(ProPlan):
-		return ProPlan, true
-	case string(PremiumPlan):
-		return PremiumPlan, true
-	default:
-		return "", false
-	}
-}
 
 type Workspace struct {
 	ID                  uuid.UUID           `gorm:"type:uuid;primaryKey"`
@@ -50,10 +30,10 @@ type UserWorkspace struct {
 }
 
 type WorkspaceSubscription struct {
-	WorkspaceID uuid.UUID        `gorm:"type:uuid;primaryKey"`
-	Plan        SubscriptionPlan `gorm:"type:text;not null;default:'free'"`   // free/pro/premium
-	Status      string           `gorm:"type:text;not null;default:'none'"`   // none/trial/active/past_due/canceled
-	Provider    string           `gorm:"type:text;not null;default:'stripe'"` // stripe/paypal
+	WorkspaceID uuid.UUID             `gorm:"type:uuid;primaryKey"`
+	Plan        subscriptionplan.Plan `gorm:"type:text;not null;default:'free'"`   // free/pro/premium
+	Status      string                `gorm:"type:text;not null;default:'none'"`   // none/trial/active/past_due/canceled
+	Provider    string                `gorm:"type:text;not null;default:'stripe'"` // stripe/paypal
 
 	ProviderCustomerID     *string `gorm:"type:text;"`
 	ProviderSubscriptionID *string `gorm:"type:text;index"`

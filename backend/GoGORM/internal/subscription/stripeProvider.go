@@ -2,7 +2,7 @@ package subscription
 
 import (
 	"GoGORM/internal/domainerr"
-	"GoGORM/models"
+	"GoGORM/internal/subscriptionplan"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -19,10 +19,10 @@ import (
 type StripeProvider struct {
 	SecretKey     string
 	WebhookSecret string
-	//PriceByPlan   map[string]models.SubscriptionPlan
+	//PriceByPlan   map[string]subscriptionplan.Plan
 }
 
-func NewStripeProvider(secretKey, webhookSecret string, priceByPlan map[string]models.SubscriptionPlan) *StripeProvider {
+func NewStripeProvider(secretKey, webhookSecret string, priceByPlan map[string]subscriptionplan.Plan) *StripeProvider {
 	return &StripeProvider{
 		SecretKey:     secretKey,
 		WebhookSecret: webhookSecret,
@@ -30,13 +30,13 @@ func NewStripeProvider(secretKey, webhookSecret string, priceByPlan map[string]m
 	}
 }
 
-func (p *StripeProvider) MapPlanToPriceId(plan models.SubscriptionPlan) string {
+func (p *StripeProvider) MapPlanToPriceId(plan subscriptionplan.Plan) string {
 	switch plan {
-	case models.FreePlan:
+	case subscriptionplan.Free:
 		return os.Getenv("STRIPE_PRICE_FREE_ID")
-	case models.ProPlan:
+	case subscriptionplan.Pro:
 		return os.Getenv("STRIPE_PRICE_PRO_ID")
-	case models.PremiumPlan:
+	case subscriptionplan.Premium:
 		return os.Getenv("STRIPE_PRICE_PREMIUM_ID")
 	default:
 		return ""
@@ -131,7 +131,7 @@ func (p *StripeProvider) VerifyAndParseWebhook(ctx context.Context, rawBody []by
 			return nil, domainerr.Wrap(err, "invalid workspace_id in webhook event metadata")
 		}
 
-		plan, ok := models.ParseSubscriptionPlan(planStr)
+		plan, ok := subscriptionplan.Parse(planStr)
 		if !ok {
 			return nil, domainerr.Wrap(fmt.Errorf("invalid plan: %s", planStr), "invalid plan in webhook event metadata")
 		}

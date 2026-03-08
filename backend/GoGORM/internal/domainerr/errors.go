@@ -14,6 +14,11 @@ var ErrConflict = errors.New("Resource conflict")
 var ErrInternal = errors.New("Internal server error")
 var ErrValidation = errors.New("Validation error")
 
+var ErrUnsupportedAction = errors.New("Unsupported action")
+var ErrUnsupportedPolicy = errors.New("Unsupported policy")
+var ErrUnsupportedFact = errors.New("Unsupported fact")
+var ErrInvalidFactValue = errors.New("Invalid fact value")
+
 var ErrInvalidSignature = errors.New("stripe: invalid signature")
 var ErrUnsupportedEvent = errors.New("stripe: unsupported event type")
 var ErrMissingPriceID = errors.New("stripe: missing price ID for the selected plan")

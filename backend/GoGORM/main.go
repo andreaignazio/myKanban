@@ -8,6 +8,8 @@ import (
 	"time"
 
 	auditcontext "GoGORM/internal/auditcontext"
+	"GoGORM/internal/authz"
+	"GoGORM/internal/authzcontext"
 	BoardLabels "GoGORM/internal/boardlabels"
 	"GoGORM/internal/boardlist"
 	"GoGORM/internal/capabilities"
@@ -131,6 +133,9 @@ func main() {
 
 	webhookRepo := subscription.NewGormWebhookInboxRepo(db)
 	subscriptionService := subscription.NewSubscriptionService(db, subscriptionRepo, membarshipsRepo, stripeBuillingProvider, webhookRepo, false)
+	authzRepo := authzcontext.NewGormRepo(db)
+	authzContextService := authzcontext.NewService(authzRepo)
+	authzService := authz.NewService(authzContextService)
 
 	positionGenerator := rank.NewRankGenerator()
 	positionService := pos.NewPositionService(positionGenerator, linksRepo, listCardsRepo, membarshipsRepo, workspacesRepo)
@@ -142,7 +147,7 @@ func main() {
 	listCardsHandler := listcards.NewListCardsHandler(listCardsService, eventRegistryService)
 
 	workspaceBoardPositionHelper := pos.NewWorkspaceBoardPositionHelper(positionGenerator, workspacesRepo)
-	workspacesService := workspaces.NewWorkspaceService(db, workspacesRepo, membarshipsRepo, boardsRepo, positionService, workspaceBoardPositionHelper, subscriptionService, eventRegistryService)
+	workspacesService := workspaces.NewWorkspaceService(db, workspacesRepo, membarshipsRepo, boardsRepo, authzService, positionService, workspaceBoardPositionHelper, subscriptionService, eventRegistryService)
 	workspacesHandler := workspaces.NewWorkspacesHandler(workspacesService)
 
 	linksService := links.NewLinksServiceWithListCards(db, eventRegistryService, wsHub, linksRepo, boardsRepo, listsRepo, cardsRepo, listCardsService, positionService, membarshipsRepo, listShareRepo, boardLabelsRepo)

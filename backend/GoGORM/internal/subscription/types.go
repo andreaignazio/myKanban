@@ -1,32 +1,32 @@
 package subscription
 
 import (
-	"GoGORM/models"
+	"GoGORM/internal/subscriptionplan"
 	"time"
 
 	"github.com/google/uuid"
 )
 
-func MaxBoardsForWorkspaceSubscription(plan models.SubscriptionPlan) int {
+func MaxBoardsForWorkspaceSubscription(plan subscriptionplan.Plan) int {
 	switch plan {
-	case models.FreePlan:
+	case subscriptionplan.Free:
 		return 5
-	case models.ProPlan:
+	case subscriptionplan.Pro:
 		return 15
-	case models.PremiumPlan:
+	case subscriptionplan.Premium:
 		return -1 // unlimited
 	default:
 		return 0
 	}
 }
 
-func MaxMembersForWorkspaceSubscription(plan models.SubscriptionPlan) int {
+func MaxMembersForWorkspaceSubscription(plan subscriptionplan.Plan) int {
 	switch plan {
-	case models.FreePlan:
+	case subscriptionplan.Free:
 		return 10
-	case models.ProPlan:
+	case subscriptionplan.Pro:
 		return 15
-	case models.PremiumPlan:
+	case subscriptionplan.Premium:
 		return -1 // unlimited
 	default:
 		return 0
@@ -55,7 +55,7 @@ type ProviderSubscriptionSnapshot struct {
 	SubscriptionID    string
 
 	SeatQuantity int
-	PlanCode     models.SubscriptionPlan
+	PlanCode     subscriptionplan.Plan
 	Status       BillingStatus
 	PriceID      string
 
@@ -84,7 +84,7 @@ type CreateCheckoutSessionOutput struct {
 type CreateCheckoutSessionInput struct {
 	WorkspaceID uuid.UUID
 	UserID      uuid.UUID // utile per audit/metadata, opzionale
-	PlanCode    models.SubscriptionPlan
+	PlanCode    subscriptionplan.Plan
 	Seats       int
 
 	SuccessURL string

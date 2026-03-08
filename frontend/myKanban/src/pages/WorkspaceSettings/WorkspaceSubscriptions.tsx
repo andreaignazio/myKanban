@@ -1,5 +1,6 @@
 import { LabeledButtonPresetA, LabeledButtonPresetBSubmit } from "@/components/buttons/labeledButton";
 import { useWorkspaceStore } from "@/stores/workspaceStore"
+import type { SubscriptionPlan } from "@/types/subscriptiontypes";
 import { useParams } from "react-router"
 import { UserPagesWrapper } from "../User/userPagesWrapper";
 import { useState } from "react";
@@ -7,7 +8,7 @@ import { Columns3, Users } from "lucide-react";
 
 
 type SubscriptionType = {
-    id: string;
+    id: SubscriptionPlan;
     name: string;
     description?: string;
     descriptionStrong?: string;
@@ -28,8 +29,8 @@ type SubscriptionFeature = {
 export const WorkspaceSubscriptions = () => {
     const subscriptionUpgrader = useWorkspaceStore(state => state.createUpgradeSubscriptionRequest)
     const workspaceID = useParams().workspaceId || ""
-    const handleSubscriptionUpgrade = () => {
-        subscriptionUpgrader("pro", 5, workspaceID)
+    const handleSubscriptionUpgrade = (plan: SubscriptionPlan) => {
+        return subscriptionUpgrader(plan, 5, workspaceID)
     }
 
     const subscriptionTypes: SubscriptionType[] = [
@@ -49,8 +50,6 @@ export const WorkspaceSubscriptions = () => {
             descriptionStrong: "Unlock your full potential."
         },
     ]
-
-
     return (
         <UserPagesWrapper Title="Workspace Settings">
             <div className="flex flex-col gap-2 h-screen">
@@ -62,7 +61,7 @@ export const WorkspaceSubscriptions = () => {
              onClick={() => { handleSubscriptionUpgrade() }} />*/}
 
 
-                <SubscriptionUpgradeSection subscriptionTypes={subscriptionTypes} />
+                <SubscriptionUpgradeSection subscriptionTypes={subscriptionTypes} onUpgrade={handleSubscriptionUpgrade} />
             </div>
         </UserPagesWrapper>
     )
@@ -70,8 +69,9 @@ export const WorkspaceSubscriptions = () => {
 
 type SubscriptionUpgradeSectionProps = {
     subscriptionTypes: SubscriptionType[];
+    onUpgrade: (plan: SubscriptionPlan) => Promise<void>;
 }
-const SubscriptionUpgradeSection = ({ subscriptionTypes }: SubscriptionUpgradeSectionProps) => {
+const SubscriptionUpgradeSection = ({ subscriptionTypes, onUpgrade }: SubscriptionUpgradeSectionProps) => {
     const [activeSubscription, setActiveSubscription] = useState<string>("free")
 
     return (
@@ -79,7 +79,7 @@ const SubscriptionUpgradeSection = ({ subscriptionTypes }: SubscriptionUpgradeSe
             {
                 subscriptionTypes.map((type) => (
                     <SubscriptionSection key={type.id} subscriptionType={type}
-                        setActiveTab={setActiveSubscription} activeTab={activeSubscription} />
+                        setActiveTab={setActiveSubscription} activeTab={activeSubscription} onUpgrade={onUpgrade} />
                 ))
 
             }
@@ -91,8 +91,9 @@ type SubscriptionSectionProps = {
     subscriptionType: SubscriptionType;
     setActiveTab?: (tab: string) => void;
     activeTab?: string;
+    onUpgrade: (plan: SubscriptionPlan) => Promise<void>;
 }
-const SubscriptionSection = ({ subscriptionType, setActiveTab, activeTab }: SubscriptionSectionProps) => {
+const SubscriptionSection = ({ subscriptionType, setActiveTab, activeTab, onUpgrade }: SubscriptionSectionProps) => {
     const { name, maxBoards, maxMembers, price } = subscriptionType
     const isActive = activeTab === subscriptionType.id
 
@@ -137,7 +138,7 @@ const SubscriptionSection = ({ subscriptionType, setActiveTab, activeTab }: Subs
                         ${isActive
                             ? "!bg-[#669df1] hover:!bg-[#74a4ed] text-neutral-900"
                             : "!bg-neutral-400/20  text-neutral-400 cursor-default"}`}
-                    onClick={() => { handleSubscriptionUpgrade() }} />}
+                    onClick={() => { void onUpgrade(subscriptionType.id) }} />}
                 <div className="h-px bg-neutral-400/20 w-full absolute bottom-0 left-0" />
             </div>
 

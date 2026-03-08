@@ -1,19 +1,20 @@
 package workspaces
 
 import (
+	"GoGORM/internal/authz"
 	"GoGORM/internal/domainerr"
 	"GoGORM/internal/dto"
 	EventRegistry "GoGORM/internal/eventregistry"
 	"GoGORM/internal/guard"
 	"GoGORM/internal/models/boards"
 	"GoGORM/internal/rbac"
+	"GoGORM/internal/subscriptionplan"
 	"GoGORM/internal/tokens"
 	"GoGORM/internal/ws"
 	"GoGORM/models"
 	"context"
 	"encoding/json"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -23,6 +24,7 @@ import (
 
 type WorkspaceService struct {
 	db                           *gorm.DB
+	authz                        *authz.Service
 	EventRegistry                *EventRegistry.EventRegistryService
 	WorkspaceRepo                WorkspaceRepo
 	MembershipRepo               MembershipRepo
@@ -38,6 +40,7 @@ func NewWorkspaceService(
 	workspaceRepo WorkspaceRepo,
 	membershipRepo MembershipRepo,
 	boardsRepo BoardsRepo,
+	authzService *authz.Service,
 	userWorkspacePositionHelper UserWorkspacePositionHelper,
 	workspaceBoardPositionHelper WorkspaceBoardPositionHelper,
 	subscriptionService SubscriptionService,
@@ -45,6 +48,7 @@ func NewWorkspaceService(
 ) *WorkspaceService {
 	return &WorkspaceService{
 		db:                           db,
+		authz:                        authzService,
 		WorkspaceRepo:                workspaceRepo,
 		MembershipRepo:               membershipRepo,
 		BoardsRepo:                   boardsRepo,
@@ -137,7 +141,7 @@ func (s *WorkspaceService) CreateWorkspace(ctx context.Context, userID uuid.UUID
 	}
 	workspaceSubscription := &models.WorkspaceSubscription{
 		WorkspaceID: workspace.ID,
-		Plan:        models.FreePlan,
+		Plan:        subscriptionplan.Free,
 		Status:      "active",
 		Provider:    "stripe",
 	}
@@ -181,7 +185,7 @@ func (s *WorkspaceService) GetUserWorkspaces(ctx context.Context, userID uuid.UU
 		if row.SubscriptionWorkspaceID != nil {
 			subscription := dto.SubscriptionResponse{
 				WorkspaceID:      *row.SubscriptionWorkspaceID,
-				Plan:             valueOrDefault(row.SubscriptionPlan, string(models.FreePlan)),
+				Plan:             valueOrDefault(row.SubscriptionPlan, string(subscriptionplan.Free)),
 				Status:           valueOrDefault(row.SubscriptionStatus, "none"),
 				CurrentPeriodEnd: valueOrZeroTime(row.SubscriptionPeriodEnd),
 				CreatedAt:        valueOrZeroTime(row.SubscriptionCreatedAt),
@@ -192,7 +196,7 @@ func (s *WorkspaceService) GetUserWorkspaces(ctx context.Context, userID uuid.UU
 		} else {
 			subscriptions = append(subscriptions, dto.SubscriptionResponse{
 				WorkspaceID:      w.ID,
-				Plan:             string(models.FreePlan),
+				Plan:             string(subscriptionplan.Free),
 				Status:           "none",
 				CurrentPeriodEnd: time.Time{},
 				CreatedAt:        time.Time{},
@@ -203,87 +207,6 @@ func (s *WorkspaceService) GetUserWorkspaces(ctx context.Context, userID uuid.UU
 	}
 
 	return workspaces, userWorkspaces, subscriptions, nil
-}
-
-func (s *WorkspaceService) PatchWorkspaceProps(ctx context.Context, userID, workspaceID, correlationID uuid.UUID, req PatchWorkspacePropsRequest) (*dto.WorkspaceResponse, error) {
-	userworkspace, err := s.WorkspaceRepo.GetUserWorkspace(ctx, userID, workspaceID)
-	if err != nil {
-		return nil, err
-	}
-	if userworkspace == nil {
-		return nil, domainerr.ErrForbidden
-	}
-	if !rbac.AtLeast(userworkspace.Role, rbac.Admin) {
-		return nil, domainerr.ErrForbidden
-	}
-
-	workspace, err := s.WorkspaceRepo.GetWorkspaceByID(ctx, workspaceID, s.IncludeDeleted)
-	if err != nil {
-		return nil, err
-	}
-
-	mergedProps, err := dto.MergeNestedProps(req.Props, workspace.Props)
-	if err != nil {
-		return nil, domainerr.ErrValidation
-	}
-
-	jsonProps, err := json.Marshal(mergedProps)
-	if err != nil {
-		return nil, domainerr.ErrValidation
-	}
-
-	updateMap := map[string]any{
-		"props": datatypes.JSON(jsonProps),
-	}
-
-	if req.Name != nil {
-		name := strings.TrimSpace(*req.Name)
-		if name == "" {
-			return nil, domainerr.ErrValidation
-		}
-		updateMap["name"] = name
-	}
-
-	if req.Visibility != nil {
-		visibility := strings.ToLower(strings.TrimSpace(*req.Visibility))
-		switch visibility {
-		case string(models.WorkspaceVisibilityPrivate), string(models.WorkspaceVisibilityPublic), string(models.WorkspaceVisibilityWorkspace):
-			updateMap["workspace_visibility"] = visibility
-		default:
-			return nil, domainerr.ErrValidation
-		}
-	}
-
-	updatedWorkspace, err := s.WorkspaceRepo.PatchWorkspaceByID(ctx, workspaceID, updateMap)
-	if err != nil {
-		return nil, err
-	}
-
-	response := dto.WorkspaceToResponse(updatedWorkspace)
-	statePayload := dto.BoardDetailResponse{
-		Workspace: &response,
-	}
-	domainPayload := EventRegistry.EventPayloadEnvelope{
-		StatePayload: &statePayload,
-	}
-	targets := []EventRegistry.TargetRef{
-		{
-			EntityType: "workspace",
-			EntityID:   workspaceID,
-		},
-	}
-	domainEvent := EventRegistry.DomainEvent{
-		Type:          EventRegistry.EventWorkspacePatched,
-		WorkspaceID:   &workspaceID,
-		ActorUserID:   &userID,
-		CorrelationID: &correlationID,
-		Payload:       domainPayload,
-		OccurredAt:    time.Now(),
-		Targets:       targets,
-	}
-	s.EventRegistry.Emit(ctx, s.db, domainEvent)
-
-	return &response, nil
 }
 
 func (s *WorkspaceService) SearchPublicWorkspaces(ctx context.Context, query string, page, limit int, sort string) ([]dto.WorkspaceResponse, []dto.SubscriptionResponse, int64, error) {
@@ -325,7 +248,7 @@ func (s *WorkspaceService) SearchPublicWorkspaces(ctx context.Context, query str
 		} else {
 			subscriptions = append(subscriptions, dto.SubscriptionResponse{
 				WorkspaceID:      workspaceID,
-				Plan:             string(models.FreePlan),
+				Plan:             string(subscriptionplan.Free),
 				Status:           "none",
 				CurrentPeriodEnd: time.Time{},
 				CreatedAt:        time.Time{},
@@ -393,7 +316,7 @@ func (s *WorkspaceService) GetPendingOfferTargetWorkspacesForUser(ctx context.Co
 		} else {
 			subscriptions = append(subscriptions, dto.SubscriptionResponse{
 				WorkspaceID:      workspaceID,
-				Plan:             string(models.FreePlan),
+				Plan:             string(subscriptionplan.Free),
 				Status:           "none",
 				CurrentPeriodEnd: time.Time{},
 				CreatedAt:        time.Time{},
