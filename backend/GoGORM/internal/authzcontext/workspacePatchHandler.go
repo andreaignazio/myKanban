@@ -19,18 +19,18 @@ func (h *WorkspacePatchHandler) BuildAuthzContext(ctx context.Context, request a
 
 	specs := []authzdto.PolicySpec{
 		{
-			Kind:  authzdto.PolicyRequireMinimumFactValue,
-			Fact:  authzdto.FactActorWorkspaceRole,
-			Value: rbac.Admin,
+			PolicyKind: authzdto.PolicyRequireMinimumFactValue,
+			FactKind:   authzdto.FactActorWorkspaceRole,
+			Value:      authzdto.NewWorkspaceRoleFact(rbac.Admin),
 		},
 		{
-			Kind:  authzdto.PolicyRequireMinimumFactValue,
-			Fact:  authzdto.FactWorkspaceSubscriptionPlan,
-			Value: subscriptionplan.Pro,
+			PolicyKind: authzdto.PolicyRequireMinimumFactValue,
+			FactKind:   authzdto.FactWorkspaceSubscriptionPlan,
+			Value:      authzdto.NewSubscriptionPlanFact(subscriptionplan.Pro),
 		},
 	}
 
-	facts := make(map[authzdto.FactKind]any)
+	facts := make(map[authzdto.FactKind]authzdto.Fact)
 
 	userWorkspace, err := h.authzRepo.GetWorkspaceUserRole(request.WorkspaceID, request.UserID)
 	if err != nil {
@@ -41,10 +41,16 @@ func (h *WorkspacePatchHandler) BuildAuthzContext(ctx context.Context, request a
 		return nil, err
 	}
 	if userWorkspace != nil {
-		facts[authzdto.FactActorWorkspaceRole] = userWorkspace.Role
+		err := authzdto.SetFact(facts, authzdto.FactActorWorkspaceRole, authzdto.NewWorkspaceRoleFact(userWorkspace.Role))
+		if err != nil {
+			return nil, err
+		}
 	}
 	if subscription != nil {
-		facts[authzdto.FactWorkspaceSubscriptionPlan] = subscription.Plan
+		err := authzdto.SetFact(facts, authzdto.FactWorkspaceSubscriptionPlan, authzdto.NewSubscriptionPlanFact(subscription.Plan))
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	context := &authzdto.AuthzContext{

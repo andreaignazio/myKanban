@@ -2,6 +2,9 @@ package authzdto
 
 import (
 	"GoGORM/internal/actions"
+	"GoGORM/internal/domainerr"
+	"GoGORM/internal/rbac"
+	"GoGORM/internal/subscriptionplan"
 
 	"github.com/google/uuid"
 )
@@ -18,7 +21,7 @@ type Response struct {
 }
 
 type AuthzContext struct {
-	Facts       map[FactKind]any
+	Facts       map[FactKind]Fact
 	PolicySpecs []PolicySpec
 }
 
@@ -38,7 +41,49 @@ const (
 )
 
 type PolicySpec struct {
-	Kind  PolicyKind
-	Fact  FactKind
-	Value any
+	PolicyKind PolicyKind
+	FactKind   FactKind
+	Value      Fact
+}
+
+type Fact struct {
+	WorkspaceRole    *rbac.Role
+	SubscriptionPlan *subscriptionplan.Plan
+}
+
+func NewWorkspaceRoleFact(role rbac.Role) Fact {
+	return Fact{
+		WorkspaceRole: &role,
+	}
+}
+
+func NewSubscriptionPlanFact(plan subscriptionplan.Plan) Fact {
+	return Fact{
+		SubscriptionPlan: &plan,
+	}
+}
+
+// SetFact canonicalizes the provided fact so only the field allowed by factKind is stored.
+func SetFact(facts map[FactKind]Fact, factKind FactKind, value Fact) error {
+	switch factKind {
+	case FactActorWorkspaceRole:
+		if value.WorkspaceRole == nil {
+			return domainerr.ErrInvalidFactValue
+		}
+		facts[factKind] = Fact{
+			WorkspaceRole: value.WorkspaceRole,
+		}
+
+		return nil
+	case FactWorkspaceSubscriptionPlan:
+		if value.SubscriptionPlan == nil {
+			return domainerr.ErrInvalidFactValue
+		}
+		facts[factKind] = Fact{
+			SubscriptionPlan: value.SubscriptionPlan,
+		}
+		return nil
+	default:
+		return domainerr.ErrUnsupportedFact
+	}
 }

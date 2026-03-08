@@ -22,8 +22,8 @@ type AuthzHandler interface {
 
 func getPolicyEvaluator(policySpec authzdto.PolicySpec) (authzpolicy.PolicyEvaluator, error) {
 
-	policyKind := policySpec.Kind
-	factKind := policySpec.Fact
+	policyKind := policySpec.PolicyKind
+	factKind := policySpec.FactKind
 
 	switch policyKind {
 
@@ -45,7 +45,7 @@ func (s *Service) AuthorizeRequest(ctx context.Context, request authzdto.Request
 		if err != nil {
 			return nil, err
 		}
-		fact, ok := authzcontext.Facts[policySpec.Fact]
+		fact, ok := authzcontext.Facts[policySpec.FactKind]
 		if !ok {
 			return nil, domainerr.ErrNotFound
 		}

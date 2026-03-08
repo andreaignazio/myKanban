@@ -8,7 +8,7 @@ import (
 )
 
 type PolicyEvaluator interface {
-	Evaluate(spec authzdto.PolicySpec, fact any) error
+	Evaluate(spec authzdto.PolicySpec, fact authzdto.Fact) error
 }
 
 func NewRequireMinimumFactValueEvaluator(factKind authzdto.FactKind) *RequireMinimumFactValueEvaluator {
@@ -21,7 +21,7 @@ type RequireMinimumFactValueEvaluator struct {
 	factKind authzdto.FactKind
 }
 
-func (e *RequireMinimumFactValueEvaluator) Evaluate(spec authzdto.PolicySpec, fact any) error {
+func (e *RequireMinimumFactValueEvaluator) Evaluate(spec authzdto.PolicySpec, fact authzdto.Fact) error {
 	comparator, err := getMinimumFactValueComparator(e.factKind)
 	if err != nil {
 		return err
@@ -52,14 +52,14 @@ func getMinimumFactValueComparator(factKind authzdto.FactKind) (MinimumFactCompa
 }
 
 type MinimumFactComparator interface {
-	Compare(factValue any, requiredValue any) (bool, error)
+	Compare(factValue authzdto.Fact, requiredValue authzdto.Fact) (bool, error)
 }
 
 type MinimumWorkspaceRoleComparator struct{}
 
 type MinimumSubscriptionPlanComparator struct{}
 
-func (c *MinimumWorkspaceRoleComparator) Compare(factValue any, requiredValue any) (bool, error) {
+func (c *MinimumWorkspaceRoleComparator) Compare(factValue authzdto.Fact, requiredValue authzdto.Fact) (bool, error) {
 	role, err := parseRoleValue(factValue)
 	if err != nil {
 		return false, err
@@ -71,7 +71,7 @@ func (c *MinimumWorkspaceRoleComparator) Compare(factValue any, requiredValue an
 	return role >= requiredRole, nil
 }
 
-func (c *MinimumSubscriptionPlanComparator) Compare(factValue any, requiredValue any) (bool, error) {
+func (c *MinimumSubscriptionPlanComparator) Compare(factValue authzdto.Fact, requiredValue authzdto.Fact) (bool, error) {
 	plan, err := parsePlanValue(factValue)
 	if err != nil {
 		return false, err
@@ -87,35 +87,16 @@ func (c *MinimumSubscriptionPlanComparator) Compare(factValue any, requiredValue
 	return ok, nil
 }
 
-func parseRoleValue(value any) (rbac.Role, error) {
-	switch typed := value.(type) {
-	case rbac.Role:
-		return typed, nil
-	case string:
-		role, ok := rbac.ParseRole(typed)
-		if !ok {
-			return 0, domainerr.ErrInvalidFactValue
-		}
-		return role, nil
-	default:
+func parseRoleValue(value authzdto.Fact) (rbac.Role, error) {
+	if value.WorkspaceRole == nil {
 		return 0, domainerr.ErrInvalidFactValue
 	}
+	return *value.WorkspaceRole, nil
 }
 
-func parsePlanValue(value any) (subscriptionplan.Plan, error) {
-	switch typed := value.(type) {
-	case subscriptionplan.Plan:
-		if !typed.IsValid() {
-			return "", domainerr.ErrInvalidFactValue
-		}
-		return typed, nil
-	case string:
-		plan, ok := subscriptionplan.Parse(typed)
-		if !ok {
-			return "", domainerr.ErrInvalidFactValue
-		}
-		return plan, nil
-	default:
+func parsePlanValue(value authzdto.Fact) (subscriptionplan.Plan, error) {
+	if value.SubscriptionPlan == nil {
 		return "", domainerr.ErrInvalidFactValue
 	}
+	return *value.SubscriptionPlan, nil
 }
