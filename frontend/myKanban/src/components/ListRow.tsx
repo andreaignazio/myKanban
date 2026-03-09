@@ -45,12 +45,12 @@ export function ListRow({ boardID: boardID, boardListID: boardListID, index: ind
     const listCardById = useBoardDetailStore((state) => state.listCardById)
 
     const { sortByPosition } = useSortByPosition()
-    const [sortedIds, setSortedIds] = useState(listCardIds)
+    /*const [sortedIds, setSortedIds] = useState(listCardIds)
 
     useEffect(() => {
         const sorted = sortByPosition(listCardIds.map(id => listCardById[id])).map(item => item.ID)
         setSortedIds(sorted)
-    }, [listCardIds, listCardById, sortByPosition])
+    }, [listCardIds, listCardById, sortByPosition])*/
 
     if (!boardList || !listID) return null
 

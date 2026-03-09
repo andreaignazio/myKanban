@@ -107,10 +107,11 @@ export const CardRow = ({ boardID, listId, listCardID: listCardID, cardId, index
     const mode: CardRowMode = hasCover ? (isDetailed ? "detailed" : "compact") : "default"
 
     const effectiveListCardID = listcard?.ID ?? listCardID ?? rootListCardId ?? ""
+    const isInboxMirror = source === "inbox-mirror"
     const resolvedRootListCardID = source === "inbox-mirror"
         ? (rootListCardId ?? effectiveListCardID)
         : (listcard?.RootID ?? rootListCardId ?? effectiveListCardID)
-    const isMirrorCard = !!effectiveListCardID && !!resolvedRootListCardID && effectiveListCardID !== resolvedRootListCardID
+    const isMirrorCard = !!effectiveListCardID && !!resolvedRootListCardID && isInboxMirror ? true : (effectiveListCardID !== resolvedRootListCardID)
 
 
     /*

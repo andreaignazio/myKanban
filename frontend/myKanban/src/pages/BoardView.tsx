@@ -7,7 +7,7 @@ import { useBoardWebSocket } from "@/hooks/ws/useBoardWS";
 import { useBoardsStore } from "@/stores/boardsStore";
 import { ListAdd } from "@/components/ListAdd";
 
-import type { Board, Card, MoveInboxToListRequest, UserLite } from "@/stores/types";
+import type { Board, Card, InboxCard, MoveInboxToListRequest, UserLite } from "@/stores/types";
 import { ChartBarIcon, FunnelIcon, UsersIcon, } from "@heroicons/react/24/solid";
 import { ChevronDownIcon, EnvelopeIcon, StarIcon } from "@heroicons/react/24/outline";
 import { usePresenceStore } from "@/stores/presenceStore";
@@ -39,6 +39,7 @@ import { useSmoothBoardBackground, type BoardBackgroundSpec } from "@/hooks/useS
 import { BoardViewTopBar } from "@/components/BoardView/BoardViewTopBar";
 
 import { BaseBtn } from "@/components/BoardView/BoardViewTopBar";
+import { useAuthStore } from "@/stores/auth";
 
 export { BaseBtn }
 
@@ -271,6 +272,8 @@ export default function BoardView() {
     const persistMoveList = useBoardDetailStore((state) => state.persistMoveList)
     const persistMoveCard = useBoardDetailStore((state) => state.persistMoveCardInBoard)
     const moveInboxCardToBoard = useUserInboxStore((state) => state.moveInboxCardToListInBoard)
+    const mirrorCardToInbox = useUserInboxStore((state) => state.mirrorCardToInbox)
+    const getInboxCardByRootCardID = useUserInboxStore((state) => state.getInboxCardByRootCardID)
     const inboxCardsById = useUserInboxStore((state) => state.inboxCardsById)
     const [draggedCardId, setDraggedCardId] = useState<string | null>(null)
 
@@ -283,6 +286,11 @@ export default function BoardView() {
         setDraggedCardId(getCardIdForListCardId(start.draggableId))
     }
 
+    const inboxCardIds = useUserInboxStore(useShallow((state) => state.inboxCardsIds))
+    const setInboxCardIds = useUserInboxStore((state) => state.setInboxCardIds)
+    const mergeInboxCardEntities = useUserInboxStore((state) => state.mergeInboxCardEntities)
+    const currentUserId = useAuthStore(useShallow((state) => state.userID)) ?? ""
+    const listcardById = useBoardDetailStore((state) => state.listCardById)
 
     function handleDragEnd(result: DropResult) {
 
@@ -293,6 +301,53 @@ export default function BoardView() {
 
         if (!destination) return
         if (destination.droppableId === source.droppableId && destination.index === source.index) return
+
+        if (destination.droppableId === "inbox") {
+            if (draggableId.startsWith("inbox:")) return
+            const movedListCardId = draggableId
+            const movedListCard = listcardById[movedListCardId]
+            if (!movedListCard) return
+
+            const rootListCardId = movedListCard.RootID ?? movedListCard.ID
+            if (getInboxCardByRootCardID(rootListCardId)) {
+                return
+            }
+
+            const optimisticListCardId = `optimistic-inbox-${movedListCard.ID}`
+            const beforeId = destination.index < inboxCardIds.length
+                ? inboxCardIds[destination.index]
+                : null
+            const newInboxCard: InboxCard = {
+                ID: optimisticListCardId,
+                UserID: currentUserId,
+                CardID: movedListCard?.CardID ?? "",
+                Position: "",
+                CreatedAt: new Date().toISOString(),
+                UpdatedAt: new Date().toISOString(),
+                DeletedAt: null,
+                RootListCardID: rootListCardId,
+                SourceBoardID: boardId ?? "",
+                Mirrors: []
+            }
+            mergeInboxCardEntities([newInboxCard])
+            const newInboxCardIds = Array.from(inboxCardIds)
+            newInboxCardIds.splice(destination.index, 0, optimisticListCardId)
+            setInboxCardIds(newInboxCardIds)
+            void mirrorCardToInbox(
+                boardId ?? "",
+                movedListCard.CardID,
+                {
+                    BeforeID: beforeId,
+                    InsertAt: beforeId ? null : "end",
+                },
+                optimisticListCardId,
+                inboxCardIds,
+            )
+            return
+        }
+
+
+
 
         if (draggableId.startsWith("inbox:")) {
             if (!workspaceId || !boardId) return
@@ -326,7 +381,7 @@ export default function BoardView() {
                 InsertAt: beforeId ? null : "end",
                 BeforeID: beforeId,
             }
-            moveInboxCardToBoard(actualCardId, workspaceId, boardId, destinationListId, requst, optimisticListCardId)
+            moveInboxCardToBoard(actualCardId, workspaceId, boardId, destinationListId, requst, optimisticListCardId, destinationListCardIds)
             return
         }
 

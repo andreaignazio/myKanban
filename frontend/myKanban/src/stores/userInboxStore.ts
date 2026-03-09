@@ -11,12 +11,14 @@ type UserInboxStore = {
     inboxCardsById: Record<string, InboxCard>
     inboxCardsIds: string[]
     fetchInboxCards: () => Promise<void>
-    mirrorCardToInbox: (boardId: string, cardId: string, payload: MirrorCardToInboxRequest) => Promise<InboxCard | undefined>
+    mirrorCardToInbox: (boardId: string, cardId: string, payload: MirrorCardToInboxRequest, optimisticInboxCardID?: string, rollbackInboxCardIds?: string[]) => Promise<InboxCard | undefined>
     createInboxCard: (payload: CreateInboxCardRequest) => Promise<InboxCard | undefined>
     getInboxCardByRootCardID: (rootCardID: string) => InboxCard | undefined
     applyInboxEvent: (evt: UserEvent) => void
     replaceInboxCardIds: (newIds: string[]) => void
-    moveInboxCardToListInBoard: (cardID: string, targetWorkspaceID: string, targetBoardID: string, targetListID: string, request: MoveInboxToListRequest, optimisticListCardID?: string) => Promise<void>
+    moveInboxCardToListInBoard: (cardID: string, targetWorkspaceID: string, targetBoardID: string, targetListID: string, request: MoveInboxToListRequest, optimisticListCardID?: string, rollbackListCardIds?: string[]) => Promise<void>
+    setInboxCardIds: (newIds: string[]) => void
+    mergeInboxCardEntities: (cards: InboxCard[]) => void
 }
 
 export const useUserInboxStore = create<UserInboxStore>((set, get) => ({
@@ -41,22 +43,79 @@ export const useUserInboxStore = create<UserInboxStore>((set, get) => ({
         }
     },
 
-    mirrorCardToInbox: async (boardId: string, cardId: string, payload: MirrorCardToInboxRequest) => {
+    mirrorCardToInbox: async (boardId: string, cardId: string, payload: MirrorCardToInboxRequest, optimisticInboxCardID?: string, rollbackInboxCardIds?: string[]) => {
+        let mirroredInboxCard: InboxCard | undefined
+
+        const rollbackOptimisticMirror = () => {
+            if (!optimisticInboxCardID) return
+
+            set((state) => {
+                const nextInboxCardsById = { ...state.inboxCardsById }
+                delete nextInboxCardsById[optimisticInboxCardID]
+
+                return {
+                    inboxCardsById: nextInboxCardsById,
+                    inboxCardsIds: rollbackInboxCardIds ?? state.inboxCardsIds.filter((id) => id !== optimisticInboxCardID)
+                }
+            })
+        }
+
+        const insertInboxCardId = (currentIds: string[], inboxCardId: string) => {
+            if (optimisticInboxCardID && currentIds.includes(optimisticInboxCardID)) {
+                return currentIds.map((id) => id === optimisticInboxCardID ? inboxCardId : id)
+            }
+
+            const nextIds = [...currentIds]
+            if (payload.BeforeID) {
+                const beforeIndex = nextIds.indexOf(payload.BeforeID)
+                if (beforeIndex >= 0) {
+                    nextIds.splice(beforeIndex, 0, inboxCardId)
+                    return nextIds
+                }
+            }
+
+            if (payload.InsertAt === "start") {
+                nextIds.unshift(inboxCardId)
+                return nextIds
+            }
+
+            nextIds.push(inboxCardId)
+            return nextIds
+        }
 
         try {
-            const response = await api.post(`/boards/${boardId}/cards/${cardId}/mirrortoinbox`, payload);
-            const data = response.data as InboxCard
-            // console.log("Mirrored card to inbox:", data)
-            set((state) => ({
-                inboxCardsById: {
-                    ...state.inboxCardsById,
-                    [data.ID]: data
-                },
-                inboxCardsIds: [data.ID, ...state.inboxCardsIds]
-            }));
-            return data;
+            await useAsyncRequestStore.getState().execute(
+                "card:mirror:inbox",
+                () => api.post(`/boards/${boardId}/cards/${cardId}/mirrortoinbox`, payload),
+                {
+                    successResetDelayMs: 2000,
+                    onSuccess: (response) => {
+                        const data = response.data as InboxCard
+                        mirroredInboxCard = data
+
+                        set((state) => {
+                            const nextInboxCardsById = { ...state.inboxCardsById }
+                            if (optimisticInboxCardID) {
+                                delete nextInboxCardsById[optimisticInboxCardID]
+                            }
+                            nextInboxCardsById[data.ID] = data
+
+                            return {
+                                inboxCardsById: nextInboxCardsById,
+                                inboxCardsIds: insertInboxCardId(state.inboxCardsIds, data.ID)
+                            }
+                        })
+                    },
+                    onError: () => {
+                        rollbackOptimisticMirror()
+                    }
+                }
+            )
+
+            return mirroredInboxCard
         }
         catch (error) {
+            rollbackOptimisticMirror()
             // console.error("Failed to mirror card to inbox:", error);
         }
 
@@ -107,31 +166,53 @@ export const useUserInboxStore = create<UserInboxStore>((set, get) => ({
         targetBoardID: string,
         targetListID: string,
         request: MoveInboxToListRequest,
-        optimisticListCardID?: string) => {
+        optimisticListCardID?: string,
+        rollbackListCardIds?: string[]) => {
+        const removedInboxCards = Object.values(get().inboxCardsById)
+            .filter((inboxCard) => inboxCard.CardID === cardID)
+        const removedInboxCardIds = removedInboxCards.map((inboxCard) => inboxCard.ID)
+        const prevInboxCardsById = get().inboxCardsById
+        const prevInboxCardsIds = get().inboxCardsIds
+
+        if (removedInboxCardIds.length > 0) {
+            const nextInboxCardsById = { ...prevInboxCardsById }
+            removedInboxCardIds.forEach((inboxEntryId) => {
+                delete nextInboxCardsById[inboxEntryId]
+            })
+            set({
+                inboxCardsById: nextInboxCardsById,
+                inboxCardsIds: prevInboxCardsIds.filter((id) => !removedInboxCardIds.includes(id))
+            })
+        }
+
+        const rollbackOptimisticMove = () => {
+            if (removedInboxCardIds.length > 0) {
+                set({
+                    inboxCardsById: prevInboxCardsById,
+                    inboxCardsIds: prevInboxCardsIds,
+                })
+            }
+            if (!optimisticListCardID) return
+            const boardDetailStore = useBoardDetailStore.getState()
+            boardDetailStore.removeListCardsByIds([optimisticListCardID])
+            if (rollbackListCardIds) {
+                boardDetailStore.setListCardIdsByListId(targetListID, rollbackListCardIds)
+            }
+        }
+
         try {
             await useAsyncRequestStore.getState().execute("inbox:card:move:board:list",
                 () => api.patch(`/inbox/cards/${cardID}/workspaces/${targetWorkspaceID}/boards/${targetBoardID}/lists/${targetListID}/move`, request),
                 {
                     successResetDelayMs: 2000,
                     onSuccess: (response) => {
-                        const inboxEntryIdsToRemove = Object.values(get().inboxCardsById)
-                            .filter((inboxCard) => inboxCard.CardID === cardID)
-                            .map((inboxCard) => inboxCard.ID)
-                        const nextInboxCardsById = { ...get().inboxCardsById };
-                        inboxEntryIdsToRemove.forEach((inboxEntryId) => {
-                            delete nextInboxCardsById[inboxEntryId]
-                        })
-                        const nextInboxCardsIds = get().inboxCardsIds.filter((id) => !inboxEntryIdsToRemove.includes(id))
-                        set({
-                            inboxCardsById: nextInboxCardsById,
-                            inboxCardsIds: nextInboxCardsIds
-                        });
                         const data = response.data as ListCard;
                         const patch = { [data.ID]: data }
                         if (optimisticListCardID) {
                             const boardDetailStore = useBoardDetailStore.getState()
                             const currentListCardIds = boardDetailStore.listCardIdsByListId[targetListID] ?? []
                             const nextListCardIds = currentListCardIds.map((id) => id === optimisticListCardID ? data.ID : id)
+                            boardDetailStore.removeListCardsByIds([optimisticListCardID])
                             boardDetailStore.setListCardIdsByListId(targetListID, nextListCardIds)
                             boardDetailStore.mergeListCardsPatch(patch)
                         } else {
@@ -139,20 +220,36 @@ export const useUserInboxStore = create<UserInboxStore>((set, get) => ({
                         }
 
 
+                    },
+                    onError: () => {
+                        rollbackOptimisticMove()
                     }
                 }
             )
 
 
         } catch (error) {
-            if (optimisticListCardID) {
-                const boardDetailStore = useBoardDetailStore.getState()
-                const currentListCardIds = boardDetailStore.listCardIdsByListId[targetListID] ?? []
-                boardDetailStore.setListCardIdsByListId(targetListID, currentListCardIds.filter((id) => id !== optimisticListCardID))
-            }
+            rollbackOptimisticMove()
             // console.error("Failed to move inbox card to list in board:", error);
         }
-    }
+    },
+    setInboxCardIds: (newIds: string[]) => {
+        set({
+            inboxCardsIds: newIds
+        })
+    },
+    mergeInboxCardEntities: (cards: InboxCard[]) => {
+        set((state) => {
+            const newCardsById = { ...state.inboxCardsById }
+            cards.forEach((card) => {
+                newCardsById[card.ID] = card
+            })
+
+            return {
+                inboxCardsById: newCardsById,
+            }
+        })
+    },
 
 
 

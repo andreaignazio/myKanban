@@ -147,6 +147,7 @@ type BoardDetailStore = {
     applyListCardCrossBoardMove: (payload: CrossBoardMoveBoardPayload) => void
     mergeListCardsPatch: (payload: Record<string, ListCard>) => void
     mergeBoardListsPatch: (payload: Record<string, BoardList>) => void
+    removeListCardsByIds: (listCardIds: string[]) => void
     checkBoardListsConsistency: (nextBoardListIds: string[], patch: BoardDetailPatch) => Promise<boolean>
     setBoardListIdsByBoardId: (boardId: string, boardListIds: string[]) => void
     setListCardIdsByListId: (listId: string, listCardIds: string[]) => void
@@ -1050,6 +1051,33 @@ export const useBoardDetailStore = create<BoardDetailStore>((set, get) => ({
             }
         })
     },
+    removeListCardsByIds: (listCardIds: string[]) => {
+        if (listCardIds.length === 0) return
+
+        const nextListCardById = { ...get().listCardById }
+        const nextListCardIdsByListId = { ...get().listCardIdsByListId }
+        const nextRootBoardIdByListCardId = { ...get().rootBoardIdByListCardId }
+        const nextInvalidatedRootBoardListCardIds = { ...get().invalidatedRootBoardListCardIds }
+
+        listCardIds.forEach((listCardId) => {
+            const listId = nextListCardById[listCardId]?.ListID
+            delete nextListCardById[listCardId]
+            delete nextRootBoardIdByListCardId[listCardId]
+            delete nextInvalidatedRootBoardListCardIds[listCardId]
+
+            if (!listId) return
+            const ids = nextListCardIdsByListId[listId] ?? []
+            nextListCardIdsByListId[listId] = ids.filter((id) => id !== listCardId)
+        })
+
+        set((state) => ({
+            listCardById: nextListCardById,
+            listCardIdsByListId: nextListCardIdsByListId,
+            rootBoardIdByListCardId: nextRootBoardIdByListCardId,
+            invalidatedRootBoardListCardIds: nextInvalidatedRootBoardListCardIds,
+            OpCounter: state.OpCounter + 1,
+        }))
+    },
     setBoardListIdsByBoardId: (boardID: string, listIDs: string[]) => {
         const nextBoardListIdsByBoardId = { ...get().boardListIdsByBoardId, [boardID]: listIDs }
         set((state) => ({
@@ -1150,7 +1178,7 @@ export const useBoardDetailStore = create<BoardDetailStore>((set, get) => ({
         })
     },
 
-    applyListCardDetachEvent: (payload: BoardDetailPatch) => {
+    applyListCardDetachEvent: async (payload: BoardDetailPatch) => {
         const lcPayload = payload.ListCardRelations
         if (!lcPayload || lcPayload.length < 1) return
 
