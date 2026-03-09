@@ -44,6 +44,8 @@ export type UserWorkspace = {
     UserID: string;
     Position: string;
     Role: string;
+    IsSuspended: boolean;
+    IsPendingSuspend: boolean;
     CreatedAt: string;
     UpdatedAt: string;
     DeletedAt: string | null;
@@ -82,6 +84,8 @@ export type Board = {
     Visibility: string;
     PublicToken: string;
     Props?: BoardProps;
+    IsSuspended: boolean;
+    IsPendingSuspend: boolean;
     CreatedAt: string;
     UpdatedAt: string;
     DeletedAt: string | null;

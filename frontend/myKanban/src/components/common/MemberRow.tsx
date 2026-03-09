@@ -12,11 +12,14 @@ type MemberRowProps = {
     rowClassName?: string
     nameClassName?: string
     usernameClassName?: string
+    children?: React.ReactNode
+    showChildrenBeforeRole?: boolean
+    endRowClassName?: string
 }
-export const MemberRow = ({ user, member, showRole = true, useDummyAvatar = true, avatarSize = 52, rowClassName, nameClassName, usernameClassName }: MemberRowProps) => {
+export const MemberRow = ({ user, member, showRole = true, useDummyAvatar = true, avatarSize = 52, rowClassName, nameClassName, usernameClassName, children, showChildrenBeforeRole = false, endRowClassName }: MemberRowProps) => {
 
 
-
+    const resolvedEndRowClassName = endRowClassName ?? "flex flex-row items-center"
     return (
         <div className={`group flex flex-row gap-3 items-center
             justify-between w-full
@@ -37,8 +40,12 @@ export const MemberRow = ({ user, member, showRole = true, useDummyAvatar = true
                 </div>
 
             </div>
+            <div className={`${resolvedEndRowClassName}`}>
+                {showChildrenBeforeRole && children}
+                {showRole && member && <UserRoleBadge role={member.Role as Role} />}
+                {!showChildrenBeforeRole && children}
 
-            {showRole && member && <UserRoleBadge role={member.Role as Role} />}
+            </div>
 
 
         </div>

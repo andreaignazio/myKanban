@@ -120,6 +120,73 @@ func (h *SubscriptionHandler) ResumeWorkspaceSubscription(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.WorkspaceSubscriptionToResponse(subscription))
 }
 
+func (h *SubscriptionHandler) ReplaceBoardPendingSuspensionSelection(c *gin.Context) {
+	ctx := c.Request.Context()
+	workspaceID, ok := parseWorkspaceID(c)
+	if !ok {
+		return
+	}
+	userID := c.MustGet("userID").(uuid.UUID)
+
+	if h.Service == nil {
+		httperr.WriteOp(c, errors.New("subscription service not configured"), "subscription.handler.ReplaceBoardPendingSuspensionSelection")
+		return
+	}
+
+	var req ReplaceWorkspaceBoardSuspensionSelectionRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		httperr.WriteParamsError(c, err, "subscription.handler.ReplaceBoardPendingSuspensionSelection")
+		return
+	}
+
+	err := h.Service.ReplaceBoardPendingSuspensionSelection(ctx, workspaceID, userID, req.MarkedBoardIDs, req.UnmarkedBoardIDs)
+	if err != nil {
+		httperr.WriteOp(c, err, "subscription.handler.ReplaceBoardPendingSuspensionSelection")
+		return
+	}
+
+	c.Status(http.StatusNoContent)
+}
+
+func (h *SubscriptionHandler) ReplaceMemberPendingSuspensionSelection(c *gin.Context) {
+	ctx := c.Request.Context()
+	workspaceID, ok := parseWorkspaceID(c)
+	if !ok {
+		return
+	}
+	userID := c.MustGet("userID").(uuid.UUID)
+
+	if h.Service == nil {
+		httperr.WriteOp(c, errors.New("subscription service not configured"), "subscription.handler.ReplaceMemberPendingSuspensionSelection")
+		return
+	}
+
+	var req ReplaceWorkspaceMemberSuspensionSelectionRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		httperr.WriteParamsError(c, err, "subscription.handler.ReplaceMemberPendingSuspensionSelection")
+		return
+	}
+
+	err := h.Service.ReplaceMemberPendingSuspensionSelection(ctx, workspaceID, userID, req.MarkedUserIDs, req.UnmarkedUserIDs)
+	if err != nil {
+		httperr.WriteOp(c, err, "subscription.handler.ReplaceMemberPendingSuspensionSelection")
+		return
+	}
+
+	c.Status(http.StatusNoContent)
+}
+
+func parseWorkspaceID(c *gin.Context) (uuid.UUID, bool) {
+	workspaceIDStr := c.Param("workspaceID")
+	workspaceID, err := uuid.Parse(workspaceIDStr)
+	if err != nil {
+		httperr.WriteParamsError(c, err, "subscription.handler.parseWorkspaceID")
+		return uuid.Nil, false
+	}
+
+	return workspaceID, true
+}
+
 func (h *SubscriptionHandler) HandleStripeBillingWebhook(c *gin.Context) {
 	// Implementation will be added in the next steps
 

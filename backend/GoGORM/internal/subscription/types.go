@@ -150,6 +150,22 @@ type PendingSubscriptionChange struct {
 	PendingChangeEffectiveAt *time.Time
 }
 
+type WorkspaceBoardSuspensionCandidate struct {
+	ID               uuid.UUID
+	CreatedAt        time.Time
+	IsSuspended      bool
+	IsPendingSuspend bool
+}
+
+type WorkspaceMemberSuspensionCandidate struct {
+	ID               uuid.UUID
+	UserID           uuid.UUID
+	Role             string
+	CreatedAt        time.Time
+	IsSuspended      bool
+	IsPendingSuspend bool
+}
+
 type CreateCheckoutSessionInput struct {
 	WorkspaceID uuid.UUID
 	UserID      uuid.UUID // utile per audit/metadata, opzionale

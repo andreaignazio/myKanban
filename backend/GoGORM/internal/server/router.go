@@ -313,6 +313,8 @@ func NewRouter(db *gorm.DB,
 				workspaces.POST("/:workspaceID/subscription/checkout", subscriptionHandler.StartCheckoutForWorkspace)
 				workspaces.POST("/:workspaceID/subscription/cancel", subscriptionHandler.CancelWorkspaceSubscription)
 				workspaces.POST("/:workspaceID/subscription/resume", subscriptionHandler.ResumeWorkspaceSubscription)
+				workspaces.POST("/:workspaceID/subscription/suspension/boards", subscriptionHandler.ReplaceBoardPendingSuspensionSelection)
+				workspaces.POST("/:workspaceID/subscription/suspension/members", subscriptionHandler.ReplaceMemberPendingSuspensionSelection)
 			}
 			activity := api.Group("/activity")
 			{

@@ -20,13 +20,15 @@ type TimeStamps struct {
 }
 
 type Board struct {
-	ID              uuid.UUID `gorm:"type:uuid;primaryKey"`
-	Name            string
-	CreatedByUserID uuid.UUID       `gorm:"type:uuid;"`
-	WorkspaceID     uuid.UUID       `gorm:"type:uuid;"`
-	Visibility      BoardVisibility `gorm:"type:text;not null;default:'private'"`
-	PublicToken     string          `gorm:"type:text;unique;index"`
-	Props           datatypes.JSON  `gorm:"type:jsonb;default:'{}'"`
+	ID               uuid.UUID `gorm:"type:uuid;primaryKey"`
+	Name             string
+	CreatedByUserID  uuid.UUID       `gorm:"type:uuid;"`
+	WorkspaceID      uuid.UUID       `gorm:"type:uuid;"`
+	Visibility       BoardVisibility `gorm:"type:text;not null;default:'private'"`
+	PublicToken      string          `gorm:"type:text;unique;index"`
+	Props            datatypes.JSON  `gorm:"type:jsonb;default:'{}'"`
+	IsSuspended      bool            `gorm:"type:boolean;not null;default:false"`
+	IsPendingSuspend bool            `gorm:"type:boolean;not null;default:false"`
 	TimeStamps
 }
 

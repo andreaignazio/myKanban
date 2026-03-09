@@ -3,6 +3,8 @@ package subscription
 import (
 	"GoGORM/internal/dto"
 	"GoGORM/internal/subscriptionplan"
+
+	"github.com/google/uuid"
 )
 
 type CreateSubscriptionRequest struct {
@@ -22,4 +24,14 @@ type SubscriptionCheckoutResponse struct {
 	CheckoutUrl  *string                   `json:"CheckoutUrl,omitempty"`
 	SessionID    *string                   `json:"SessionID,omitempty"`
 	Subscription *dto.SubscriptionResponse `json:"Subscription,omitempty"`
+}
+
+type ReplaceWorkspaceBoardSuspensionSelectionRequest struct {
+	MarkedBoardIDs   []uuid.UUID `json:"MarkedBoardIDs"`
+	UnmarkedBoardIDs []uuid.UUID `json:"UnmarkedBoardIDs"`
+}
+
+type ReplaceWorkspaceMemberSuspensionSelectionRequest struct {
+	MarkedUserIDs   []uuid.UUID `json:"MarkedUserIDs"`
+	UnmarkedUserIDs []uuid.UUID `json:"UnmarkedUserIDs"`
 }

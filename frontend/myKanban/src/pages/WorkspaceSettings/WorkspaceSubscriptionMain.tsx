@@ -26,8 +26,9 @@ export const WorkspaceSubscriptionMain = () => {
     }
 
     const links = asideTabs(workspaceID)
+    const isGoingToCancel = subscription?.CancelAtPeriodEnd ?? false;
 
-    const status = "trialing"
+    const status = isGoingToCancel ? "pending_cancel" : subscription?.Status ?? "inactive";
 
     return (
 
@@ -92,9 +93,11 @@ const StatusBadge = ({ status }: { status: string }) => {
             break;
     }
 
+    const resolvedLabel = status === "pending_cancel" ? "Pending cancellation" : status.charAt(0).toUpperCase() + status.slice(1);
+
     return (
         <div className={`px-2 py-1 rounded-full text-xs font-medium ${color} text-white`}>
-            {status.charAt(0).toUpperCase() + status.slice(1)}
+            {resolvedLabel}
         </div>
     );
 }

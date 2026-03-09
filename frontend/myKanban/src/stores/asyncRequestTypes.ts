@@ -81,7 +81,9 @@ export const ASYNC_REQUEST_BASE_KEYS = [
     "checklist:entry:member:remove",
     "subscription:checkout",
     "subscription:cancel",
-    "subscription:resume"
+    "subscription:resume",
+    "subscription:suspension:boards:save",
+    "subscription:suspension:members:save"
 ] as const;
 
 export type AsyncRequestBaseKey = typeof ASYNC_REQUEST_BASE_KEYS[number];

@@ -21,11 +21,13 @@ type Workspace struct {
 }
 
 type UserWorkspace struct {
-	ID          uuid.UUID `gorm:"type:uuid;primaryKey"`
-	WorkspaceID uuid.UUID `gorm:"type:uuid;not null;index"`
-	UserID      uuid.UUID `gorm:"type:uuid;not null;index"`
-	Pos         string    `gorm:"type:text;not null;index"`
-	Role        rbac.Role `gorm:"type:text;not null"`
+	ID               uuid.UUID `gorm:"type:uuid;primaryKey"`
+	WorkspaceID      uuid.UUID `gorm:"type:uuid;not null;index"`
+	UserID           uuid.UUID `gorm:"type:uuid;not null;index"`
+	Pos              string    `gorm:"type:text;not null;index"`
+	Role             rbac.Role `gorm:"type:text;not null"`
+	IsSuspended      bool      `gorm:"type:boolean;not null;default:false"`
+	IsPendingSuspend bool      `gorm:"type:boolean;not null;default:false"`
 	TimeStamps
 }
 
@@ -80,6 +82,8 @@ type UserWorkspaceRow struct {
 	UserWorkspaceUserID                  uuid.UUID           `gorm:"column:workspace_user_user_id"`
 	UserWorkspacePos                     string              `gorm:"column:workspace_user_pos"`
 	UserWorkspaceRole                    string              `gorm:"column:workspace_user_role"`
+	UserWorkspaceIsSuspended             bool                `gorm:"column:workspace_user_is_suspended"`
+	UserWorkspaceIsPendingSuspend        bool                `gorm:"column:workspace_user_is_pending_suspend"`
 	UserWorkspaceCreatedAt               time.Time           `gorm:"column:workspace_user_created_at"`
 	UserWorkspaceUpdatedAt               time.Time           `gorm:"column:workspace_user_updated_at"`
 	UserWorkspaceDeletedAt               gorm.DeletedAt      `gorm:"column:workspace_user_deleted_at"`
@@ -126,11 +130,13 @@ func (r UserWorkspaceRow) ToWorkspaceAndUser() (Workspace, UserWorkspace) {
 	}
 
 	userWorkspace := UserWorkspace{
-		ID:          r.UserWorkspaceID,
-		WorkspaceID: r.UserWorkspaceWorkspaceID,
-		UserID:      r.UserWorkspaceUserID,
-		Pos:         r.UserWorkspacePos,
-		Role:        role,
+		ID:               r.UserWorkspaceID,
+		WorkspaceID:      r.UserWorkspaceWorkspaceID,
+		UserID:           r.UserWorkspaceUserID,
+		Pos:              r.UserWorkspacePos,
+		Role:             role,
+		IsSuspended:      r.UserWorkspaceIsSuspended,
+		IsPendingSuspend: r.UserWorkspaceIsPendingSuspend,
 		TimeStamps: TimeStamps{
 			CreatedAt: r.UserWorkspaceCreatedAt,
 			UpdatedAt: r.UserWorkspaceUpdatedAt,

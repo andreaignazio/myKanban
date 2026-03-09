@@ -73,18 +73,7 @@ func MapUserBoardDetailResponse(userBoardRow *UserBoardRow, boardListRows []Boar
 	}
 
 	return UserBoardDetailResponse{
-		Board: dto.BoardResponse{
-			ID:              userBoardRow.Board.ID,
-			Name:            userBoardRow.Board.Name,
-			CreatedByUserID: userBoardRow.Board.CreatedByUserID,
-			WorkspaceID:     userBoardRow.Board.WorkspaceID,
-			Visibility:      userBoardRow.Board.Visibility.String(),
-			PublicToken:     userBoardRow.Board.PublicToken,
-			Props:           userBoardRow.Board.Props,
-			CreatedAt:       userBoardRow.Board.CreatedAt,
-			UpdatedAt:       userBoardRow.Board.UpdatedAt,
-			DeletedAt:       deletedAtPtr(userBoardRow.Board.DeletedAt),
-		},
+		Board:    dto.BoardToResponse(&userBoardRow.Board),
 		Relation: dto.UserBoardToResponse(&userBoardRow.UserBoard),
 		Lists:    lists,
 	}

@@ -11,6 +11,7 @@ import { LabeledButtonPresetA } from "./buttons/labeledButton";
 import { X } from "lucide-react";
 import { useWorkspaceActionRegistry } from "@/actionRegistry/workspaceActionRegistry";
 import { LeaveRemoveMember } from "./common/leaveRemoveMember";
+import { UserIdentityRow } from "./common/UserIdentityRow";
 
 export function UserRow({ userID, workspaceId }: { userID: string; workspaceId: string }) {
 
@@ -44,13 +45,7 @@ export function UserRow({ userID, workspaceId }: { userID: string; workspaceId: 
     return (
         <div>
             <div className="flex flex-row items-center justify-between gap-3">
-                <div className="flex flex-row items-center gap-3 h-full ">
-                    <UserAvatar user={user} size={42} />
-                    <div className="flex flex-col min-h-14 items-start justify-center  ">
-                        <p className="font-bold text-sm">{user?.Name}</p>
-                        <p className="text-xs text-gray-500">@{user?.Username === "" ? "username" : user?.Username}</p>
-                    </div>
-                </div>
+                <UserIdentityRow user={user} />
                 <div className="flex flex-row gap-4 items-center justify-center h-full +">
                     <WorkspaceMembersDropdown userId={userID} workspaceID={workspaceId} isAdminOrOwner={isAdminOrOwner} isCurrentUser={isCurrentUser}
                         showChevron={!isLocked}
@@ -59,20 +54,7 @@ export function UserRow({ userID, workspaceId }: { userID: string; workspaceId: 
                         className={`h-9 font-semibold text-sm
                             ${isLocked ? "" : " !bg-menubtn hover:!bg-white/15"} 
                             ${isAdminOrOwner ? "!text-neutral-300 bg-transparent" : "!text-neutral-600"}`} />
-
                     <LeaveRemoveMember canRemove={!isLocked} canLeave={canLeave} isCurrentUser={isCurrentUser} onLeave={handleLeaveWorkspace} onRemove={handleRemoveMember} />
-                    {/*<LabeledButtonPresetA label="Remove" onClick={handleRemoveMember} disabled={isLocked}
-                        className={`h-9 
-                    ${isCurrentUser ? "hidden" : ""}
-                    font-semibold text-sm ${isLocked ? "opacity-50 cursor-not-allowed" : ""}`} />
-
-                    <LabeledButtonPresetA label="Leave" onClick={handleLeaveWorkspace} disabled={!canLeave}
-                        className={`h-9  px-6
-                    ${isCurrentUser ? "" : "hidden"}
-                    font-semibold text-sm ${canLeave ? "" : "opacity-50 cursor-not-allowed"}`} >
-                        <X className="h-4 w-4" />
-                    </LabeledButtonPresetA>*/}
-
                 </div>
             </div>
         </div>

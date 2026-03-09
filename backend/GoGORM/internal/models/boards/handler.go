@@ -56,18 +56,7 @@ func (h *BoardsHandler) CreateBoard(c *gin.Context) {
 	}
 
 	res := BoardForUserResponse{
-		BoardResponse: dto.BoardResponse{
-			ID:              board.ID,
-			Name:            board.Name,
-			CreatedByUserID: board.CreatedByUserID,
-			WorkspaceID:     board.WorkspaceID,
-			Visibility:      board.Visibility.String(),
-			PublicToken:     board.PublicToken,
-			Props:           board.Props,
-			CreatedAt:       board.CreatedAt,
-			UpdatedAt:       board.UpdatedAt,
-			DeletedAt:       deletedAtPtr(board.DeletedAt),
-		},
+		BoardResponse: dto.BoardToResponse(board),
 		UserBoardResponse: dto.UserBoardResponse{
 			UserID:    userBoard.UserID,
 			BoardID:   userBoard.BoardID,
@@ -121,18 +110,7 @@ func (h *BoardsHandler) GetUserBoards(c *gin.Context) {
 	userBoardsResponse := make([]BoardForUserResponse, 0, len(userBoards))
 	for _, userBoard := range userBoards {
 		res := BoardForUserResponse{
-			BoardResponse: dto.BoardResponse{
-				ID:              userBoard.Board.ID,
-				Name:            userBoard.Board.Name,
-				CreatedByUserID: userBoard.Board.CreatedByUserID,
-				WorkspaceID:     userBoard.Board.WorkspaceID,
-				Visibility:      userBoard.Board.Visibility.String(),
-				PublicToken:     userBoard.Board.PublicToken,
-				Props:           userBoard.Board.Props,
-				CreatedAt:       userBoard.Board.CreatedAt,
-				UpdatedAt:       userBoard.Board.UpdatedAt,
-				DeletedAt:       deletedAtPtr(userBoard.Board.DeletedAt),
-			},
+			BoardResponse: dto.BoardToResponse(&userBoard.Board),
 			UserBoardResponse: dto.UserBoardResponse{
 				UserID:    userBoard.UserBoard.UserID,
 				BoardID:   userBoard.UserBoard.BoardID,
@@ -173,18 +151,7 @@ func (h *BoardsHandler) PatchBoard(c *gin.Context) {
 		return
 	}
 
-	response := dto.BoardResponse{
-		ID:              board.ID,
-		Name:            board.Name,
-		CreatedByUserID: board.CreatedByUserID,
-		WorkspaceID:     board.WorkspaceID,
-		Visibility:      board.Visibility.String(),
-		PublicToken:     board.PublicToken,
-		Props:           board.Props,
-		CreatedAt:       board.CreatedAt,
-		UpdatedAt:       board.UpdatedAt,
-		DeletedAt:       deletedAtPtr(board.DeletedAt),
-	}
+	response := dto.BoardToResponse(board)
 
 	changedFields := collectBoardChangedFields(payload)
 	correlationID := c.MustGet("correlationID").(uuid.UUID)

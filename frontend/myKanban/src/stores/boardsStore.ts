@@ -80,6 +80,7 @@ export type BoardsStore = {
     mergeBoardsInWorkspace: (workspaceID: string, boards: Record<string, Board>) => void;
     applyOptimisticCloseBoard: (workspaceId: string, boardId: string) => void;
     closeBoardInWorkspace: (workspaceId: string, boardId: string, asyncKey?: AsyncRequestKey) => Promise<void>;
+    replaceBoardPendingSuspensionSelection: (workspaceId: string, markedBoardIDs: string[], unmarkedBoardIDs: string[], asyncKey?: AsyncRequestKey) => Promise<void>;
     restoreBoardInWorkspace: (workspaceId: string, boardId: string) => Promise<void>;
     purgeBoardInWorkspace: (workspaceId: string, boardId: string) => Promise<void>;
     getClosedBoardsInWorkspace: (workspaceId: string) => Promise<void>;
@@ -469,6 +470,20 @@ export const useBoardsStore = create<BoardsStore>((set, get) => ({
         };
         if (asyncKey) {
             await useAsyncRequestStore.getState().execute(asyncKey, run, { successResetDelayMs: 2000 });
+        } else {
+            await run();
+        }
+    },
+    replaceBoardPendingSuspensionSelection: async (workspaceId, markedBoardIDs, unmarkedBoardIDs, asyncKey?) => {
+        const run = async () => {
+            await api.post(`/workspaces/${workspaceId}/subscription/suspension/boards`, {
+                MarkedBoardIDs: markedBoardIDs,
+                UnmarkedBoardIDs: unmarkedBoardIDs,
+            });
+            await get().fetchBoardsForWorkspace(workspaceId);
+        };
+        if (asyncKey) {
+            await useAsyncRequestStore.getState().execute(asyncKey, run, { successResetDelayMs: 1500 });
         } else {
             await run();
         }

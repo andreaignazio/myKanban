@@ -8,6 +8,7 @@ import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { useShallow } from "zustand/react/shallow";
 import { useBoardsStore } from "@/stores/boardsStore";
+import { ManagaeMembersAndBoards } from "./ManageMembersAndBoards";
 
 export const WorkspaceSubscriptionManage = () => {
 
@@ -39,6 +40,7 @@ export const WorkspaceSubscriptionManage = () => {
         shouldUpgrade,
     } = useWorkspaceSubscriptionBilling({
         currentPlan,
+        nextPlan: pendingPlan,
         currentMemberCount: usedSeats,
         availableSeats: subscription?.SeatQuantity,
     });
@@ -53,8 +55,12 @@ export const WorkspaceSubscriptionManage = () => {
 
     const isMembersOverLimit = usedSeats > totalSeats;
     const isBoardsOverLimit = !hasUnlimitedBoards && usedBoards > maxBoards;
-    const membersProgressBarColor = isMembersOverLimit ? "bg-red-400" : "bg-green-400";
-    const boardsProgressBarColor = isBoardsOverLimit ? "bg-red-400" : "bg-green-400";
+    const outOfRangeBg = "!bg-yellow-600/70";
+    const inRangeBg = "!bg-lime-500/50";
+    const outOfRangeText = "text-yellow-400/60";
+    const inRangeText = "text-lime-400/50";
+    const membersProgressBarColor = isMembersOverLimit ? outOfRangeBg : inRangeBg;
+    const boardsProgressBarColor = isBoardsOverLimit ? outOfRangeBg : inRangeBg;
     const progressBarHeight = "!h-2 !rounded-full"
     const canCancelSubscription = Boolean(subscription?.ProviderSubscriptionID) && !cancelAtPeriodEnd;
     const canResumeSubscription = Boolean(subscription?.ProviderSubscriptionID) && cancelAtPeriodEnd;
@@ -83,101 +89,73 @@ export const WorkspaceSubscriptionManage = () => {
         }
     };
 
+    const isGoingToDowngrade = pendingPlan && subscription && subscription.Plan !== pendingPlan && subscription.Plan !== "free" && pendingPlan !== "free";
+    const isGoingToBeCanceled = cancelAtPeriodEnd && !pendingPlan;
+    const resolvedNextDate = isGoingToDowngrade ? formattedPendingChangeDate : formattedExpiryDate;
+    const nextBillingInfo = isGoingToDowngrade ? `Your plan will change to ${pendingPlan} on ${resolvedNextDate}.` :
+        isGoingToBeCanceled ? `Your subscription will be canceled on ${resolvedNextDate}.` :
+            `Your next billing date is on ${resolvedNextDate}.`;
 
 
     return (
-        <div className="h-full w-full flex flex-col items-start justify-start gap-4 mt-8">
+        <div className="h-[80vh] w-full flex flex-col items-start justify-start gap-4 mt-8">
             <span className="text-sm text-neutral-300">Your current subscription plan details and billing information.</span>
-            <div className="flex flex-col w-full items-start justify-start gap-2">
+            <div className="flex flex-col w-full items-start justify-start gap-2 scrollbar-hidden overflow-y-auto">
 
-                <div className="flex flex-col items-start pe-6 ps-5 py-4 pt-6 gap-4 bg-slate-500/10 
-                shadow-md shadow-black/10
+                <div className="h-fit relative w-full rounded-md ">
+                    <div className=" relative flex flex-col items-start pe-6 ps-5 py-4 pt-6 gap-4 bg-slate-500/10 
+                shadow-md shadow-black/10 overflow-hidden
                 border border-neutral-700 rounded-2xl w-full">
-                    <div className="flex flex-col items-start   gap-2 w-full">
-                        <ProgressBar
-                            containerClassName={`${progressBarHeight}`}
-                            percentage={boardsPercentageUsed} barClassName={`${boardsProgressBarColor} ${progressBarHeight}`} />
-                        <span className={`text-sm font-medium ${isBoardsOverLimit ? "text-red-400" : "text-green-400"}`}>
-                            {usedBoards} of {hasUnlimitedBoards ? "Unlimited" : totalBoards} boards used ({boardsPercentageUsed}%)
-                        </span>
+                        <div className="absolute inset-0 z-10 rounded-2xl bg-gradient-to-r from-yellow-600/20 via-pink-600/20 to-purple-600/20 blur-lg opacity-50" />
+                        <div className="flex flex-col items-start  gap-2 w-full">
+                            <ProgressBar
+                                containerClassName={`${progressBarHeight}`}
+                                percentage={boardsPercentageUsed} barClassName={`${boardsProgressBarColor} ${progressBarHeight}`} />
+                            <span className={`text-sm font-medium ${isBoardsOverLimit ? outOfRangeText : inRangeText}`}>
+                                {usedBoards} of {hasUnlimitedBoards ? "Unlimited" : totalBoards} boards used ({boardsPercentageUsed}%)
+                            </span>
+                        </div>
+
+                        <div className="flex flex-col items-start  gap-2 w-full">
+                            <ProgressBar
+                                containerClassName={`${progressBarHeight}`}
+                                percentage={percentageUsed} barClassName={`${membersProgressBarColor} ${progressBarHeight}`} />
+                            <span className={`text-sm font-medium ${isMembersOverLimit ? outOfRangeText : inRangeText}`}>
+                                {usedSeats} of {totalSeats} seats used ({percentageUsed}%)
+                            </span>
+                        </div>
                     </div>
-
-                    <div className="flex flex-col items-start  gap-2 w-full">
-                        <ProgressBar
-                            containerClassName={`${progressBarHeight}`}
-                            percentage={percentageUsed} barClassName={`${membersProgressBarColor} ${progressBarHeight}`} />
-                        <span className={`text-sm font-medium ${isMembersOverLimit ? "text-red-400" : "text-green-400"}`}>
-                            {usedSeats} of {totalSeats} seats used ({percentageUsed}%)
-                        </span>
-                    </div>
+                </div>
+                <div className="relative flex flex-col h-6 w-full my-5 items-center justify-center">
+                    <div className="absolute z-20 h-px w-full place-self-stretch bg-neutral-300/20 " />
                 </div>
 
 
-                <div className="flex flex-row items-center gap-2">
-                    <span className="text-sm text-neutral-400">Status:</span>
-                    <span className={`text-sm font-medium ${status === "active" ? "text-green-400" : "text-red-400"}`}>
-                        {status.charAt(0).toUpperCase() + status.slice(1)}
-                    </span>
-                </div>
-                <div className="flex flex-row items-center gap-2">
-                    <span className="text-sm text-neutral-400">Cancel at period end:</span>
-                    <span className={`text-sm font-medium ${cancelAtPeriodEnd ? "text-amber-300" : "text-neutral-300"}`}>
-                        {cancelAtPeriodEnd ? "Yes" : "No"}
-                    </span>
-                </div>
-                <div className="flex flex-row items-center gap-2">
-                    <span className="text-sm text-neutral-400">Pending plan:</span>
-                    <span className={`text-sm font-medium ${pendingPlan ? "text-amber-300" : "text-neutral-300"}`}>
-                        {pendingPlan ? pendingPlan.charAt(0).toUpperCase() + pendingPlan.slice(1) : "None"}
-                    </span>
-                </div>
-                <div className="flex flex-row items-center gap-2">
-                    <span className="text-sm text-neutral-400">Pending seats:</span>
-                    <span className="text-sm text-neutral-300">{pendingSeatQuantity ?? "None"}</span>
-                </div>
-                <div className="flex flex-row items-center gap-2">
-                    <span className="text-sm text-neutral-400">Pending change effective:</span>
-                    <span className="text-sm text-neutral-300">{pendingPlan ? formattedPendingChangeDate : "N/A"}</span>
-                </div>
-                <div className="flex flex-row items-center gap-2">
-                    <span className="text-sm text-neutral-400">Expiry Date:</span>
-                    <span className="text-sm text-neutral-300">{formattedExpiryDate}</span>
-                </div>
-                <div className="flex flex-row items-center gap-2">
-                    <span className="text-sm text-neutral-400">Seats:</span>
-                    <span className="text-sm text-neutral-300">{hasUnlimitedMembers ? "Unlimited" : totalSeats}</span>
-                </div>
-                <div className="flex flex-row items-center gap-2">
+                <div className="text-sm text-neutral-400">{nextBillingInfo}</div>
+
+
+                {!isGoingToBeCanceled && <div className="flex flex-row items-center gap-2">
                     <span className="text-sm text-neutral-400">Next billing:</span>
                     <span className="text-sm text-neutral-300">${nextBillingAmount} USD/month</span>
-                </div>
-                <div className="flex flex-row items-center gap-2">
-                    <span className="text-sm text-neutral-400">Should upgrade:</span>
-                    <span className={`text-sm font-medium ${shouldUpgrade ? "text-red-400" : "text-green-400"}`}>
-                        {shouldUpgrade ? "Yes" : "No"}
-                    </span>
-                </div>
-                {shouldUpgrade ? (
-                    <span className="text-sm text-red-400">
-                        Current members exceed the maximum allowed by the {currentPlan} plan.
-                    </span>
-                ) : null}
-                <div className="pt-2">
-                    <LabeledButtonPresetA
-                        label={isSubmittingSubscriptionChange
-                            ? (cancelAtPeriodEnd ? "Resuming..." : "Canceling...")
-                            : (cancelAtPeriodEnd ? "Resume Subscription" : "Cancel Subscription")}
-                        onClick={() => {
-                            if (cancelAtPeriodEnd) {
-                                void handleResumeSubscription();
-                                return;
-                            }
-                            void handleCancelSubscription();
-                        }}
-                        disabled={isSubmittingSubscriptionChange || (!canCancelSubscription && !canResumeSubscription)}
-                        className={`!rounded-xl ${(!canCancelSubscription && !canResumeSubscription) ? "opacity-50" : ""}`}
-                    />
-                </div>
+                </div>}
+                {false &&
+                    <div className="pt-2">
+                        <LabeledButtonPresetA
+                            label={isSubmittingSubscriptionChange
+                                ? (cancelAtPeriodEnd ? "Resuming..." : "Canceling...")
+                                : (cancelAtPeriodEnd ? "Resume Subscription" : "Cancel Subscription")}
+                            onClick={() => {
+                                if (cancelAtPeriodEnd) {
+                                    void handleResumeSubscription();
+                                    return;
+                                }
+                                void handleCancelSubscription();
+                            }}
+                            disabled={isSubmittingSubscriptionChange || (!canCancelSubscription && !canResumeSubscription)}
+                            className={`!rounded-xl ${(!canCancelSubscription && !canResumeSubscription) ? "opacity-50" : ""}`}
+                        />
+                    </div>}
+                <ManagaeMembersAndBoards />
             </div>
 
         </div>

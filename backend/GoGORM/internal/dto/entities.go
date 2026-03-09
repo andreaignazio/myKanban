@@ -9,16 +9,18 @@ import (
 )
 
 type BoardResponse struct {
-	ID              uuid.UUID      `json:"ID"`
-	Name            string         `json:"Name"`
-	CreatedByUserID uuid.UUID      `json:"CreatedByUserID"`
-	WorkspaceID     uuid.UUID      `json:"WorkspaceID"`
-	Visibility      string         `json:"Visibility"`
-	PublicToken     string         `json:"PublicToken"`
-	Props           datatypes.JSON `json:"Props,omitempty"`
-	CreatedAt       time.Time      `json:"CreatedAt"`
-	UpdatedAt       time.Time      `json:"UpdatedAt"`
-	DeletedAt       *time.Time     `json:"DeletedAt,omitempty"`
+	ID               uuid.UUID      `json:"ID"`
+	Name             string         `json:"Name"`
+	CreatedByUserID  uuid.UUID      `json:"CreatedByUserID"`
+	WorkspaceID      uuid.UUID      `json:"WorkspaceID"`
+	Visibility       string         `json:"Visibility"`
+	PublicToken      string         `json:"PublicToken"`
+	Props            datatypes.JSON `json:"Props,omitempty"`
+	IsSuspended      bool           `json:"IsSuspended"`
+	IsPendingSuspend bool           `json:"IsPendingSuspend"`
+	CreatedAt        time.Time      `json:"CreatedAt"`
+	UpdatedAt        time.Time      `json:"UpdatedAt"`
+	DeletedAt        *time.Time     `json:"DeletedAt,omitempty"`
 }
 
 type ListResponse struct {
@@ -98,14 +100,16 @@ type WorkspaceResponse struct {
 }
 
 type UserWorkspaceResponse struct {
-	ID          uuid.UUID  `json:"ID"`
-	WorkspaceID uuid.UUID  `json:"WorkspaceID"`
-	UserID      uuid.UUID  `json:"UserID"`
-	Position    string     `json:"Position"`
-	Role        string     `json:"Role"`
-	CreatedAt   time.Time  `json:"CreatedAt"`
-	UpdatedAt   time.Time  `json:"UpdatedAt"`
-	DeletedAt   *time.Time `json:"DeletedAt,omitempty"`
+	ID               uuid.UUID  `json:"ID"`
+	WorkspaceID      uuid.UUID  `json:"WorkspaceID"`
+	UserID           uuid.UUID  `json:"UserID"`
+	Position         string     `json:"Position"`
+	Role             string     `json:"Role"`
+	IsSuspended      bool       `json:"IsSuspended"`
+	IsPendingSuspend bool       `json:"IsPendingSuspend"`
+	CreatedAt        time.Time  `json:"CreatedAt"`
+	UpdatedAt        time.Time  `json:"UpdatedAt"`
+	DeletedAt        *time.Time `json:"DeletedAt,omitempty"`
 }
 
 type SubscriptionResponse struct {

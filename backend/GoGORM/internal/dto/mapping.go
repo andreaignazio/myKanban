@@ -105,16 +105,18 @@ func ListCardToResponse(listCard *models.ListCard) ListCardResponse {
 
 func BoardToResponse(board *models.Board) BoardResponse {
 	return BoardResponse{
-		ID:              board.ID,
-		Name:            board.Name,
-		CreatedByUserID: board.CreatedByUserID,
-		WorkspaceID:     board.WorkspaceID,
-		Visibility:      board.Visibility.String(),
-		PublicToken:     board.PublicToken,
-		Props:           board.Props,
-		CreatedAt:       board.CreatedAt,
-		UpdatedAt:       board.UpdatedAt,
-		DeletedAt:       DeletedAtPtr(board.DeletedAt),
+		ID:               board.ID,
+		Name:             board.Name,
+		CreatedByUserID:  board.CreatedByUserID,
+		WorkspaceID:      board.WorkspaceID,
+		Visibility:       board.Visibility.String(),
+		PublicToken:      board.PublicToken,
+		Props:            board.Props,
+		IsSuspended:      board.IsSuspended,
+		IsPendingSuspend: board.IsPendingSuspend,
+		CreatedAt:        board.CreatedAt,
+		UpdatedAt:        board.UpdatedAt,
+		DeletedAt:        DeletedAtPtr(board.DeletedAt),
 	}
 }
 
@@ -172,14 +174,16 @@ func WorkspaceToResponse(workspace *models.Workspace) WorkspaceResponse {
 
 func UserWorkspaceToResponse(userWorkspace *models.UserWorkspace) UserWorkspaceResponse {
 	return UserWorkspaceResponse{
-		ID:          userWorkspace.ID,
-		WorkspaceID: userWorkspace.WorkspaceID,
-		UserID:      userWorkspace.UserID,
-		Position:    userWorkspace.Pos,
-		Role:        userWorkspace.Role.String(),
-		CreatedAt:   userWorkspace.CreatedAt,
-		UpdatedAt:   userWorkspace.UpdatedAt,
-		DeletedAt:   DeletedAtPtr(userWorkspace.DeletedAt),
+		ID:               userWorkspace.ID,
+		WorkspaceID:      userWorkspace.WorkspaceID,
+		UserID:           userWorkspace.UserID,
+		Position:         userWorkspace.Pos,
+		Role:             userWorkspace.Role.String(),
+		IsSuspended:      userWorkspace.IsSuspended,
+		IsPendingSuspend: userWorkspace.IsPendingSuspend,
+		CreatedAt:        userWorkspace.CreatedAt,
+		UpdatedAt:        userWorkspace.UpdatedAt,
+		DeletedAt:        DeletedAtPtr(userWorkspace.DeletedAt),
 	}
 }
 
@@ -290,14 +294,16 @@ func UserWorkspaceRowToResponses(row *models.UserWorkspaceRow) (WorkspaceRespons
 	}
 
 	userWorkspace := UserWorkspaceResponse{
-		ID:          row.UserWorkspaceID,
-		WorkspaceID: row.UserWorkspaceWorkspaceID,
-		UserID:      row.UserWorkspaceUserID,
-		Position:    row.UserWorkspacePos,
-		Role:        row.UserWorkspaceRole,
-		CreatedAt:   row.UserWorkspaceCreatedAt,
-		UpdatedAt:   row.UserWorkspaceUpdatedAt,
-		DeletedAt:   DeletedAtPtr(row.UserWorkspaceDeletedAt),
+		ID:               row.UserWorkspaceID,
+		WorkspaceID:      row.UserWorkspaceWorkspaceID,
+		UserID:           row.UserWorkspaceUserID,
+		Position:         row.UserWorkspacePos,
+		Role:             row.UserWorkspaceRole,
+		IsSuspended:      row.UserWorkspaceIsSuspended,
+		IsPendingSuspend: row.UserWorkspaceIsPendingSuspend,
+		CreatedAt:        row.UserWorkspaceCreatedAt,
+		UpdatedAt:        row.UserWorkspaceUpdatedAt,
+		DeletedAt:        DeletedAtPtr(row.UserWorkspaceDeletedAt),
 	}
 
 	return workspace, userWorkspace

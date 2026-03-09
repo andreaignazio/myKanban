@@ -15,6 +15,22 @@ type GormSubscriptionRepo struct {
 	db *gorm.DB
 }
 
+type workspaceBoardSuspensionCandidateRow struct {
+	ID               uuid.UUID `gorm:"column:id"`
+	CreatedAt        time.Time `gorm:"column:created_at"`
+	IsSuspended      bool      `gorm:"column:is_suspended"`
+	IsPendingSuspend bool      `gorm:"column:is_pending_suspend"`
+}
+
+type workspaceMemberSuspensionCandidateRow struct {
+	ID               uuid.UUID `gorm:"column:id"`
+	UserID           uuid.UUID `gorm:"column:user_id"`
+	Role             string    `gorm:"column:role"`
+	CreatedAt        time.Time `gorm:"column:created_at"`
+	IsSuspended      bool      `gorm:"column:is_suspended"`
+	IsPendingSuspend bool      `gorm:"column:is_pending_suspend"`
+}
+
 func NewGormSubscriptionRepo(db *gorm.DB) *GormSubscriptionRepo {
 	return &GormSubscriptionRepo{db: db}
 }
@@ -40,6 +56,52 @@ func (r *GormSubscriptionRepo) CountWorkspaceBoards(ctx context.Context, workspa
 		return 0, err
 	}
 	return count, nil
+}
+
+func (r *GormSubscriptionRepo) ListWorkspaceBoardsForSuspension(ctx context.Context, workspaceID uuid.UUID) ([]WorkspaceBoardSuspensionCandidate, error) {
+	var rows []workspaceBoardSuspensionCandidateRow
+	if err := r.db.WithContext(ctx).
+		Table("boards").
+		Select("id, created_at, is_suspended, is_pending_suspend").
+		Where("workspace_id = ? AND deleted_at IS NULL", workspaceID).
+		Find(&rows).Error; err != nil {
+		return nil, err
+	}
+
+	out := make([]WorkspaceBoardSuspensionCandidate, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, WorkspaceBoardSuspensionCandidate{
+			ID:               row.ID,
+			CreatedAt:        row.CreatedAt,
+			IsSuspended:      row.IsSuspended,
+			IsPendingSuspend: row.IsPendingSuspend,
+		})
+	}
+	return out, nil
+}
+
+func (r *GormSubscriptionRepo) ListWorkspaceMembersForSuspension(ctx context.Context, workspaceID uuid.UUID) ([]WorkspaceMemberSuspensionCandidate, error) {
+	var rows []workspaceMemberSuspensionCandidateRow
+	if err := r.db.WithContext(ctx).
+		Table("user_workspaces").
+		Select("id, user_id, role, created_at, is_suspended, is_pending_suspend").
+		Where("workspace_id = ? AND deleted_at IS NULL", workspaceID).
+		Find(&rows).Error; err != nil {
+		return nil, err
+	}
+
+	out := make([]WorkspaceMemberSuspensionCandidate, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, WorkspaceMemberSuspensionCandidate{
+			ID:               row.ID,
+			UserID:           row.UserID,
+			Role:             row.Role,
+			CreatedAt:        row.CreatedAt,
+			IsSuspended:      row.IsSuspended,
+			IsPendingSuspend: row.IsPendingSuspend,
+		})
+	}
+	return out, nil
 }
 
 func (r *GormSubscriptionRepo) UpsertFromWebhook(ctx context.Context, tx *gorm.DB,
@@ -109,6 +171,70 @@ func (r *GormSubscriptionRepo) UpdatePendingChange(ctx context.Context, tx *gorm
 		Table("workspace_subscriptions").
 		Where("workspace_id = ? AND deleted_at IS NULL", workspaceID).
 		Updates(updates).Error
+}
+
+func (r *GormSubscriptionRepo) ApplyWorkspaceBoardSuspensionState(ctx context.Context, tx *gorm.DB, workspaceID uuid.UUID, suspendedIDs, pendingIDs []uuid.UUID) error {
+	if err := tx.WithContext(ctx).
+		Table("boards").
+		Where("workspace_id = ? AND deleted_at IS NULL", workspaceID).
+		Updates(map[string]interface{}{
+			"is_suspended":       false,
+			"is_pending_suspend": false,
+			"updated_at":         time.Now(),
+		}).Error; err != nil {
+		return err
+	}
+
+	if len(suspendedIDs) > 0 {
+		if err := tx.WithContext(ctx).
+			Table("boards").
+			Where("workspace_id = ? AND deleted_at IS NULL AND id IN ?", workspaceID, suspendedIDs).
+			Updates(map[string]interface{}{"is_suspended": true, "updated_at": time.Now()}).Error; err != nil {
+			return err
+		}
+	}
+	if len(pendingIDs) > 0 {
+		if err := tx.WithContext(ctx).
+			Table("boards").
+			Where("workspace_id = ? AND deleted_at IS NULL AND id IN ?", workspaceID, pendingIDs).
+			Updates(map[string]interface{}{"is_pending_suspend": true, "updated_at": time.Now()}).Error; err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (r *GormSubscriptionRepo) ApplyWorkspaceMemberSuspensionState(ctx context.Context, tx *gorm.DB, workspaceID uuid.UUID, suspendedIDs, pendingIDs []uuid.UUID) error {
+	if err := tx.WithContext(ctx).
+		Table("user_workspaces").
+		Where("workspace_id = ? AND deleted_at IS NULL", workspaceID).
+		Updates(map[string]interface{}{
+			"is_suspended":       false,
+			"is_pending_suspend": false,
+			"updated_at":         time.Now(),
+		}).Error; err != nil {
+		return err
+	}
+
+	if len(suspendedIDs) > 0 {
+		if err := tx.WithContext(ctx).
+			Table("user_workspaces").
+			Where("workspace_id = ? AND deleted_at IS NULL AND id IN ?", workspaceID, suspendedIDs).
+			Updates(map[string]interface{}{"is_suspended": true, "updated_at": time.Now()}).Error; err != nil {
+			return err
+		}
+	}
+	if len(pendingIDs) > 0 {
+		if err := tx.WithContext(ctx).
+			Table("user_workspaces").
+			Where("workspace_id = ? AND deleted_at IS NULL AND id IN ?", workspaceID, pendingIDs).
+			Updates(map[string]interface{}{"is_pending_suspend": true, "updated_at": time.Now()}).Error; err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (r *GormSubscriptionRepo) ClearPendingChange(ctx context.Context, tx *gorm.DB, workspaceID uuid.UUID) error {

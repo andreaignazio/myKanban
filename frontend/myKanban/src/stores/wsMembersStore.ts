@@ -3,6 +3,8 @@ import { api } from "@/api/api";
 
 import type { ChangeWorkspaceMemberRoleRequest, User, UserWorkspace } from "./types";
 import { useUserStore } from "./userStore";
+import { useAsyncRequestStore } from "./asyncRequestStore";
+import type { AsyncRequestKey } from "./asyncRequestTypes";
 
 export type WorkspaceMemberData = {
     User: User[];
@@ -21,6 +23,7 @@ type WsMembersState = {
     getMembersByWorkspaceId: (workspaceId: string) => UserWorkspace[];
     getUserWorkspacesByUserId: (userId: string) => UserWorkspace[];
     updateMemberRole: (workspaceID: string, userID: string, payload: ChangeWorkspaceMemberRoleRequest) => Promise<void>;
+    replaceMemberPendingSuspensionSelection: (workspaceID: string, markedUserIDs: string[], unmarkedUserIDs: string[], asyncKey?: AsyncRequestKey) => Promise<void>;
     applyUpsertUserWorkspaceRelations: (userWorkspaces: UserWorkspace[]) => void;
     deleteWorkspaceMember: (workspaceID: string, userID: string) => Promise<void>;
     applyDeleteWorkspaceRelations: (data: UserWorkspace[]) => void;
@@ -172,6 +175,20 @@ export const useWsMembersStore = create<WsMembersState>((set, get) => ({
         } catch (error) {
             // console.log("Error updating member role");
             throw error;
+        }
+    },
+    replaceMemberPendingSuspensionSelection: async (workspaceID, markedUserIDs, unmarkedUserIDs, asyncKey?) => {
+        const run = async () => {
+            await api.post(`/workspaces/${workspaceID}/subscription/suspension/members`, {
+                MarkedUserIDs: markedUserIDs,
+                UnmarkedUserIDs: unmarkedUserIDs,
+            });
+            await get().fetchWorkspaceMembers(workspaceID);
+        };
+        if (asyncKey) {
+            await useAsyncRequestStore.getState().execute(asyncKey, run, { successResetDelayMs: 1500 });
+        } else {
+            await run();
         }
     },
     applyUpsertUserWorkspaceRelations: (userWorkspaces: UserWorkspace[]) => {
