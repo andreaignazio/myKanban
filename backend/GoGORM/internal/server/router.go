@@ -105,6 +105,7 @@ func NewRouter(db *gorm.DB,
 
 			inbox.DELETE("/cards/:cardID", inboxHandler.DetatchInboxCard)
 			inbox.PATCH("/cards/:cardID/move", inboxHandler.MoveInboxCard)
+			inbox.PATCH("/cards/:cardID/workspaces/:targetWorkspaceID/boards/:targetBoardID/lists/:targetListID/move", inboxHandler.MoveInboxCardToBoard)
 		}
 
 		boards := api.Group("/boards")

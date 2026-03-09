@@ -8,7 +8,11 @@ import { DragDropContext, Droppable, type DropResult } from "@hello-pangea/dnd"
 
 const EMPTY_LIST_IDS: string[] = []
 
-export const ListContainer = () => {
+type ListContainerProps = {
+    draggedCardId?: string | null
+}
+
+export const ListContainer = ({ draggedCardId = null }: ListContainerProps) => {
     const boardId = useParams().boardId as string
     const boardListIds = useBoardDetailStore(useShallow((state) => (
         boardId ? state.boardListIdsByBoardId[boardId] ?? EMPTY_LIST_IDS : EMPTY_LIST_IDS
@@ -77,25 +81,26 @@ export const ListContainer = () => {
 
 
     return (
-        <DragDropContext onDragEnd={handleDragEnd}>
-            <Droppable droppableId="lists" type="list" direction="horizontal">
-                {(provided) => (
-                    <div
-                        {...provided.droppableProps}
-                        ref={provided.innerRef}
-                        className="relative flex h-full min-h-0 w-full flex-row items-start pt-2 pb-2 mb-1 !pr-8
+
+        <Droppable droppableId="lists" type="list" direction="horizontal">
+            {(provided) => (
+                <div
+                    {...provided.droppableProps}
+                    ref={provided.innerRef}
+                    className="relative flex h-full min-h-0 w-full flex-row items-start pt-2 pb-2 mb-1 !pr-8
                             overflow-x-auto overflow-y-hidden scrollbar-hidden "
-                    >
-                        {uniqueBoardListIds.map((boardListId: string, index: number) => (
-                            <ListRow key={boardListId}
-                                index={index}
-                                boardListID={boardListId} boardID={boardId} />
-                        ))}
-                        {provided.placeholder}
-                        <ListAdd key="listAdd" />
-                    </div>
-                )}
-            </Droppable>
-        </DragDropContext>
+                >
+                    {uniqueBoardListIds.map((boardListId: string, index: number) => (
+                        <ListRow key={boardListId}
+                            index={index}
+                            draggedCardId={draggedCardId}
+                            boardListID={boardListId} boardID={boardId} />
+                    ))}
+                    {provided.placeholder}
+                    <ListAdd key="listAdd" />
+                </div>
+            )}
+        </Droppable>
+
     )
 }

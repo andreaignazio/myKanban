@@ -12,12 +12,17 @@ import { CardDatesMenu } from "../cardMenus/cardDatesMenu";
 import { CardMoveMenu } from "../cardMenus/cardMoveMenu";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { useCardActionRegistry } from "@/actionRegistry/cardActionRegistry";
+import { useCardsStore } from "@/stores/cardsStore";
+import { ConfirmDeletionPopover } from "./ConfirmDeletion";
+import { useUiStore, type DomainModalData } from "@/stores/uiStore";
+import { useBoardDetailStore } from "@/stores/boardDetailStore";
 
 type CardEditMenuProps = {
     listId: string;
     cardID: string;
     onClose: () => void;
     menuId?: string;
+    inboxMode?: boolean;
     // Define the props for the CardEditMenu component here
 }
 
@@ -33,12 +38,15 @@ type MenuItem = {
 type MenuItemAndID = MenuItem & { menuId?: string }
 
 export const CardEditMenu = forwardRef<HTMLDivElement, CardEditMenuProps>((props, ref) => {
-    const { listId, cardID, onClose } = props;
+    const { listId, cardID, onClose, inboxMode = false } = props;
     const iconClass = "w-4 h-4 text-neutral-400"
     const navigate = useNavigate()
     const location = useLocation()
     const { workspaceId, boardId } = useParams<{ workspaceId: string; boardId: string }>()
     const cardActions = useCardActionRegistry();
+    const cardsStore = useCardsStore();
+    const getRootListIdForCardId = useBoardDetailStore((state) => state.getRootListIdForCardId);
+    const resolvedListId = listId || getRootListIdForCardId(cardID) || "";
 
     const handleOpenCardDetailMenu = () => {
         onClose();
@@ -59,6 +67,34 @@ export const CardEditMenu = forwardRef<HTMLDivElement, CardEditMenuProps>((props
         onMenuClose(id);
         onMenuClose(props.menuId ?? id);
 
+    }
+
+    const archiveCard = async () => {
+        if (inboxMode || !boardId || !resolvedListId || !cardID) return;
+        const result = await cardsStore.removeCardFromList(boardId, resolvedListId, cardID);
+        if (result !== null) {
+            handleCloseAllMenu(props.menuId ?? "card-edit-menu");
+        }
+    }
+
+    const archiveCardWithConfirmation = () => {
+        const data: DomainModalData = {
+            componentent: (onCloseModal) => (
+                <ConfirmDeletionPopover
+                    onClose={onCloseModal}
+                    onSubmit={() => {
+                        void archiveCard();
+                        onCloseModal();
+                    }}
+                    title="Archive card?"
+                    body="Are you sure you want to archive this card?"
+                    submitLabel="Archive"
+                />
+            ),
+            anchorRef: null,
+        }
+
+        useUiStore.getState().setDomainModalOpen(true, data)
     }
 
 
@@ -88,7 +124,7 @@ export const CardEditMenu = forwardRef<HTMLDivElement, CardEditMenuProps>((props
         },
         {
             id: "move", label: "Move", icon: <ArrowRight className={iconClass} />,
-            menuToOpen: ({ onClose, ref }) => <CardMoveMenu onClose={onClose} ref={ref} cardId={cardID} listId={listId} mode="move" />,
+            menuToOpen: ({ onClose, ref }) => <CardMoveMenu onClose={onClose} ref={ref} cardId={cardID} listId={listId} mode={inboxMode ? "moveInboxCard" : "move"} />,
             menuId: "card-edit-menu-move"
         },
         {
@@ -105,7 +141,12 @@ export const CardEditMenu = forwardRef<HTMLDivElement, CardEditMenuProps>((props
             menuToOpen: ({ onClose, ref }) => <CardMoveMenu onClose={onClose} ref={ref} cardId={cardID} listId={listId} mode="mirror" />,
             menuId: "card-edit-menu-mirror"
         },
-        { id: "archive", label: "Archive", icon: <ArchiveIcon className={iconClass} />, }
+        {
+            id: "archive",
+            label: "Archive",
+            icon: <ArchiveIcon className={iconClass} />,
+            actionToPerform: () => archiveCardWithConfirmation(),
+        }
 
     ]
     const openOverlay = useOverlayStore((state) => state.open);
@@ -164,16 +205,18 @@ export const CardEditMenu = forwardRef<HTMLDivElement, CardEditMenuProps>((props
 
                         <div
                             key={item.id} >
-                            <LabeledButtonPresetB
-                                registerAnchor={registerAnchor}
-                                anchorKey={item.id}
+                            {item.id === "archive" && inboxMode ? null : (
+                                <LabeledButtonPresetB
+                                    registerAnchor={registerAnchor}
+                                    anchorKey={item.id}
 
-                                className="w-fit bg-neutral-800 text-white
+                                    className="w-fit bg-neutral-800 text-white
                              hover:bg-neutral-700 rounded-[4px] px-2 py-1 text-left"
-                                label={item.label}
-                                onClick={() => { item.actionToPerform?.(); item.menuToOpen && handleOpenCardActionModal(item.menuToOpen, item.id, item.menuId); }} >
-                                {item.icon}
-                            </LabeledButtonPresetB>
+                                    label={item.label}
+                                    onClick={() => { item.actionToPerform?.(); item.menuToOpen && handleOpenCardActionModal(item.menuToOpen, item.id, item.menuId); }} >
+                                    {item.icon}
+                                </LabeledButtonPresetB>
+                            )}
                         </div>
                     </>
                 )

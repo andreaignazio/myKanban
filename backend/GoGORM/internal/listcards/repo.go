@@ -258,6 +258,30 @@ func (r *GormListCardsRepo) GetAnyListCardByCardIDTX(ctx context.Context, db *go
 	return &listCard, nil
 }
 
+func (r *GormListCardsRepo) FindAnyListCardByCardIDTX(ctx context.Context, db *gorm.DB, cardID uuid.UUID, includeDeleted bool) (*models.ListCard, bool, error) {
+	var listCard models.ListCard
+	query := db.WithContext(ctx).Table("list_cards")
+	if includeDeleted {
+		query = query.Unscoped()
+	} else {
+		query = query.Where("deleted_at IS NULL")
+	}
+
+	result := query.
+		Where("card_id = ?", cardID).
+		Order("created_at ASC").
+		Limit(1).
+		Find(&listCard)
+	if result.Error != nil {
+		return nil, false, result.Error
+	}
+	if result.RowsAffected == 0 {
+		return nil, false, nil
+	}
+
+	return &listCard, true, nil
+}
+
 func (r *GormListCardsRepo) GetListCardsByRootIDTX(ctx context.Context, db *gorm.DB, rootID uuid.UUID, includeDeleted bool) ([]models.ListCard, error) {
 	var listCards []models.ListCard
 	query := db.WithContext(ctx).Table("list_cards")

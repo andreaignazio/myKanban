@@ -43,49 +43,43 @@ export const InboxView = () => {
                 </div>
                 <InboxAddCard />
 
-                <DragDropContext onDragEnd={handleDragEnd}>
-                    <Droppable droppableId="lists" type="list" direction="horizontal">
+
+                <div
+                    className="relative flex h-full min-h-0 w-full flex-row items-start pt-2 pb-2 mb-1 !pr-8
+                            overflow-x-auto overflow-y-hidden scrollbar-hidden "
+                >
+
+                    <Droppable droppableId={"inbox"} type="card" isDropDisabled={false}>
                         {(provided) => (
                             <div
-                                {...provided.droppableProps}
                                 ref={provided.innerRef}
-                                className="relative flex h-full min-h-0 w-full flex-row items-start pt-2 pb-2 mb-1 !pr-8
-                            overflow-x-auto overflow-y-hidden scrollbar-hidden "
-                            >
-
-                                <Droppable droppableId={"inbox"} type="card" isDropDisabled={true}>
-                                    {(provided) => (
-                                        <div
-                                            ref={provided.innerRef}
-                                            {...provided.droppableProps}
-                                            className="flex flex-1 min-h-0 flex-col pt-2 
+                                {...provided.droppableProps}
+                                className="flex flex-1 min-h-0 flex-col pt-2 
                         overflow-y-auto scrollbar-hidden">
 
-                                            <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden w-full space-y-2 scrollbar-hidden">
-                                                {inboxCardIds.length > 0 && inboxCardIds.map((id, index) => {
-                                                    const inboxCard = inboxCardById[id]
-                                                    if (!inboxCard) return null
-                                                    const isInboxMirror = inboxCard.RootListCardID !== undefined && inboxCard.RootListCardID !== null
-                                                    const source = isInboxMirror ? "inbox-mirror" : "inbox"
-                                                    const rootListCardId = inboxCard.RootListCardID ?? null
-                                                    return (
-                                                        <CardRow key={id}
-                                                            rootListCardId={rootListCardId}
-                                                            source={source}
-                                                            inboxCardId={id}
-                                                            cardId={inboxCardById[id]?.CardID ?? ""}
-                                                            index={index} />
-                                                    )
-                                                })}
-                                            </div>
-                                            {provided.placeholder}
-                                        </div>
-                                    )}
-                                </Droppable>
+                                <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden w-full space-y-2 scrollbar-hidden">
+                                    {inboxCardIds.length > 0 && inboxCardIds.map((id, index) => {
+                                        const inboxCard = inboxCardById[id]
+                                        if (!inboxCard) return null
+                                        const isInboxMirror = inboxCard.RootListCardID !== undefined && inboxCard.RootListCardID !== null
+                                        const source = isInboxMirror ? "inbox-mirror" : "inbox"
+                                        const rootListCardId = inboxCard.RootListCardID ?? null
+                                        return (
+                                            <CardRow key={id}
+                                                rootListCardId={rootListCardId}
+                                                source={source}
+                                                inboxCardId={id}
+                                                cardId={inboxCardById[id]?.CardID ?? ""}
+                                                index={index} />
+                                        )
+                                    })}
+                                </div>
+                                {provided.placeholder}
                             </div>
                         )}
                     </Droppable>
-                </DragDropContext>
+                </div>
+
 
 
             </div>

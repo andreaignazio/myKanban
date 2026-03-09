@@ -237,7 +237,7 @@ func main() {
 	cardCommentsHandler := cardcomments.NewCardCommentsHandler(cardCommentService)
 
 	inboxPositionHelper := pos.NewInboxPositionHelper(positionGenerator, inboxRepo, false)
-	inboxService := inbox.NewInboxService(inboxRepo, eventRegistryService, membarshipsRepo, listCardsRepo, listCardsService, inboxPositionHelper, cardsRepo, linksRepo, db, false)
+	inboxService := inbox.NewInboxService(inboxRepo, eventRegistryService, membarshipsRepo, listCardsRepo, listCardsService, inboxPositionHelper, positionService, cardsRepo, linksRepo, boardsRepo, boardListRepo, db, authzService, false)
 	inboxHandler := inbox.NewInboxHandler(inboxService)
 
 	subscriptionhandler := subscription.NewSubscriptionHandler(subscriptionService)

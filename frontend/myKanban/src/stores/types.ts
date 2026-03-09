@@ -2,6 +2,7 @@ import type { ApiAuditLogEvent } from "./audittypes";
 import type { ListCard } from "./boardDetailStore";
 import type { ShareOffer, ShareOfferDetailsResponse, WorkspaceDetailResponse } from "./shareOfferTypes";
 import type { User, UserLite, UserProps } from "./usertypes";
+import type { UserWorkspaceData } from "./workspaceStore";
 
 export type { User, UserLite } from "./usertypes";
 
@@ -1022,4 +1023,9 @@ export type UserWorkspacesBoardsResponse = UserWorkspaceData & {
     UserBoards: UserBoard[]
     BoardIDsByWorkspaceID: Record<string, string[]>
 
+}
+
+export type MoveInboxToListRequest = {
+    InsertAt?: "start" | "end" | null;
+    BeforeID?: string | null;
 }

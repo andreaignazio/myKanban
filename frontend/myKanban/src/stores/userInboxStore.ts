@@ -1,7 +1,9 @@
 ﻿import { create } from "zustand";
-import type { CreateInboxCardRequest, InboxCard, InboxCardResponse, MirrorCardToInboxRequest, UserEvent, UserInboxCardResponse } from "./types";
+import type { CreateInboxCardRequest, InboxCard, InboxCardResponse, MirrorCardToInboxRequest, MoveInboxToListRequest, UserEvent, UserInboxCardResponse } from "./types";
 import { api } from "@/api/api";
 import { useCardsStore } from "./cardsStore";
+import { useAsyncRequestStore } from "./asyncRequestStore";
+import { useBoardDetailStore, type ListCard } from "./boardDetailStore";
 
 
 
@@ -14,6 +16,7 @@ type UserInboxStore = {
     getInboxCardByRootCardID: (rootCardID: string) => InboxCard | undefined
     applyInboxEvent: (evt: UserEvent) => void
     replaceInboxCardIds: (newIds: string[]) => void
+    moveInboxCardToListInBoard: (cardID: string, targetWorkspaceID: string, targetBoardID: string, targetListID: string, request: MoveInboxToListRequest, optimisticListCardID?: string) => Promise<void>
 }
 
 export const useUserInboxStore = create<UserInboxStore>((set, get) => ({
@@ -99,6 +102,57 @@ export const useUserInboxStore = create<UserInboxStore>((set, get) => ({
             inboxCardsIds: newIds
         })
     },
+    moveInboxCardToListInBoard: async (cardID: string,
+        targetWorkspaceID: string,
+        targetBoardID: string,
+        targetListID: string,
+        request: MoveInboxToListRequest,
+        optimisticListCardID?: string) => {
+        try {
+            await useAsyncRequestStore.getState().execute("inbox:card:move:board:list",
+                () => api.patch(`/inbox/cards/${cardID}/workspaces/${targetWorkspaceID}/boards/${targetBoardID}/lists/${targetListID}/move`, request),
+                {
+                    successResetDelayMs: 2000,
+                    onSuccess: (response) => {
+                        const inboxEntryIdsToRemove = Object.values(get().inboxCardsById)
+                            .filter((inboxCard) => inboxCard.CardID === cardID)
+                            .map((inboxCard) => inboxCard.ID)
+                        const nextInboxCardsById = { ...get().inboxCardsById };
+                        inboxEntryIdsToRemove.forEach((inboxEntryId) => {
+                            delete nextInboxCardsById[inboxEntryId]
+                        })
+                        const nextInboxCardsIds = get().inboxCardsIds.filter((id) => !inboxEntryIdsToRemove.includes(id))
+                        set({
+                            inboxCardsById: nextInboxCardsById,
+                            inboxCardsIds: nextInboxCardsIds
+                        });
+                        const data = response.data as ListCard;
+                        const patch = { [data.ID]: data }
+                        if (optimisticListCardID) {
+                            const boardDetailStore = useBoardDetailStore.getState()
+                            const currentListCardIds = boardDetailStore.listCardIdsByListId[targetListID] ?? []
+                            const nextListCardIds = currentListCardIds.map((id) => id === optimisticListCardID ? data.ID : id)
+                            boardDetailStore.setListCardIdsByListId(targetListID, nextListCardIds)
+                            boardDetailStore.mergeListCardsPatch(patch)
+                        } else {
+                            useBoardDetailStore.getState().mergeListCardsPatch(patch)
+                        }
+
+
+                    }
+                }
+            )
+
+
+        } catch (error) {
+            if (optimisticListCardID) {
+                const boardDetailStore = useBoardDetailStore.getState()
+                const currentListCardIds = boardDetailStore.listCardIdsByListId[targetListID] ?? []
+                boardDetailStore.setListCardIdsByListId(targetListID, currentListCardIds.filter((id) => id !== optimisticListCardID))
+            }
+            // console.error("Failed to move inbox card to list in board:", error);
+        }
+    }
 
 
 

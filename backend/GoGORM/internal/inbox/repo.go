@@ -59,3 +59,13 @@ func (r *GormInboxRepo) GetMirrorsIds(ctx context.Context, userID, rootListCardI
 
 	return mirrorIDs, nil
 }
+
+func (r *GormInboxRepo) DeleteInboxCardTX(ctx context.Context, db *gorm.DB, userID, cardID uuid.UUID) error {
+	if err := db.WithContext(ctx).
+		Table("user_inbox_cards").
+		Where("user_id = ? AND card_id = ?", userID, cardID).
+		Delete(&models.UserInboxCard{}).Error; err != nil {
+		return err
+	}
+	return nil
+}

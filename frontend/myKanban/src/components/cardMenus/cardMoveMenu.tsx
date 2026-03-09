@@ -12,12 +12,13 @@ import { useBoardsStore } from "@/stores/boardsStore";
 import { useShallow } from "zustand/shallow";
 import { useBoardDetailStore } from "@/stores/boardDetailStore";
 import { useListsStore } from "@/stores/listsStore";
-import type { CopyCardToListRequest, List, MirrorCardToInboxRequest, MirrorCardToListRequest } from "@/stores/types";
+import type { CopyCardToListRequest, List, MirrorCardToInboxRequest, MirrorCardToListRequest, MoveInboxToListRequest } from "@/stores/types";
 import { useCardsStore } from "@/stores/cardsStore";
 import { CustomInput } from "../menuElements/CustomInput";
 import type { AsyncRequestKey } from "@/stores/asyncRequestTypes";
+import { useUserInboxStore } from "@/stores/userInboxStore";
 
-type cardMoveMenuMode = "move" | "copy" | "mirror";
+type cardMoveMenuMode = "move" | "copy" | "mirror" | "moveInboxCard";
 
 type CardMoveMenuProps = {
     onClose: () => void;
@@ -64,7 +65,7 @@ export const CardMoveMenu = forwardRef<HTMLDivElement, CardMoveMenuProps>(({ onC
         return <div className="px-[10px] pt-[10px]">{content}</div>;
     }
 
-    const Title = mode === "move" ? "Move card to..." : mode === "copy" ? "Copy card to..." : "Mirror card to...";
+    const Title = mode === "move" || mode === "moveInboxCard" ? "Move card to..." : mode === "copy" ? "Copy card to..." : "Mirror card to...";
 
     const keys: AsyncRequestKey[] = ["card:move", "card:copy", "card:mirror"]
 
@@ -132,11 +133,13 @@ type MoveToBoardTabProps = {
 
 const MoveToBoardTab = ({ onClose, cardId, listId, mode, onMoveSubmitSuccess }: MoveToBoardTabProps) => {
     const boardID = useParams().boardId as string;
+    const workspaceId = useParams().workspaceId as string;
     const cardActions = useCardActionRegistry();
+    const moveInboxCardToListInBoard = useUserInboxStore((state) => state.moveInboxCardToListInBoard)
+    const isInboxMove = mode === "moveInboxCard"
 
 
     const fetchBoardsForWorkspace = useBoardsStore((state) => state.fetchBoardsForWorkspace)
-    const workspaceId = useParams().workspaceId as string;
     const boardIds = useBoardsStore(useShallow((state) => state.boardIdsByWorkspaceId[workspaceId] ?? []))
     const boardsById = useBoardsStore((state) => state.boardsById)
     const canModifyByBoardID = useBoardsStore(useShallow((state) => state.canModifyByBoardIDByWorkspaceId[workspaceId] ?? {}))
@@ -180,10 +183,14 @@ const MoveToBoardTab = ({ onClose, cardId, listId, mode, onMoveSubmitSuccess }: 
     }, [activeBoard, boardID]);
 
     useEffect(() => {
+        if (isInboxMove) {
+            setSourceLists([])
+            return
+        }
         if (!cardId) return
         const sourceLists = selectSourceLists(cardId, boardID)
         setSourceLists(sourceLists)
-    }, [cardId, selectSourceLists, boardID])
+    }, [cardId, selectSourceLists, boardID, isInboxMove])
 
     useEffect(() => {
         if (mode !== "move") {
@@ -370,8 +377,7 @@ const MoveToBoardTab = ({ onClose, cardId, listId, mode, onMoveSubmitSuccess }: 
     const handleMove = async () => {
         // console.log("Moving card with details: ", { cardId, listId, activeBoard, activeList, activePosition })
         if (isSubmitInvalid) return
-        if (!activeBoard || !activeList || !cardId || !activePosition || !activeSourceList) return;
-        const sourceListId = activeSourceList;
+        if (!activeBoard || !activeList || !cardId || !activePosition) return;
         const targetBoardId = activeBoard;
         const targetListId = activeList;
 
@@ -383,6 +389,19 @@ const MoveToBoardTab = ({ onClose, cardId, listId, mode, onMoveSubmitSuccess }: 
         }
 
         const execMove = async () => {
+            if (isInboxMove) {
+                const payload: MoveInboxToListRequest = {
+                    BeforeID: beforeId,
+                    InsertAt: insertAtEnd ? "end" : null,
+                }
+                await moveInboxCardToListInBoard(cardId, workspaceId, targetBoardId, targetListId, payload)
+                onMoveSubmitSuccess?.();
+                onClose();
+                return
+            }
+
+            if (!activeSourceList) return
+            const sourceListId = activeSourceList;
             const result = await moveCardToBoard(boardID, cardId, sourceListId, targetBoardId, targetListId, beforeId, insertAtEnd)
             if (result !== null) {
                 onMoveSubmitSuccess?.();
@@ -521,7 +540,8 @@ const MoveToBoardTab = ({ onClose, cardId, listId, mode, onMoveSubmitSuccess }: 
         },
         {
             id: "sourceList", label: "Select source list", kind: "custom",
-            customElement: () => dropdownMenu(menuItemsSourceLists, "Select source list...", activeSourceList, setActiveSourceList, undefined, "Source List")
+            customElement: () => dropdownMenu(menuItemsSourceLists, "Select source list...", activeSourceList, setActiveSourceList, undefined, "Source List"),
+            hide: () => mode !== "move"
         },
         {
             id: "boardDropdown", label: "Select board", kind: "custom",
@@ -532,7 +552,7 @@ const MoveToBoardTab = ({ onClose, cardId, listId, mode, onMoveSubmitSuccess }: 
 
         {
             id: "moveButton", label: "Move", kind: "custom", customElement: () => <Footer onClick={handleMove} label="Move" disabled={isSubmitInvalid} />, style: { marginTop: "16px" },
-            hide: () => mode !== "move"
+            hide: () => mode !== "move" && mode !== "moveInboxCard"
         },
         {
             id: "mirrorButton", label: "Mirror", kind: "custom", customElement: () => <Footer onClick={handleMirror} label="Mirror" disabled={isSubmitInvalid} />, style: { marginTop: "16px" },

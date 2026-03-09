@@ -53,6 +53,7 @@ function getStableIndexFromString(value: string, length: number): number {
 export const CardRow = ({ boardID, listId, listCardID: listCardID, cardId, index, isDragDisabled = false, source = "board", inboxCardId, rootListCardId }: CardRowProps) => {
 
     const isInbox = source === "inbox"
+    const isInboxMode = source === "inbox" || source === "inbox-mirror"
 
     const [editMode, setEditMode] = useState(false)
     //const boardId = useParams().boardId as string
@@ -165,7 +166,7 @@ export const CardRow = ({ boardID, listId, listCardID: listCardID, cardId, index
         const descriptor: OverlayDescriptor = {
             id: id,
             render: () => <CardEditMenu
-                ref={ActionsMenuRef} cardID={cardID} listId={listID} onClose={() => onMenuClose(id)} menuId={id} />,
+                ref={ActionsMenuRef} cardID={cardID} listId={listID} onClose={() => onMenuClose(id)} menuId={id} inboxMode={isInboxMode} />,
             anchorRef: cardRowRef,
             panelRef: ActionsMenuRef,
             type: "modal",
@@ -266,6 +267,8 @@ export const CardRow = ({ boardID, listId, listCardID: listCardID, cardId, index
         onMenuClose(editMenutID)
     }
 
+    const resolvedDraggableId = isInboxMode ? (`inbox:${cardId}`) : (listCardID ?? "")
+
 
     return (
 
@@ -288,7 +291,7 @@ export const CardRow = ({ boardID, listId, listCardID: listCardID, cardId, index
             className="relative -mt-2 pt-2  "
         >
 
-            <Draggable draggableId={listCardID ?? inboxCardId ?? ""} index={index} isDragDisabled={isDragDisabled}>
+            <Draggable draggableId={resolvedDraggableId} index={index} isDragDisabled={isDragDisabled}>
                 {(provided, snapshot) => {
                     const draggableNode = (
                         <div

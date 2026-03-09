@@ -113,3 +113,46 @@ func (h *InboxHandler) MirrorCardToInbox(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, inboxCard)
 }
+
+func (h *InboxHandler) MoveInboxCardToBoard(c *gin.Context) {
+	ctx := c.Request.Context()
+	userID := c.MustGet("userID").(uuid.UUID)
+	cardIDStr := c.Param("cardID")
+	cardID, err := uuid.Parse(cardIDStr)
+	if err != nil {
+		httperr.WriteParamsError(c, err, "inbox.handler.MoveInboxCardToBoard")
+		return
+	}
+	targetBoardIDStr := c.Param("targetBoardID")
+	targetBoardID, err := uuid.Parse(targetBoardIDStr)
+	if err != nil {
+		httperr.WriteParamsError(c, err, "inbox.handler.MoveInboxCardToBoard")
+		return
+	}
+	targetListIDStr := c.Param("targetListID")
+	targetListID, err := uuid.Parse(targetListIDStr)
+	if err != nil {
+		httperr.WriteParamsError(c, err, "inbox.handler.MoveInboxCardToBoard")
+		return
+	}
+	targetWorkspaceIDStr := c.Param("targetWorkspaceID")
+	targetWorkspaceID, err := uuid.Parse(targetWorkspaceIDStr)
+	if err != nil {
+		httperr.WriteParamsError(c, err, "inbox.handler.MoveInboxCardToBoard")
+		return
+	}
+	correlationID := c.MustGet("correlationID").(uuid.UUID)
+
+	var req MoveInboxCardToListInBoardRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		httperr.WriteOp(c, err, "inbox.handler.MoveInboxCardToBoard")
+		return
+	}
+
+	response, err := h.inboxService.MoveInboxCardToListInBoard(ctx, userID, cardID, targetWorkspaceID, targetBoardID, targetListID, correlationID, req)
+	if err != nil {
+		httperr.WriteOp(c, err, "inbox.handler.MoveInboxCardToBoard")
+		return
+	}
+	c.JSON(http.StatusOK, response)
+}

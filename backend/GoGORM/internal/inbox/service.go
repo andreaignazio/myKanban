@@ -1,6 +1,7 @@
 package inbox
 
 import (
+	"GoGORM/internal/authz"
 	"GoGORM/internal/domainerr"
 	"GoGORM/internal/dto"
 	EventRegistry "GoGORM/internal/eventregistry"
@@ -15,67 +16,39 @@ import (
 )
 
 type InboxService struct {
-	db               *gorm.DB
-	EventRegistry    *EventRegistry.EventRegistryService
-	ListCardsRepo    ListCardsRepo
-	ListCardsService ListCardsService
-	PositionHelper   PositionHelper
-	MembershipRepo   MembershipRepo
-	CardsRepo        CardsRepo
-	repo             InboxRepo
-	LinksRepo        LinksRepo
-	includeDeleted   bool
-}
-
-type InboxRepo interface {
-	CreateInboxCardTX(ctx context.Context, db *gorm.DB, inboxCard *models.UserInboxCard) error
-	GetUserInboxCards(ctx context.Context, userID uuid.UUID, includeDeleted bool) ([]models.UserInboxCard, error)
-	GetMirrorsIds(ctx context.Context, userID, rootListCardID uuid.UUID) ([]uuid.UUID, error)
-}
-
-type MembershipRepo interface {
-	GetUserRole(ctx context.Context, userID, boardID uuid.UUID, includeDeleted bool) (string, error)
-}
-
-type PositionHelper interface {
-	InboxPosAtStart(ctx context.Context, userID uuid.UUID) (string, error)
-	InboxPosAtEnd(ctx context.Context, userID uuid.UUID) (string, error)
-	InboxPosBeforeID(ctx context.Context, userID, beforeID uuid.UUID) (string, error)
-}
-
-type ListCardsRepo interface {
-	GetAnyListCardByCardIDTX(ctx context.Context, db *gorm.DB, cardID uuid.UUID, includeDeleted bool) (*models.ListCard, error)
-}
-
-type ListCardsService interface {
-	CopyCardChecklistsTX(ctx context.Context, tx *gorm.DB, cardID uuid.UUID, newCard *models.Card,
-		domain *listcards.CheckListDomain) error
-}
-
-type LinksRepo interface {
-	GetExternalRootRefsByIDs(ctx context.Context, rootIDs []uuid.UUID, includeDeleted bool) ([]models.ExternalRootRefRow, error)
-}
-
-type CardsRepo interface {
-	CreateCard(ctx context.Context, db *gorm.DB, card *models.Card) error
-	CreateCardTX(ctx context.Context, tx *gorm.DB, card *models.Card) error
-	GetCardByIDTX(ctx context.Context, tx *gorm.DB, cardID uuid.UUID, includeDeleted bool) (*models.Card, error)
-	GetCardsByIDs(ctx context.Context, cardIDs []uuid.UUID, includeDeleted bool) ([]models.Card, error)
+	db                 *gorm.DB
+	authz              *authz.Service
+	EventRegistry      *EventRegistry.EventRegistryService
+	ListCardsRepo      ListCardsRepo
+	ListCardsService   ListCardsService
+	PositionHelper     PositionHelper
+	MembershipRepo     MembershipRepo
+	CardsRepo          CardsRepo
+	repo               InboxRepo
+	LinksRepo          LinksRepo
+	BoardsRepo         BoardsRepo
+	BoardListRepo      BoardListRepo
+	CardPositionHelper CardPositionHelper
+	includeDeleted     bool
 }
 
 func NewInboxService(inboxRepo InboxRepo, eventRegistry *EventRegistry.EventRegistryService, membershipRepo MembershipRepo, listCardsRepo ListCardsRepo,
-	listCardsService ListCardsService, positionHelper PositionHelper, cardsRepo CardsRepo, linksRepo LinksRepo, db *gorm.DB, includeDeleted bool) *InboxService {
+	listCardsService ListCardsService, positionHelper PositionHelper, cardPositionHelper CardPositionHelper, cardsRepo CardsRepo, linksRepo LinksRepo, boardsRepo BoardsRepo, boardListRepo BoardListRepo, db *gorm.DB, authz *authz.Service, includeDeleted bool) *InboxService {
 	return &InboxService{
-		ListCardsRepo:    listCardsRepo,
-		ListCardsService: listCardsService,
-		PositionHelper:   positionHelper,
-		repo:             inboxRepo,
-		EventRegistry:    eventRegistry,
-		includeDeleted:   includeDeleted,
-		MembershipRepo:   membershipRepo,
-		CardsRepo:        cardsRepo,
-		LinksRepo:        linksRepo,
-		db:               db,
+		ListCardsRepo:      listCardsRepo,
+		ListCardsService:   listCardsService,
+		PositionHelper:     positionHelper,
+		repo:               inboxRepo,
+		EventRegistry:      eventRegistry,
+		includeDeleted:     includeDeleted,
+		MembershipRepo:     membershipRepo,
+		CardsRepo:          cardsRepo,
+		LinksRepo:          linksRepo,
+		BoardsRepo:         boardsRepo,
+		BoardListRepo:      boardListRepo,
+		CardPositionHelper: cardPositionHelper,
+		db:                 db,
+		authz:              authz,
 	}
 }
 
@@ -320,4 +293,101 @@ func (s *InboxService) extractRootListCardIDs(inboxCards []models.UserInboxCard)
 		}
 	}
 	return rootIDs
+}
+
+func (s *InboxService) MoveInboxCardToListInBoard(ctx context.Context, userID, cardID, targetWorkspaceID, targetBoardID, targetListID, correlationID uuid.UUID, req MoveInboxCardToListInBoardRequest) (*dto.ListCardResponse, error) {
+
+	/*authzRequest := authzdto.Request{
+		UserID:        userID,
+		WorkspaceID:   targetWorkspaceID,
+		CorrelationID: correlationID,
+		Action:        actions.InboxCardMoveToListInBoard,
+	}
+
+	authzResponse, err := s.authz.AuthorizeRequest(ctx, authzRequest)
+	if err != nil {
+		//return nil, err
+	}
+	if authzResponse.Authorized == false {
+		//return nil, domainerr.ErrForbidden
+	}*/
+
+	isMirror := false
+	listcard, found, err := s.ListCardsRepo.FindAnyListCardByCardIDTX(ctx, s.db, cardID, s.includeDeleted)
+	if err != nil {
+		return nil, err
+	}
+	if found {
+		isMirror = listcard.RootID != uuid.Nil
+	}
+
+	_, err = s.BoardListRepo.GetBoardListsByListIdTX(ctx, s.db, targetListID, s.includeDeleted)
+	if err != nil {
+		return nil, err
+	}
+
+	var position string
+	if req.BeforeID != nil {
+		beforeListcard, err := s.ListCardsRepo.GetListCardByListAndCardTX(ctx, s.db, targetListID, *req.BeforeID, s.includeDeleted)
+		if err != nil {
+			return nil, err
+		}
+		position, err = s.CardPositionHelper.CardPosBeforeID(ctx, targetListID, beforeListcard.ID)
+		if err != nil {
+			return nil, err
+		}
+	} else if req.InsertAt != nil {
+		if *req.InsertAt == "start" {
+			position, err = s.CardPositionHelper.CardPosAtListStart(ctx, targetListID)
+		} else {
+			position, err = s.CardPositionHelper.CardPosAtListEnd(ctx, targetListID)
+		}
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		position, err = s.CardPositionHelper.CardPosAtListEnd(ctx, targetListID)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	var newListCard *models.ListCard
+
+	if isMirror {
+		newListCard = &models.ListCard{
+			ID:     uuid.New(),
+			CardID: cardID,
+			ListID: targetListID,
+			Pos:    position,
+			RootID: listcard.RootID,
+		}
+	} else {
+		newId := uuid.New()
+		newListCard = &models.ListCard{
+			ID:     newId,
+			CardID: cardID,
+			ListID: targetListID,
+			Pos:    position,
+			RootID: newId,
+		}
+	}
+
+	err = s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err = s.ListCardsRepo.UpsertListCardByIdTX(ctx, tx, newListCard); err != nil {
+			return err
+		}
+		if err = s.repo.DeleteInboxCardTX(ctx, tx, userID, cardID); err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	response := dto.ListCardToResponse(newListCard)
+
+	return &response, nil
+
 }

@@ -34,3 +34,8 @@ type CreateInboxCardRequest struct {
 	MirrorCardToInboxRequest
 	Title string `json:"Title" binding:"required"`
 }
+
+type MoveInboxCardToListInBoardRequest struct {
+	BeforeID *uuid.UUID `json:"BeforeID" binding:"omitempty"`
+	InsertAt *string    `json:"InsertAt" binding:"omitempty"`
+}

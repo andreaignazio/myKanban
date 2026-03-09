@@ -25,22 +25,36 @@ import { useOverlayStore } from "@/overlays/overlayStore"
 import { useUserWatchStore } from "@/stores/userWatchStore"
 import { getListCoverTheme } from "@/domain/colorTokens"
 import { useListTheme } from "@/hooks/useListTheme"
+import { useSortByPosition } from "@/hooks/useSortByPosition"
 
 type ListRowProps = {
     boardID: string
     boardListID: string
     index: number
+    draggedCardId?: string | null
 }
 
-export function ListRow({ boardID: boardID, boardListID: boardListID, index: index }: ListRowProps) {
+export function ListRow({ boardID: boardID, boardListID: boardListID, index: index, draggedCardId = null }: ListRowProps) {
     const boardList = useBoardDetailStore((state) => state.boardListById[boardListID])
     const listID = boardList?.ListID ?? ""
     const list = useListsStore(state => state.listsById[listID])
     const listCardIds = useBoardDetailStore(useShallow((state) => state.listCardIdsByListId[listID] ?? []))
+    const getCardIdForListCardId = useBoardDetailStore((state) => state.getCardIdForListCardId)
     const isRootBoardList = !!boardList && boardList.ID === boardList.RootID
     const accessMode = boardList?.AccessMode === "readonly" ? "readonly" : "editable"
+    const listCardById = useBoardDetailStore((state) => state.listCardById)
+
+    const { sortByPosition } = useSortByPosition()
+    const [sortedIds, setSortedIds] = useState(listCardIds)
+
+    useEffect(() => {
+        const sorted = sortByPosition(listCardIds.map(id => listCardById[id])).map(item => item.ID)
+        setSortedIds(sorted)
+    }, [listCardIds, listCardById, sortByPosition])
 
     if (!boardList || !listID) return null
+
+    const alreadyContainsDraggedCard = !!draggedCardId && listCardIds.some((listCardId) => getCardIdForListCardId(listCardId) === draggedCardId)
 
     const { listColor, listTheme, listTextColor, hasListTheme, isReadonly } = useListTheme(list, accessMode)
     return (
@@ -89,7 +103,7 @@ export function ListRow({ boardID: boardID, boardListID: boardListID, index: ind
                                 />
                             </div>
 
-                            <Droppable droppableId={boardListID} type="card" isDropDisabled={isReadonly}>
+                            <Droppable droppableId={boardListID} type="card" isDropDisabled={isReadonly || alreadyContainsDraggedCard}>
                                 {(provided) => (
                                     <div
                                         ref={provided.innerRef}
