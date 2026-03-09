@@ -32,9 +32,10 @@ type ListRowProps = {
     boardListID: string
     index: number
     draggedCardId?: string | null
+    draggedSourceBoardListId?: string | null
 }
 
-export function ListRow({ boardID: boardID, boardListID: boardListID, index: index, draggedCardId = null }: ListRowProps) {
+export function ListRow({ boardID: boardID, boardListID: boardListID, index: index, draggedCardId = null, draggedSourceBoardListId = null }: ListRowProps) {
     const boardList = useBoardDetailStore((state) => state.boardListById[boardListID])
     const listID = boardList?.ListID ?? ""
     const list = useListsStore(state => state.listsById[listID])
@@ -54,7 +55,8 @@ export function ListRow({ boardID: boardID, boardListID: boardListID, index: ind
 
     if (!boardList || !listID) return null
 
-    const alreadyContainsDraggedCard = !!draggedCardId && listCardIds.some((listCardId) => getCardIdForListCardId(listCardId) === draggedCardId)
+    const isDragSourceList = draggedSourceBoardListId === boardListID
+    const alreadyContainsDraggedCard = !!draggedCardId && !isDragSourceList && listCardIds.some((listCardId) => getCardIdForListCardId(listCardId) === draggedCardId)
 
     const { listColor, listTheme, listTextColor, hasListTheme, isReadonly } = useListTheme(list, accessMode)
     return (

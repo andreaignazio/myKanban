@@ -35,7 +35,7 @@ type CreateInboxCardRequest struct {
 	Title string `json:"Title" binding:"required"`
 }
 
-type MoveInboxCardToListInBoardRequest struct {
+type MoveInboxCardRequest struct {
 	BeforeID *uuid.UUID `json:"BeforeID" binding:"omitempty"`
 	InsertAt *string    `json:"InsertAt" binding:"omitempty"`
 }

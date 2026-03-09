@@ -295,7 +295,7 @@ func (s *InboxService) extractRootListCardIDs(inboxCards []models.UserInboxCard)
 	return rootIDs
 }
 
-func (s *InboxService) MoveInboxCardToListInBoard(ctx context.Context, userID, cardID, targetWorkspaceID, targetBoardID, targetListID, correlationID uuid.UUID, req MoveInboxCardToListInBoardRequest) (*dto.ListCardResponse, error) {
+func (s *InboxService) MoveInboxCardToListInBoard(ctx context.Context, userID, cardID, targetWorkspaceID, targetBoardID, targetListID, correlationID uuid.UUID, req MoveInboxCardRequest) (*dto.ListCardResponse, error) {
 
 	/*authzRequest := authzdto.Request{
 		UserID:        userID,
@@ -390,4 +390,46 @@ func (s *InboxService) MoveInboxCardToListInBoard(ctx context.Context, userID, c
 
 	return &response, nil
 
+}
+
+func (s *InboxService) MoveInboxCard(ctx context.Context, userID, cardID uuid.UUID, correlationID uuid.UUID, req MoveInboxCardRequest) (*dto.InboxCardResponse, error) {
+
+	var newPos string
+	var err error
+	if req.BeforeID != nil {
+		newPos, err = s.PositionHelper.InboxPosBeforeID(ctx, userID, *req.BeforeID)
+		if err != nil {
+			return nil, err
+		}
+	} else if req.InsertAt != nil {
+		if *req.InsertAt == "start" {
+			newPos, err = s.PositionHelper.InboxPosAtStart(ctx, userID)
+		} else {
+			newPos, err = s.PositionHelper.InboxPosAtEnd(ctx, userID)
+		}
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		newPos, err = s.PositionHelper.InboxPosAtEnd(ctx, userID)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	updateMap := map[string]interface{}{
+		"pos": newPos,
+	}
+	var updatedCard *models.UserInboxCard
+	if err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		updatedCard, err = s.repo.PatchInboxCardTX(ctx, tx, userID, cardID, updateMap)
+		if err != nil {
+			return err
+		}
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+	response := dto.InboxCardToResponse(updatedCard)
+	return &response, nil
 }

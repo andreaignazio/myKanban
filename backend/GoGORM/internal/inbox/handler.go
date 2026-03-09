@@ -80,7 +80,26 @@ func (h *InboxHandler) DetatchInboxCard(c *gin.Context) {
 }
 
 func (h *InboxHandler) MoveInboxCard(c *gin.Context) {
-
+	ctx := c.Request.Context()
+	userID := c.MustGet("userID").(uuid.UUID)
+	cardIDStr := c.Param("cardID")
+	cardID, err := uuid.Parse(cardIDStr)
+	if err != nil {
+		httperr.WriteParamsError(c, err, "inbox.handler.MoveInboxCard")
+		return
+	}
+	correlationID := c.MustGet("correlationID").(uuid.UUID)
+	var req MoveInboxCardRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		httperr.WriteOp(c, err, "inbox.handler.MoveInboxCard")
+		return
+	}
+	response, err := h.inboxService.MoveInboxCard(ctx, userID, cardID, correlationID, req)
+	if err != nil {
+		httperr.WriteOp(c, err, "inbox.handler.MoveInboxCard")
+		return
+	}
+	c.JSON(http.StatusOK, response)
 }
 
 func (h *InboxHandler) MirrorCardToInbox(c *gin.Context) {
@@ -143,7 +162,7 @@ func (h *InboxHandler) MoveInboxCardToBoard(c *gin.Context) {
 	}
 	correlationID := c.MustGet("correlationID").(uuid.UUID)
 
-	var req MoveInboxCardToListInBoardRequest
+	var req MoveInboxCardRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		httperr.WriteOp(c, err, "inbox.handler.MoveInboxCardToBoard")
 		return

@@ -271,19 +271,27 @@ export default function BoardView() {
     const getCardIdForListCardId = useBoardDetailStore((state) => state.getCardIdForListCardId)
     const persistMoveList = useBoardDetailStore((state) => state.persistMoveList)
     const persistMoveCard = useBoardDetailStore((state) => state.persistMoveCardInBoard)
+    const moveInboxCard = useUserInboxStore((state) => state.moveInboxCard)
     const moveInboxCardToBoard = useUserInboxStore((state) => state.moveInboxCardToListInBoard)
     const mirrorCardToInbox = useUserInboxStore((state) => state.mirrorCardToInbox)
     const getInboxCardByRootCardID = useUserInboxStore((state) => state.getInboxCardByRootCardID)
     const inboxCardsById = useUserInboxStore((state) => state.inboxCardsById)
     const [draggedCardId, setDraggedCardId] = useState<string | null>(null)
+    const [draggedRootListCardId, setDraggedRootListCardId] = useState<string | null>(null)
+    const [draggedSourceBoardListId, setDraggedSourceBoardListId] = useState<string | null>(null)
 
     function handleDragStart(start: DragStart) {
         if (start.draggableId.startsWith("inbox:")) {
             setDraggedCardId(start.draggableId.split(":")[1] ?? null)
+            setDraggedRootListCardId(null)
+            setDraggedSourceBoardListId(null)
             return
         }
 
         setDraggedCardId(getCardIdForListCardId(start.draggableId))
+        const draggedListCard = listcardById[start.draggableId]
+        setDraggedRootListCardId(draggedListCard?.RootID ?? draggedListCard?.ID ?? null)
+        setDraggedSourceBoardListId(start.source.droppableId)
     }
 
     const inboxCardIds = useUserInboxStore(useShallow((state) => state.inboxCardsIds))
@@ -295,6 +303,8 @@ export default function BoardView() {
     function handleDragEnd(result: DropResult) {
 
         setDraggedCardId(null)
+        setDraggedRootListCardId(null)
+        setDraggedSourceBoardListId(null)
 
 
         const { destination, source, draggableId, type } = result
@@ -303,7 +313,30 @@ export default function BoardView() {
         if (destination.droppableId === source.droppableId && destination.index === source.index) return
 
         if (destination.droppableId === "inbox") {
-            if (draggableId.startsWith("inbox:")) return
+            if (draggableId.startsWith("inbox:")) {
+                const movedInboxCardId = inboxCardIds[source.index]
+                if (!movedInboxCardId) return
+
+                const actualCardId = draggableId.split(":")[1]
+                const reorderedInboxCardIds = [...inboxCardIds]
+                reorderedInboxCardIds.splice(source.index, 1)
+                reorderedInboxCardIds.splice(destination.index, 0, movedInboxCardId)
+                setInboxCardIds(reorderedInboxCardIds)
+
+                const beforeInboxCardId = destination.index < reorderedInboxCardIds.length - 1
+                    ? reorderedInboxCardIds[destination.index + 1]
+                    : null
+
+                void moveInboxCard(
+                    actualCardId,
+                    {
+                        BeforeID: beforeInboxCardId,
+                        InsertAt: beforeInboxCardId ? null : "end",
+                    },
+                    inboxCardIds,
+                )
+                return
+            }
             const movedListCardId = draggableId
             const movedListCard = listcardById[movedListCardId]
             if (!movedListCard) return
@@ -451,7 +484,7 @@ export default function BoardView() {
                  bg-transparent overflow-hidden
                  `}>
 
-                        <InboxView></InboxView>
+                        <InboxView draggedRootListCardId={draggedRootListCardId}></InboxView>
 
                     </div>
                     {boardId && (
@@ -466,7 +499,7 @@ export default function BoardView() {
 
                                 <div className={`flex flex-1 min-h-0 w-full ps-4 py-0 ${paddingBottom} overflow-hidden scrollbar-hidden`}>
 
-                                    <ListContainer draggedCardId={draggedCardId} />
+                                    <ListContainer draggedCardId={draggedCardId} draggedSourceBoardListId={draggedSourceBoardListId} />
 
                                 </div>
 

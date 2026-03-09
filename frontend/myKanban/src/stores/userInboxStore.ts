@@ -16,6 +16,7 @@ type UserInboxStore = {
     getInboxCardByRootCardID: (rootCardID: string) => InboxCard | undefined
     applyInboxEvent: (evt: UserEvent) => void
     replaceInboxCardIds: (newIds: string[]) => void
+    moveInboxCard: (cardID: string, request: MoveInboxToListRequest, rollbackInboxCardIds?: string[]) => Promise<void>
     moveInboxCardToListInBoard: (cardID: string, targetWorkspaceID: string, targetBoardID: string, targetListID: string, request: MoveInboxToListRequest, optimisticListCardID?: string, rollbackListCardIds?: string[]) => Promise<void>
     setInboxCardIds: (newIds: string[]) => void
     mergeInboxCardEntities: (cards: InboxCard[]) => void
@@ -160,6 +161,31 @@ export const useUserInboxStore = create<UserInboxStore>((set, get) => ({
         set({
             inboxCardsIds: newIds
         })
+    },
+    moveInboxCard: async (cardID: string, request: MoveInboxToListRequest, rollbackInboxCardIds?: string[]) => {
+        const rollbackOptimisticMove = () => {
+            if (!rollbackInboxCardIds) return
+
+            set({
+                inboxCardsIds: rollbackInboxCardIds,
+            })
+        }
+
+        try {
+            await useAsyncRequestStore.getState().execute(
+                "card:move:inbox",
+                () => api.patch(`/inbox/cards/${cardID}/move`, request),
+                {
+                    successResetDelayMs: 2000,
+                    onError: () => {
+                        rollbackOptimisticMove()
+                    }
+                }
+            )
+        } catch (error) {
+            rollbackOptimisticMove()
+            // console.error("Failed to reorder inbox card:", error);
+        }
     },
     moveInboxCardToListInBoard: async (cardID: string,
         targetWorkspaceID: string,

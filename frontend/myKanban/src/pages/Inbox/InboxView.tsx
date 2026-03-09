@@ -2,42 +2,43 @@ import { useCardActionRegistry } from "@/actionRegistry/cardActionRegistry"
 import { LabeledButtonPresetBSubmit, LabeledButtonPresetB } from "@/components/buttons/labeledButton"
 import { CardRow } from "@/components/CardRow"
 
-import { CardRowInbox } from "@/components/cardRowInbox"
 import { type CustomInputHandle, CustomInput } from "@/components/menuElements/CustomInput"
 import { useUserInboxStore } from "@/stores/userInboxStore"
-import { DragDropContext, Droppable } from "@hello-pangea/dnd"
+import { Droppable } from "@hello-pangea/dnd"
 import { WalletCardsIcon } from "lucide-react"
 import { useEffect, useState, useRef } from "react"
 import { useShallow } from "zustand/shallow"
 
 const PADDING_X = 8
 
-export const InboxView = () => {
+type InboxViewProps = {
+    draggedRootListCardId?: string | null
+}
+
+export const InboxView = ({ draggedRootListCardId = null }: InboxViewProps) => {
     const inboxCardIds = useUserInboxStore(useShallow((state) => state.inboxCardsIds))
     const fetchInboxCards = useUserInboxStore((state) => state.fetchInboxCards)
     const inboxCardById = useUserInboxStore((state) => state.inboxCardsById)
+    const alreadyContainsDraggedRootCard = !!draggedRootListCardId
+        && inboxCardIds.some((id) => inboxCardById[id]?.RootListCardID === draggedRootListCardId)
 
     useEffect(() => {
         fetchInboxCards()
     }, [fetchInboxCards])
 
-    const handleDragEnd = () => {
-        // We don't need to handle drag end in the inbox, because cards can't be moved from the inbox. They can only be moved from the inbox to a list, and that is handled by the onDragEnd of the BoardView.
-    }
-
 
 
     return (
-        <div className=" flex relative h-full w-full  min-h-0
+        <div className="flex relative h-full w-full min-h-0
         border border-neutral-500/30 
          bg-[#182f53] overflow-hidden 
-         rounded-2xl  shadow pb-2">
+         rounded-2xl shadow">
             <div
                 style={{ paddingInline: PADDING_X }}
-                className={`flex flex-col min-h-0 h-full w-full px-[${PADDING_X}px] overflow-hidden gap-4`}>
+                className={`flex flex-col min-h-0 h-full w-full px-[${PADDING_X}px] overflow-hidden gap-4 pb-3`}>
                 <div
                     style={{ marginInline: `calc(${PADDING_X}px * -1)`, width: `calc(100% + ${PADDING_X * 2}px)` }}
-                    className="flex items-center gap-2 mb-4 bg-[#142137] h-16 w-full py-2 px-4 rounded">
+                    className="shrink-0 flex items-center gap-2 mb-4 bg-[#142137] h-16 w-full py-2 px-4 rounded">
                     <WalletCardsIcon className="w-5 h-5" />
                     <span className="text-sm font-medium">Inbox</span>
                 </div>
@@ -45,19 +46,17 @@ export const InboxView = () => {
 
 
                 <div
-                    className="relative flex h-full min-h-0 w-full flex-row items-start pt-2 pb-2 mb-1 !pr-8
-                            overflow-x-auto overflow-y-hidden scrollbar-hidden "
+                    className="relative flex-1 min-h-0 w-full overflow-hidden"
                 >
 
-                    <Droppable droppableId={"inbox"} type="card" isDropDisabled={false}>
+                    <Droppable droppableId={"inbox"} type="card" isDropDisabled={alreadyContainsDraggedRootCard}>
                         {(provided) => (
                             <div
                                 ref={provided.innerRef}
                                 {...provided.droppableProps}
-                                className="flex flex-1 min-h-0 flex-col pt-2 
-                        overflow-y-auto scrollbar-hidden">
+                                className="flex h-full min-h-full w-full flex-col overflow-y-auto overflow-x-hidden pr-3 pt-2 pb-6 scrollbar-hidden">
 
-                                <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden w-full space-y-2 scrollbar-hidden">
+                                <div className="flex flex-col gap-2 min-h-full w-full">
                                     {inboxCardIds.length > 0 && inboxCardIds.map((id, index) => {
                                         const inboxCard = inboxCardById[id]
                                         if (!inboxCard) return null

@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type GormInboxRepo struct {
@@ -68,4 +69,42 @@ func (r *GormInboxRepo) DeleteInboxCardTX(ctx context.Context, db *gorm.DB, user
 		return err
 	}
 	return nil
+}
+
+func (r *GormInboxRepo) GetInboxCardByCardID(ctx context.Context, userID, cardID uuid.UUID, includeDeleted bool) (*models.UserInboxCard, error) {
+	var inboxCard models.UserInboxCard
+	query := r.db.WithContext(ctx).Table("user_inbox_cards").
+		Where("user_id = ? AND card_id = ?", userID, cardID)
+	if includeDeleted {
+		query = query.Unscoped()
+	} else {
+		query = query.Where("deleted_at IS NULL")
+	}
+	if err := query.First(&inboxCard).Error; err != nil {
+		return nil, err
+	}
+	return &inboxCard, nil
+}
+
+func (r *GormInboxRepo) PatchInboxCardTX(ctx context.Context, db *gorm.DB, userID, cardID uuid.UUID, updateMap map[string]interface{}) (*models.UserInboxCard, error) {
+	var inboxCard models.UserInboxCard
+	result := db.WithContext(ctx).
+		Model(&inboxCard).
+		Clauses(clause.Returning{}).
+		Where("user_id = ? AND card_id = ?", userID, cardID).
+		Updates(updateMap)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	if result.RowsAffected == 0 {
+		return nil, gorm.ErrRecordNotFound
+	}
+	if inboxCard.ID == uuid.Nil {
+		return nil, gorm.ErrInvalidData
+	}
+
+	if inboxCard.UserID == uuid.Nil || inboxCard.CardID == uuid.Nil {
+		return nil, gorm.ErrInvalidData
+	}
+	return &inboxCard, nil
 }

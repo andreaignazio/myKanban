@@ -10,9 +10,10 @@ const EMPTY_LIST_IDS: string[] = []
 
 type ListContainerProps = {
     draggedCardId?: string | null
+    draggedSourceBoardListId?: string | null
 }
 
-export const ListContainer = ({ draggedCardId = null }: ListContainerProps) => {
+export const ListContainer = ({ draggedCardId = null, draggedSourceBoardListId = null }: ListContainerProps) => {
     const boardId = useParams().boardId as string
     const boardListIds = useBoardDetailStore(useShallow((state) => (
         boardId ? state.boardListIdsByBoardId[boardId] ?? EMPTY_LIST_IDS : EMPTY_LIST_IDS
@@ -94,6 +95,7 @@ export const ListContainer = ({ draggedCardId = null }: ListContainerProps) => {
                         <ListRow key={boardListId}
                             index={index}
                             draggedCardId={draggedCardId}
+                            draggedSourceBoardListId={draggedSourceBoardListId}
                             boardListID={boardListId} boardID={boardId} />
                     ))}
                     {provided.placeholder}

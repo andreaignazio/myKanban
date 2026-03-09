@@ -14,6 +14,8 @@ type InboxRepo interface {
 	GetUserInboxCards(ctx context.Context, userID uuid.UUID, includeDeleted bool) ([]models.UserInboxCard, error)
 	GetMirrorsIds(ctx context.Context, userID, rootListCardID uuid.UUID) ([]uuid.UUID, error)
 	DeleteInboxCardTX(ctx context.Context, db *gorm.DB, userID, cardID uuid.UUID) error
+	GetInboxCardByCardID(ctx context.Context, userID, cardID uuid.UUID, includeDeleted bool) (*models.UserInboxCard, error)
+	PatchInboxCardTX(ctx context.Context, db *gorm.DB, userID, cardID uuid.UUID, updateMap map[string]interface{}) (*models.UserInboxCard, error)
 }
 
 type MembershipRepo interface {
