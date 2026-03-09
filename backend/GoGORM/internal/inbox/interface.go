@@ -36,6 +36,7 @@ type CardPositionHelper interface {
 }
 
 type ListCardsRepo interface {
+	CreateCardListTX(ctx context.Context, db *gorm.DB, listCard *models.ListCard) error
 	GetAnyListCardByCardIDTX(ctx context.Context, db *gorm.DB, cardID uuid.UUID, includeDeleted bool) (*models.ListCard, error)
 	FindAnyListCardByCardIDTX(ctx context.Context, db *gorm.DB, cardID uuid.UUID, includeDeleted bool) (*models.ListCard, bool, error)
 	UpsertListCardByIdTX(ctx context.Context, db *gorm.DB, listCard *models.ListCard) error

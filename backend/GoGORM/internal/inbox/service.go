@@ -374,7 +374,7 @@ func (s *InboxService) MoveInboxCardToListInBoard(ctx context.Context, userID, c
 	}
 
 	err = s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if err = s.ListCardsRepo.UpsertListCardByIdTX(ctx, tx, newListCard); err != nil {
+		if err = s.ListCardsRepo.CreateCardListTX(ctx, tx, newListCard); err != nil {
 			return err
 		}
 		if err = s.repo.DeleteInboxCardTX(ctx, tx, userID, cardID); err != nil {
