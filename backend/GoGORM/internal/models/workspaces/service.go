@@ -66,6 +66,9 @@ type WorkspaceRepo interface {
 	GetWorkspaceByID(ctx context.Context, workspaceID uuid.UUID, includeDeleted bool) (*models.Workspace, error)
 	PatchWorkspaceByID(ctx context.Context, workspaceID uuid.UUID, updateMap map[string]any) (*models.Workspace, error)
 	GetWorkspacesByUserID(ctx context.Context, userID uuid.UUID) ([]models.UserWorkspaceRow, error)
+	GetWorkspaceIDsByUserID(ctx context.Context, userID uuid.UUID) ([]uuid.UUID, error)
+	GetUserWorkspacesByIDs(ctx context.Context, userID uuid.UUID, workspaceDs []uuid.UUID) ([]models.UserWorkspace, error)
+
 	GetWorkspaceBoardsForUserID(ctx context.Context, userID, workspaceID uuid.UUID) ([]boards.UserBoardRow, error)
 	GetUserWorkspace(ctx context.Context, userID, workspaceID uuid.UUID) (*models.UserWorkspace, error)
 	GetWorkspaceMembersByWorkspaceID(ctx context.Context, workspaceID uuid.UUID, includeDeleted bool) ([]WorkspaceMemberRow, error)
@@ -78,6 +81,8 @@ type WorkspaceRepo interface {
 	UpdateUserWorkspaceRoleTX(ctx context.Context, tx *gorm.DB, userID, workspaceID uuid.UUID, updateMap map[string]interface{}) (*models.UserWorkspace, error)
 	DeleteUserWorkspaceTX(ctx context.Context, tx *gorm.DB, userID, workspaceID uuid.UUID) (*models.UserWorkspace, error)
 	DeleteUserBaordsWhereWorkspaceIDTX(ctx context.Context, tx *gorm.DB, userID, workspaceID uuid.UUID) error
+
+	GetWorkspacesBoardsForUserID(ctx context.Context, userID uuid.UUID, workspaceIDs []uuid.UUID) ([]boards.UserBoardRow, error)
 }
 
 type MembershipRepo interface {
@@ -347,6 +352,59 @@ func (s *WorkspaceService) GetWorkspaceBoardsForUserID(ctx context.Context, user
 	}
 
 	return boardResponses, userBoardResponses, nil
+}
+
+func (s *WorkspaceService) GetWorkspacesBoardsForUserID(ctx context.Context, userID uuid.UUID) (*dto.BoardsAccrossWorkspacesResponse, error) {
+
+	//workspaceIds, err := s.WorkspaceRepo.GetWorkspaceIDsByUserID(ctx, userID)
+
+	workspaces, userworkspaces, subscriptions, err := s.GetUserWorkspaces(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	workspaceIds := make([]uuid.UUID, 0, len(workspaces))
+	for _, workspace := range workspaces {
+		workspaceIds = append(workspaceIds, workspace.ID)
+	}
+
+	userWorkspaces, err := s.WorkspaceRepo.GetUserWorkspacesByIDs(ctx, userID, workspaceIds)
+
+	for _, userWorkspace := range userWorkspaces {
+
+		if !rbac.AtLeast(userWorkspace.Role, rbac.Viewer) {
+			return nil, domainerr.ErrForbidden
+		}
+	}
+
+	rows, err := s.WorkspaceRepo.GetWorkspacesBoardsForUserID(ctx, userID, workspaceIds)
+	if err != nil {
+		return nil, err
+	}
+	boards, userboards := boards.UserBoardRowsToModels(rows)
+
+	boardResponses := make([]dto.BoardResponse, 0, len(boards))
+	userBoardResponses := make([]dto.UserBoardResponse, 0, len(userboards))
+
+	for i := range boards {
+		boardResponses = append(boardResponses, dto.BoardToResponse(&boards[i]))
+		userBoardResponses = append(userBoardResponses, dto.UserBoardToResponse(&userboards[i]))
+	}
+	BoardIDsByWorkspaceID := make(map[uuid.UUID][]uuid.UUID)
+	for _, board := range boards {
+		BoardIDsByWorkspaceID[board.WorkspaceID] = append(BoardIDsByWorkspaceID[board.WorkspaceID], board.ID)
+	}
+
+	boardsAccrossWorkspacesResponse := &dto.BoardsAccrossWorkspacesResponse{
+		Workspaces:             workspaces,
+		UserWorkspaces:         userworkspaces,
+		WorkspaceSubscriptions: subscriptions,
+		Boards:                 boardResponses,
+		UserBoards:             userBoardResponses,
+		BoardIDsByWorkspaceID:  BoardIDsByWorkspaceID,
+	}
+
+	return boardsAccrossWorkspacesResponse, nil
 }
 
 func (s *WorkspaceService) CreateBoardInWorkspace(ctx context.Context, userID, workspaceID, correlationID uuid.UUID, request CreateBoardInWorkspaceRequest) (*dto.BoardResponse, *dto.UserBoardResponse, error) {

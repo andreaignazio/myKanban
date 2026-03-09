@@ -109,7 +109,7 @@ func NewRouter(db *gorm.DB,
 
 		boards := api.Group("/boards")
 		{
-			boards.GET("/", boardsHandler.GetUserBoards)
+			boards.GET("/", workspacesHandler.GetWorkspacesBoardsForUserID)
 			boards.POST("/", boardsHandler.CreateBoard)
 
 			//boards.GET("/:boardID", boardsHandler.GetUserBoard)

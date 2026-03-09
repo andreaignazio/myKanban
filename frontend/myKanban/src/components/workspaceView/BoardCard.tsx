@@ -1,8 +1,7 @@
 
 type BoardRowProps = {
     boardID: string
-
-
+    workspaceId?: string
 }
 import { useNavigate, useParams } from "react-router";
 import { useBoardsStore } from "@/stores/boardsStore";
@@ -30,7 +29,7 @@ function getStableIndexFromString(value: string, length: number): number {
     return hash % length;
 }
 
-export function BoardCard({ boardID: boardID }: BoardRowProps) {
+export function BoardCard({ boardID: boardID, workspaceId: overrideWorkspaceId }: BoardRowProps) {
     const name = useBoardsStore(state => state.boardsById[boardID]?.Name)
     const isStarred = useBoardsStore((state) => !!state.userBoardsById[boardID]?.Props?.Starred)
     const boardStatus = useBoardsStore((state) => state.getBoardStatus(boardID));
@@ -46,7 +45,7 @@ export function BoardCard({ boardID: boardID }: BoardRowProps) {
     const shareActionModalRef = useRef<HTMLDivElement>(null)
     const shareOfferDetailsRef = useRef<HTMLDivElement>(null)
 
-    const workspaceId = useParams().workspaceId as string;
+    const workspaceId = overrideWorkspaceId ?? (useParams().workspaceId as string);
     const handleOpenBoard = () => {
 
         if (isLocked) {

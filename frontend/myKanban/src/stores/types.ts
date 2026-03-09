@@ -1016,3 +1016,10 @@ export type MirrorCardData = {
     ListCardID: string
     CardID: string
 }
+
+export type UserWorkspacesBoardsResponse = UserWorkspaceData & {
+    Boards: Board[];
+    UserBoards: UserBoard[]
+    BoardIDsByWorkspaceID: Record<string, string[]>
+
+}

@@ -7,6 +7,7 @@ import { LucideTrash2, TrashIcon } from "lucide-react";
 import { ButtonXMark } from "../menuElements/buttonXMark";
 import { useBoardActionRegistry } from "@/actionRegistry/boardActionRegistry";
 import { CommonMenuWrapper } from "../menuElements/menuWrapper";
+import { BoardRowWCover } from "../common/BoardRowWCover";
 
 type ViewDeletedBoardsProps = {
     onClose: () => void;
@@ -59,13 +60,12 @@ const DeletedBoardRow = ({ boardId, workspaceId }: { boardId: string, workspaceI
 
     return (
         <div className="flex items-center justify-between">
-            <div className="flex flex-row h-10 items-center gap-3">
-                <BoardCoverRenderer board={board} />
-                <div className="flex flex-col">
-                    <div className="text-sm font-medium">{board.Name}</div>
-                    <div className="text-xs text-gray-400">Deleted on {new Date(board.DeletedAt!).toLocaleDateString()}</div>
-                </div>
-            </div>
+            <BoardRowWCover board={board} >
+                <div className="text-xs text-gray-400">Deleted on {new Date(board.DeletedAt!).toLocaleDateString()}</div>
+            </BoardRowWCover>
+
+
+
             <div ref={buttonRef}
                 className="flex md:flex-row  sm:flex-col sm:items-start items-center gap-2">
                 <LabeledButtonPresetA label="Restore" onClick={() => { handleRestoreBoard(); }}

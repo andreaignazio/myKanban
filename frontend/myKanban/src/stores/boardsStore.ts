@@ -2,13 +2,14 @@
 import { api } from "@/api/api";
 import { create } from "zustand";
 
-import type { Board, CreateBoardRequest, PatchUserBoardPropsRequest, UserBoard, WorkspaceEvent } from "./types";
+import type { Board, CreateBoardRequest, PatchUserBoardPropsRequest, UserBoard, UserWorkspacesBoardsResponse, WorkspaceEvent } from "./types";
 import type { BoardDetailPatch } from "./boardDetailStore";
 import type { ShareOffer } from "./shareOfferTypes";
 import { useCacheStore } from "./cacheStore";
 import { useSortByPosition } from "@/hooks/useSortByPosition";
 import { useAsyncRequestStore } from "./asyncRequestStore";
 import type { AsyncRequestKey } from "./asyncRequestTypes";
+import { useWorkspaceStore, type UserWorkspaceData } from "./workspaceStore";
 
 const { sortByPosition } = useSortByPosition();
 export type UserBoardData = {
@@ -42,6 +43,7 @@ export type BoardsStore = {
     OpCounter: number;
     boardsById: Record<string, Board>;
     boardIdsByWorkspaceId: Record<string, string[]>;
+
     offerIdByBoardId: Record<string, string>;
     pendingOfferedBoardIdsByWorkspaceId: Record<string, string[]>;
     pendingRequestedBoardIdsByWorkspaceId: Record<string, string[]>;
@@ -57,6 +59,9 @@ export type BoardsStore = {
     isRequestSuccessful: boolean;
     getIsSuccess: () => boolean;
     fetchBoardsForWorkspace: (workspaceId: string) => Promise<void>;
+
+    fetchUserBoardsAndWorkspaces: () => Promise<void>;
+
     fetchPendingOfferTargetBoardsForWorkspace: (workspaceId: string) => Promise<void>;
     addPendingOfferedBoardId: (workspaceId: string, boardId: string) => void;
     addPendingRequestedBoardId: (workspaceId: string, boardId: string) => void;
@@ -107,6 +112,43 @@ export const useBoardsStore = create<BoardsStore>((set, get) => ({
     isRequestSuccessful: false,
     isSendingRequest: false,
     getIsSuccess: () => get().isRequestSuccessful,
+
+    fetchUserBoardsAndWorkspaces: async () => {
+        await useAsyncRequestStore.getState().execute("workspace:boards:fetch:all",
+            () => api.get(`/boards`),
+            {
+                successResetDelayMs: 3000,
+                onSuccess: (response) => {
+                    const data: UserWorkspacesBoardsResponse = response.data;
+                    const boardsById: Record<string, Board> = data.Boards.reduce((acc, board) => {
+                        acc[board.ID] = board;
+                        return acc;
+                    }, {} as Record<string, Board>);
+                    const userBoardsById: Record<string, UserBoard> = data.UserBoards.reduce((acc, userBoard) => {
+                        acc[userBoard.BoardID] = userBoard;
+                        return acc;
+                    }, {} as Record<string, UserBoard>);
+                    const nextBoardIdsByWorkspaceId: Record<string, string[]> = {};
+                    Object.entries(data.BoardIDsByWorkspaceID).forEach(([workspaceId, boardIds]) => {
+                        nextBoardIdsByWorkspaceId[workspaceId] = boardIds;
+                    });
+                    set((state) => ({
+                        boardsById: { ...state.boardsById, ...boardsById },
+                        boardIdsByWorkspaceId: { ...state.boardIdsByWorkspaceId, ...nextBoardIdsByWorkspaceId },
+                        userBoardsById: { ...state.userBoardsById, ...userBoardsById },
+                    }));
+                    const wsData: UserWorkspaceData = {
+                        Workspaces: data.Workspaces,
+                        UserWorkspaces: data.UserWorkspaces,
+                        WorkspaceSubscriptions: data.WorkspaceSubscriptions
+
+                    }
+                    useWorkspaceStore.getState().mergeWorkspaceData(wsData)
+
+                }
+            },
+        );
+    },
 
     fetchBoardsForWorkspace: async (workspaceId: string) => {
         try {

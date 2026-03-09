@@ -202,6 +202,17 @@ func (h *WorkspacesHandler) GetWorkspaceBoardsForUserID(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
+func (h *WorkspacesHandler) GetWorkspacesBoardsForUserID(c *gin.Context) {
+	ctx := c.Request.Context()
+	userID := c.MustGet("userID").(uuid.UUID)
+	response, err := h.WorkspaceService.GetWorkspacesBoardsForUserID(ctx, userID)
+	if err != nil {
+		httperr.WriteOp(c, err, "workspaces.handler.GetWorkspacesBoardsForUserID")
+		return
+	}
+	c.JSON(http.StatusOK, response)
+}
+
 func (h *WorkspacesHandler) CreateBoardInWorkspace(c *gin.Context) {
 	ctx := c.Request.Context()
 	userID := c.MustGet("userID").(uuid.UUID)

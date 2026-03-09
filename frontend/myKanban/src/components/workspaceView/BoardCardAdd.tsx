@@ -22,7 +22,7 @@ export function BoardCardAdd({ workspaceId }: BoardRowProps) {
         const id = "create-board-modal"
         const descriptor: OverlayDescriptor = {
             id: "create-board-modal",
-            render: () => <CreateBoardModal ref={createPanelRef} onClose={() => closeOverlay(id)} />,
+            render: () => <CreateBoardModal ref={createPanelRef} onClose={() => closeOverlay(id)} workspaceId={workspaceId} />,
             panelRef: createPanelRef,
             anchorRef: anchorRef,
             type: "modal",

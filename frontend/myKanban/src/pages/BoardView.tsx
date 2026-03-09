@@ -223,7 +223,7 @@ export default function BoardView() {
             panelRef: shareActionModalRef,
             type: "modal",
             renderType: "virtual",
-            exclusiveGroup: "share-action-modal",
+            exclusiveGroup: "board-view-modals",
             opts: {
                 closeOnMouseLeave: false,
                 closeOnClickOutside: true,

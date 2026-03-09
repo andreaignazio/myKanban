@@ -1,6 +1,8 @@
 import { forwardRef } from "react"
 import type { AsyncRequestKey } from "@/stores/asyncRequestTypes";
 import { useAsyncRequestDisplay } from "@/hooks/useAsyncRequestDisplay";
+import { motion } from "framer-motion";
+import { menuMotionProps } from "@/components/modals/menuMotion";
 
 // --- MenuStateIndicator ---
 
@@ -109,14 +111,14 @@ export const CommonMenuWrapper = forwardRef<HTMLDivElement, CommonMenuWrapperPro
     })();
 
     return (
-        <div ref={ref} className="w-fit relative overflow-visible">
+        <motion.div ref={ref} className="w-fit relative overflow-visible" {...menuMotionProps}>
             {resolvedStateChildren}
             <div className={` flex justify-start items-start theme-dark bg-menu rounded-xl 
             shadow-lg shadow-black relative
          text-white  overflow-hidden ${className}`} style={style} >
                 {children}
             </div>
-        </div>
+        </motion.div>
     )
 
 })

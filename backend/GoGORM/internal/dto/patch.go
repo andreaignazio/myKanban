@@ -125,6 +125,15 @@ type BoardDetailResponse struct {
 	ShareOffers                        []ShareOfferResponse                   `json:"ShareOffers"`
 }
 
+type BoardsAccrossWorkspacesResponse struct {
+	Workspaces             []WorkspaceResponse       `json:"Workspaces"`
+	UserWorkspaces         []UserWorkspaceResponse   `json:"UserWorkspaces"`
+	WorkspaceSubscriptions []SubscriptionResponse    `json:"Subscriptions"`
+	Boards                 []BoardResponse           `json:"Boards"`
+	UserBoards             []UserBoardResponse       `json:"UserBoards"`
+	BoardIDsByWorkspaceID  map[uuid.UUID][]uuid.UUID `json:"BoardIDsByWorkspaceID"`
+}
+
 type MoveCardEventPayload struct {
 	ListCardPatch      ListCardResponse
 	ToListCards        []ListCardResponse

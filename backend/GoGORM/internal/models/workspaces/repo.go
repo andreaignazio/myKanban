@@ -242,7 +242,7 @@ func (r *GormWorkspaceRepo) GetUserWorkspacesByUserID(ctx context.Context, userI
 	return userWorkspaces, nil
 }
 
-func (r *GormWorkspaceRepo) GetWorkspaceBoardsForUserID(ctx context.Context, userID, workspaceID uuid.UUID) ([]boards.UserBoardRow, error) {
+func (r *GormWorkspaceRepo) GetWorkspacesBoardsForUserID(ctx context.Context, userID uuid.UUID, workspaceIDs []uuid.UUID) ([]boards.UserBoardRow, error) {
 	allowedRoles := rbac.AllowedAtLeast(rbac.Viewer)
 	var rows []boards.UserBoardRow
 	if err := r.db.WithContext(ctx).
@@ -270,11 +270,48 @@ func (r *GormWorkspaceRepo) GetWorkspaceBoardsForUserID(ctx context.Context, use
 			ub.updated_at AS ub_updated_at,
 			ub.deleted_at AS ub_deleted_at
 		`).
-		Where("boards.workspace_id = ?", workspaceID).
+		Where("boards.workspace_id IN ?", workspaceIDs).
 		Where("boards.deleted_at IS NULL").
 		Where("boards.visibility != 'private' OR (boards.visibility = 'private' AND ub.user_id IS NOT NULL AND ub.role IN ?)", allowedRoles).
 		Order("ub.pos COLLATE \"C\"").
 		Scan(&rows).Error; err != nil {
+		return nil, err
+	}
+	return rows, nil
+
+}
+
+func (r *GormWorkspaceRepo) GetWorkspaceIDsByUserID(ctx context.Context, userID uuid.UUID) ([]uuid.UUID, error) {
+	var workspaceIDs []uuid.UUID
+	if err := r.db.WithContext(ctx).
+		Table("user_workspaces").
+		Where("user_id = ?", userID).
+		Where("deleted_at IS NULL").
+		Order("pos COLLATE \"C\"").
+		Pluck("workspace_id", &workspaceIDs).Error; err != nil {
+		return nil, err
+	}
+	return workspaceIDs, nil
+}
+
+func (r *GormWorkspaceRepo) GetUserWorkspacesByIDs(ctx context.Context, userID uuid.UUID, workspaceIDs []uuid.UUID) ([]models.UserWorkspace, error) {
+	var userWorkspaces []models.UserWorkspace
+	if err := r.db.WithContext(ctx).
+		Table("user_workspaces").
+		Where("user_id = ?", userID).
+		Where("workspace_id IN ?", workspaceIDs).
+		Where("deleted_at IS NULL").
+		Order("pos COLLATE \"C\"").
+		Find(&userWorkspaces).Error; err != nil {
+		return nil, err
+	}
+	return userWorkspaces, nil
+}
+
+func (r *GormWorkspaceRepo) GetWorkspaceBoardsForUserID(ctx context.Context, userID, workspaceID uuid.UUID) ([]boards.UserBoardRow, error) {
+
+	rows, err := r.GetWorkspacesBoardsForUserID(ctx, userID, []uuid.UUID{workspaceID})
+	if err != nil {
 		return nil, err
 	}
 	return rows, nil
