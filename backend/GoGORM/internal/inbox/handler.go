@@ -2,6 +2,7 @@ package inbox
 
 import (
 	"GoGORM/internal/domainerr"
+	"GoGORM/internal/models/cards"
 	"GoGORM/internal/server/httperr"
 	"context"
 	"fmt"
@@ -171,6 +172,52 @@ func (h *InboxHandler) MoveInboxCardToBoard(c *gin.Context) {
 	response, err := h.inboxService.MoveInboxCardToListInBoard(ctx, userID, cardID, targetWorkspaceID, targetBoardID, targetListID, correlationID, req)
 	if err != nil {
 		httperr.WriteOp(c, err, "inbox.handler.MoveInboxCardToBoard")
+		return
+	}
+	c.JSON(http.StatusOK, response)
+}
+
+func (h *InboxHandler) PatchInboxCardProps(c *gin.Context) {
+	ctx := c.Request.Context()
+	userID := c.MustGet("userID").(uuid.UUID)
+	cardIDStr := c.Param("cardID")
+	cardID, err := uuid.Parse(cardIDStr)
+	if err != nil {
+		httperr.WriteParamsError(c, err, "inbox.handler.PatchInboxCardProps")
+		return
+	}
+	correlationID := c.MustGet("correlationID").(uuid.UUID)
+	var req cards.PatchCardPropsRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		httperr.WriteOp(c, err, "inbox.handler.PatchInboxCardProps")
+		return
+	}
+	response, err := h.inboxService.PatchInboxCardProps(ctx, userID, cardID, correlationID, req)
+	if err != nil {
+		httperr.WriteOp(c, err, "inbox.handler.PatchInboxCardProps")
+		return
+	}
+	c.JSON(http.StatusOK, response)
+}
+
+func (h *InboxHandler) PatchInboxCardDetails(c *gin.Context) {
+	ctx := c.Request.Context()
+	userID := c.MustGet("userID").(uuid.UUID)
+	cardIDStr := c.Param("cardID")
+	cardID, err := uuid.Parse(cardIDStr)
+	if err != nil {
+		httperr.WriteParamsError(c, err, "inbox.handler.PatchInboxCardDetails")
+		return
+	}
+	correlationID := c.MustGet("correlationID").(uuid.UUID)
+	var req cards.PatchCardDetailsRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		httperr.WriteBindingError(c, err, "inbox.handler.PatchInboxCardDetails")
+		return
+	}
+	response, err := h.inboxService.PatchInboxCardDetails(ctx, userID, cardID, correlationID, req)
+	if err != nil {
+		httperr.WriteOp(c, err, "inbox.handler.PatchInboxCardDetails")
 		return
 	}
 	c.JSON(http.StatusOK, response)

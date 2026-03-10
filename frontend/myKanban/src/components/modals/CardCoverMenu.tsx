@@ -65,9 +65,10 @@ export const CardActionMenuBtn = forwardRef<HTMLDivElement, CardActionMenuBtnPro
 type CardCoverTabSelectorProps = {
     onClose: () => void;
     cardId?: string;
+    source?: "board" | "inbox" | "inbox-mirror";
 }
 
-export const CardCoverTabSelector = forwardRef<HTMLDivElement, CardCoverTabSelectorProps>(({ onClose, cardId }, ref) => {
+export const CardCoverTabSelector = forwardRef<HTMLDivElement, CardCoverTabSelectorProps>(({ onClose, cardId, source = "board" }, ref) => {
     const [activeTab, setActiveTab] = useState<"main" | "search">("main");
     const Title = activeTab === "main" ? "Cover" : "Search Photos";
 
@@ -84,8 +85,8 @@ export const CardCoverTabSelector = forwardRef<HTMLDivElement, CardCoverTabSelec
                 width={300}
                 titleStyle={{ color: "rgba(255, 255, 255, 0.7)", fontSize: "14px", fontWeight: 600 }}>
                 <div className="relative w-full h-full px-3" >
-                    {activeTab === "main" && <CardCoverMenu ref={ref} onClose={onClose} setActiveTab={setActiveTab} cardId={cardId} />}
-                    {activeTab === "search" && <ImageSearchMenu ref={ref} onClose={onClose} onBack={() => setActiveTab("main")} />}
+                    {activeTab === "main" && <CardCoverMenu ref={ref} onClose={onClose} setActiveTab={setActiveTab} cardId={cardId} source={source} />}
+                    {activeTab === "search" && <ImageSearchMenu ref={ref} onClose={onClose} onBack={() => setActiveTab("main")} cardId={cardId} source={source} />}
                 </div>
             </ActionMenuWrapper>
         </>
@@ -97,14 +98,15 @@ type CardActionsMenuProps = {
     onClose: () => void;
     setActiveTab?: (tab: "main" | "search") => void;
     cardId?: string;
+    source?: "board" | "inbox" | "inbox-mirror";
 
 }
 
-export const CardCoverMenu = forwardRef<HTMLDivElement, CardActionsMenuProps>(({ onClose, setActiveTab, cardId }, ref) => {
+export const CardCoverMenu = forwardRef<HTMLDivElement, CardActionsMenuProps>(({ onClose, setActiveTab, cardId, source = "board" }, ref) => {
     const boardID = useParams().boardId as string;
     const cardID = cardId ?? useParams().cardId as string;
     const cardActions = useCardActionRegistry();
-    const removeCover = cardActions.removeCardCover;
+    const isInboxMode = source === "inbox" || source === "inbox-mirror";
 
     //console.log("CardCoverMenu rendered with coverColor:", coverColor);
     const card = useCardsStore((state) => state.cardsById[cardID]);
@@ -138,15 +140,23 @@ export const CardCoverMenu = forwardRef<HTMLDivElement, CardActionsMenuProps>(({
 
 
     const coverSizeSelector = (coverColor?: string, coverURL?: string, hasCover?: boolean) => {
-        return <CoverSizeMenu coverColor={coverColor} coverURL={coverURL} hasCover={hasCover} cardId={cardID} activeCoverSize={coverSize} />
+        return <CoverSizeMenu coverColor={coverColor} coverURL={coverURL} hasCover={hasCover} cardId={cardID} activeCoverSize={coverSize} source={source} />
     }
 
     const handleRemoveCover = () => {
-        removeCover(boardID, cardID);
+        if (isInboxMode) {
+            void cardActions.removeInboxCardCover(cardID);
+            return;
+        }
+        void cardActions.removeCardCover(boardID, cardID);
 
     }
     const handleSetCoverColor = (color: string) => {
-        cardActions.setCardColor(boardID, cardID, color);
+        if (isInboxMode) {
+            void cardActions.setInboxCardColor(cardID, color);
+        } else {
+            void cardActions.setCardColor(boardID, cardID, color);
+        }
         setCoverColor(color);
     }
 
@@ -186,7 +196,7 @@ export const CardCoverMenu = forwardRef<HTMLDivElement, CardActionsMenuProps>(({
         { id: "photosFromUnplash", label: "Photos from Unsplash", kind: "header", style: headerStyle },
         {
             id: "unsplashSelector", label: "", kind: "custom",
-            customElement: () => <CoverImageSelector setCoverURL={setCoverURL} coverURL={coverURL} cardId={cardID} />
+            customElement: () => <CoverImageSelector setCoverURL={setCoverURL} coverURL={coverURL} cardId={cardID} source={source} />
         },
         {
             id: "searchForPhotos", label: "Search for Photos", kind: "custom",
@@ -215,13 +225,18 @@ type CoverSizeMenuProps = {
     hasCover?: boolean;
     cardId?: string;
     activeCoverSize?: "small" | "large";
+    source?: "board" | "inbox" | "inbox-mirror";
 }
 
-export const CoverSizeMenu = ({ coverColor, coverURL, hasCover, cardId, activeCoverSize }: CoverSizeMenuProps) => {
+export const CoverSizeMenu = ({ coverColor, coverURL, hasCover, cardId, activeCoverSize, source = "board" }: CoverSizeMenuProps) => {
     const boardID = useParams().boardId as string;
     const cardID = cardId ?? useParams().cardId as string;
     const cardActions = useCardActionRegistry();
-    const setCardCoverSize = (size: "small" | "large") => cardActions.setCardCoverSize(boardID, cardID, size);
+    const isInboxMode = source === "inbox" || source === "inbox-mirror";
+    const setCardCoverSize = (size: "small" | "large") => {
+        if (isInboxMode) return cardActions.setInboxCardCoverSize(cardID, size);
+        return cardActions.setCardCoverSize(boardID, cardID, size);
+    };
     //console.log("CoverSizeMenu rendered with coverColor:", coverColor);
     return (
         <div className="grid  grid-cols-2 w-full h-full flex-row items-start gap-2 mb-1">
@@ -267,12 +282,14 @@ type CoverImageSelectorProps = {
     setCoverURL?: (url: string) => void;
     coverURL?: string;
     cardId?: string;
+    source?: "board" | "inbox" | "inbox-mirror";
 }
 
-export const CoverImageSelector = forwardRef<HTMLDivElement, CoverImageSelectorProps>(({ setCoverURL, coverURL, cardId }, ref) => {
+export const CoverImageSelector = forwardRef<HTMLDivElement, CoverImageSelectorProps>(({ setCoverURL, coverURL, cardId, source = "board" }, ref) => {
     const boardID = useParams().boardId as string;
     const cardID = cardId ?? useParams().cardId as string;
     const cardActions = useCardActionRegistry();
+    const isInboxMode = source === "inbox" || source === "inbox-mirror";
     const urls = [
         "https://images.unsplash.com/photo-1503023345310-bd7c1de61c7d",
         "https://images.unsplash.com/photo-1491895200222-0fc4a4c35e18",
@@ -282,7 +299,11 @@ export const CoverImageSelector = forwardRef<HTMLDivElement, CoverImageSelectorP
         "https://images.unsplash.com/photo-1494526585095-c41746248156",
     ]
     const setCardCoverURL = (url: string) => {
-        cardActions.setCardCoverURL(boardID, cardID, url);
+        if (isInboxMode) {
+            void cardActions.setInboxCardCoverURL(cardID, url);
+        } else {
+            void cardActions.setCardCoverURL(boardID, cardID, url);
+        }
         setCoverURL?.(url);
     }
 
@@ -314,39 +335,6 @@ export const ImageRenderer = forwardRef<HTMLDivElement, ImageRendererProps>(({ u
                 return next;
             });
         });
-
-        let cancelled = false;
-        const preloaders: HTMLImageElement[] = [];
-
-        urls.forEach((url) => {
-            const image = new Image();
-            image.decoding = "async";
-            image.src = url;
-
-            const markLoaded = () => {
-                if (cancelled) return;
-                startTransition(() => {
-                    setLoadedByUrl((prev) => prev[url] ? prev : { ...prev, [url]: true });
-                });
-            };
-
-            if (typeof image.decode === "function") {
-                void image.decode().then(markLoaded).catch(markLoaded);
-            } else {
-                image.onload = markLoaded;
-                image.onerror = markLoaded;
-            }
-
-            preloaders.push(image);
-        });
-
-        return () => {
-            cancelled = true;
-            preloaders.forEach((image) => {
-                image.onload = null;
-                image.onerror = null;
-            });
-        };
     }, [urls, startTransition]);
 
     const handleImageLoaded = (url: string) => {

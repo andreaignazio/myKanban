@@ -31,9 +31,14 @@ func (s *WorkspaceService) PatchWorkspaceProps(ctx context.Context, userID, work
 	// }
 
 	authorization, err := s.authz.AuthorizeRequest(ctx, authzdto.Request{
-		UserID:      userID,
-		Action:      actions.WorkspacePatch,
-		WorkspaceID: workspaceID,
+		UserID:        userID,
+		Action:        actions.WorkspacePatch,
+		WorkspaceID:   &workspaceID,
+		CorrelationID: correlationID,
+		Resource: authzdto.ResourceRef{
+			ResourceType: authzdto.ResourceTypeWorkspace,
+			ResourceID:   workspaceID,
+		},
 	})
 
 	if err != nil {

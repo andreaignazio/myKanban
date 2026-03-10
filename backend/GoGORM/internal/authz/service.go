@@ -29,6 +29,8 @@ func getPolicyEvaluator(policySpec authzdto.PolicySpec) (authzpolicy.PolicyEvalu
 
 	case authzdto.PolicyRequireMinimumFactValue:
 		return authzpolicy.NewRequireMinimumFactValueEvaluator(factKind), nil
+	case authzdto.PolicyRequireExactFactValue:
+		return authzpolicy.NewRequireExactFactValueEvaluator(factKind), nil
 	default:
 		return nil, domainerr.ErrUnsupportedPolicy
 	}

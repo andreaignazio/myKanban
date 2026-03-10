@@ -32,6 +32,16 @@ export function useCardActionRegistry() {
         return cardsStore.patchCardProps(boardID, cardId, props)
     }
 
+    function setInboxCardCoverSize(cardId: string, size: "small" | "large") {
+        const props: CardProps = {
+            Display: {
+                Size: size,
+            }
+        }
+
+        return inboxStore.patchInboxCardProps(cardId, props)
+    }
+
     function setCardColor(boardID: string, cardId: string, color: string) {
         const props: CardProps = {
             Display: {
@@ -44,6 +54,18 @@ export function useCardActionRegistry() {
         return cardsStore.patchCardProps(boardID, cardId, props)
     }
 
+    function setInboxCardColor(cardId: string, color: string) {
+        const props: CardProps = {
+            Display: {
+                Cover: {
+                    Type: "color",
+                    Color: color
+                }
+            }
+        }
+        return inboxStore.patchInboxCardProps(cardId, props)
+    }
+
     function removeCardCover(boardID: string, cardId: string) {
         const props: CardProps = {
             Display: {
@@ -52,6 +74,15 @@ export function useCardActionRegistry() {
         }
         // console.log("Removing card cover with props:", props);
         return cardsStore.patchCardProps(boardID, cardId, props)
+    }
+
+    function removeInboxCardCover(cardId: string) {
+        const props: CardProps = {
+            Display: {
+                Cover: null
+            }
+        }
+        return inboxStore.patchInboxCardProps(cardId, props)
     }
 
     async function setCardTitle(boardID: string, cardId: string, title: string, asyncKey?: AsyncRequestKey) {
@@ -80,6 +111,19 @@ export function useCardActionRegistry() {
             }
         }
         await cardsStore.patchCardProps(boardID, cardId, props)
+        return
+    }
+
+    async function setInboxCardCoverURL(cardId: string, url: string) {
+        const props: CardProps = {
+            Display: {
+                Cover: {
+                    Type: "image",
+                    URL: url
+                }
+            }
+        }
+        await inboxStore.patchInboxCardProps(cardId, props)
         return
     }
 
@@ -171,6 +215,14 @@ export function useCardActionRegistry() {
             EndDate: to ? to.toISOString() : null
         };
         return cardsStore.patchCardDetails(boardID, cardID, payload, asyncKey ?? useAsyncKey("card:edit:dates", cardID))
+    }
+
+    async function setDatesForInboxCard(cardID: string, from: Date | null, to: Date | null, asyncKey?: AsyncRequestKey) {
+        const payload: PatchCardDetailsRequest = {
+            StartDate: from ? from.toISOString() : null,
+            EndDate: to ? to.toISOString() : null
+        };
+        return inboxStore.patchInboxCardDetails(cardID, payload, asyncKey ?? useAsyncKey("card:edit:dates", cardID))
     }
 
     async function setDueDateForChecklistEntry(boardID: string, cardID: string, entryID: string, dueDate: Date | null) {
@@ -313,6 +365,7 @@ export function useCardActionRegistry() {
         addMemberToChecklistEntry,
         removeMemberFromChecklistEntry,
         setDatesForCard,
+        setDatesForInboxCard,
         setDueDateForChecklistEntry,
         setCardDescription,
         crossMoveChecklistEntry,
@@ -324,7 +377,11 @@ export function useCardActionRegistry() {
         mirrorCardToList,
         copyCardToList,
         mirrorCardToInbox,
-        createInboxCard
+        createInboxCard,
+        setInboxCardColor,
+        setInboxCardCoverSize,
+        setInboxCardCoverURL,
+        removeInboxCardCover,
 
     }
 

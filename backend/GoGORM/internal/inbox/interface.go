@@ -41,6 +41,7 @@ type ListCardsRepo interface {
 	FindAnyListCardByCardIDTX(ctx context.Context, db *gorm.DB, cardID uuid.UUID, includeDeleted bool) (*models.ListCard, bool, error)
 	UpsertListCardByIdTX(ctx context.Context, db *gorm.DB, listCard *models.ListCard) error
 	GetListCardByListAndCardTX(ctx context.Context, db *gorm.DB, listID, cardID uuid.UUID, includeDeleted bool) (*models.ListCard, error)
+	GetListCardByIDTX(ctx context.Context, db *gorm.DB, listCardID uuid.UUID, includeDeleted bool) (*models.ListCard, error)
 }
 
 type ListCardsService interface {
@@ -65,4 +66,14 @@ type CardsRepo interface {
 	CreateCardTX(ctx context.Context, tx *gorm.DB, card *models.Card) error
 	GetCardByIDTX(ctx context.Context, tx *gorm.DB, cardID uuid.UUID, includeDeleted bool) (*models.Card, error)
 	GetCardsByIDs(ctx context.Context, cardIDs []uuid.UUID, includeDeleted bool) ([]models.Card, error)
+	PatchCardDetailsTX(ctx context.Context, tx *gorm.DB,
+		cardID uuid.UUID, updateMap map[string]any) (*models.Card, error)
 }
+
+/*type CardsRepo interface {
+	PatchCardDetails(ctx context.Context, cardID uuid.UUID, updateMap map[string]any) (*models.Card, error)
+	GetUserCards(ctx context.Context, userID uuid.UUID, includeDeleted bool) ([]models.Card, error)
+	GetCardsWhereUserIsMember(ctx context.Context, userID uuid.UUID, includeDeleted bool) ([]models.Card, error)
+	GetCardsByIDs(ctx context.Context, cardIDs []uuid.UUID, includeDeleted bool) ([]models.Card, error)
+	GetCardByID(ctx context.Context, card *models.Card, includeDeleted bool) error
+}*/

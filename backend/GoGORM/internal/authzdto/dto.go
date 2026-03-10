@@ -11,10 +11,26 @@ import (
 
 type Request struct {
 	UserID        uuid.UUID
-	WorkspaceID   uuid.UUID
+	WorkspaceID   *uuid.UUID
 	CorrelationID uuid.UUID
 	Action        actions.Action
+	Resource      ResourceRef
+	AncillaryData map[ResourceType]ResourceRef
 }
+
+type ResourceRef struct {
+	ResourceType ResourceType
+	ResourceID   uuid.UUID
+}
+
+type ResourceType string
+
+const (
+	ResourceTypeCard      ResourceType = "card"
+	ResourceTypeBoardList ResourceType = "board_list"
+	ResourceTypeBoard     ResourceType = "board"
+	ResourceTypeWorkspace ResourceType = "workspace"
+)
 
 type Response struct {
 	Authorized bool
@@ -30,6 +46,10 @@ type FactKind string
 const (
 	FactActorWorkspaceRole        FactKind = "actor.workspace_role"
 	FactWorkspaceSubscriptionPlan FactKind = "workspace.subscription_plan"
+	FactBoardRole                 FactKind = "board_role"
+	FactBoardListAccessMode       FactKind = "board_list_access_mode"
+	FactBoardWorkspaceID          FactKind = "board_workspace_id"
+	FactCardEffectiveBoardListID  FactKind = "card.effective_board_list_id"
 )
 
 type PolicyKind string
@@ -47,8 +67,12 @@ type PolicySpec struct {
 }
 
 type Fact struct {
-	WorkspaceRole    *rbac.Role
-	SubscriptionPlan *subscriptionplan.Plan
+	WorkspaceRole       *rbac.Role
+	SubscriptionPlan    *subscriptionplan.Plan
+	BoardRole           *rbac.Role
+	BoardListAccessMode *rbac.BoardListAccessMode
+	BoardWorkspaceID    *uuid.UUID
+	BoardListID         *uuid.UUID
 }
 
 func NewWorkspaceRoleFact(role rbac.Role) Fact {
@@ -57,9 +81,33 @@ func NewWorkspaceRoleFact(role rbac.Role) Fact {
 	}
 }
 
+func NewBoardRoleFact(role rbac.Role) Fact {
+	return Fact{
+		BoardRole: &role,
+	}
+}
+
 func NewSubscriptionPlanFact(plan subscriptionplan.Plan) Fact {
 	return Fact{
 		SubscriptionPlan: &plan,
+	}
+}
+
+func NewBoardListAccessModeFact(mode rbac.BoardListAccessMode) Fact {
+	return Fact{
+		BoardListAccessMode: &mode,
+	}
+}
+
+func NewBoardWorkspaceIDFact(workspaceID uuid.UUID) Fact {
+	return Fact{
+		BoardWorkspaceID: &workspaceID,
+	}
+}
+
+func NewCardEffectiveBoardListIDFact(boardListID uuid.UUID) Fact {
+	return Fact{
+		BoardListID: &boardListID,
 	}
 }
 
@@ -81,6 +129,38 @@ func SetFact(facts map[FactKind]Fact, factKind FactKind, value Fact) error {
 		}
 		facts[factKind] = Fact{
 			SubscriptionPlan: value.SubscriptionPlan,
+		}
+		return nil
+	case FactBoardRole:
+		if value.BoardRole == nil {
+			return domainerr.ErrInvalidFactValue
+		}
+		facts[factKind] = Fact{
+			BoardRole: value.BoardRole,
+		}
+		return nil
+	case FactBoardListAccessMode:
+		if value.BoardListAccessMode == nil {
+			return domainerr.ErrInvalidFactValue
+		}
+		facts[factKind] = Fact{
+			BoardListAccessMode: value.BoardListAccessMode,
+		}
+		return nil
+	case FactBoardWorkspaceID:
+		if value.BoardWorkspaceID == nil {
+			return domainerr.ErrInvalidFactValue
+		}
+		facts[factKind] = Fact{
+			BoardWorkspaceID: value.BoardWorkspaceID,
+		}
+		return nil
+	case FactCardEffectiveBoardListID:
+		if value.BoardListID == nil {
+			return domainerr.ErrInvalidFactValue
+		}
+		facts[factKind] = Fact{
+			BoardListID: value.BoardListID,
 		}
 		return nil
 	default:

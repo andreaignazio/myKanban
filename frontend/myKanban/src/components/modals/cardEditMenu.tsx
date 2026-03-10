@@ -22,7 +22,7 @@ type CardEditMenuProps = {
     cardID: string;
     onClose: () => void;
     menuId?: string;
-    inboxMode?: boolean;
+    source?: "board" | "inbox" | "inbox-mirror";
     // Define the props for the CardEditMenu component here
 }
 
@@ -33,13 +33,15 @@ type MenuItem = {
     icon: JSX.Element;
     menuToOpen?: (props: { onClose: () => void; ref: React.RefObject<HTMLDivElement | null> }) => JSX.Element | null;
     actionToPerform?: () => void;
+    shouldShow?: boolean;
 }
 
 type MenuItemAndID = MenuItem & { menuId?: string }
 
 export const CardEditMenu = forwardRef<HTMLDivElement, CardEditMenuProps>((props, ref) => {
-    const { listId, cardID, onClose, inboxMode = false } = props;
+    const { listId, cardID, onClose, source = "board" } = props;
     const iconClass = "w-4 h-4 text-neutral-400"
+    const isInboxSource = source === "inbox" || source === "inbox-mirror"
     const navigate = useNavigate()
     const location = useLocation()
     const { workspaceId, boardId } = useParams<{ workspaceId: string; boardId: string }>()
@@ -47,6 +49,9 @@ export const CardEditMenu = forwardRef<HTMLDivElement, CardEditMenuProps>((props
     const cardsStore = useCardsStore();
     const getRootListIdForCardId = useBoardDetailStore((state) => state.getRootListIdForCardId);
     const resolvedListId = listId || getRootListIdForCardId(cardID) || "";
+
+
+
 
     const handleOpenCardDetailMenu = () => {
         onClose();
@@ -70,7 +75,7 @@ export const CardEditMenu = forwardRef<HTMLDivElement, CardEditMenuProps>((props
     }
 
     const archiveCard = async () => {
-        if (inboxMode || !boardId || !resolvedListId || !cardID) return;
+        if (isInboxSource || !boardId || !resolvedListId || !cardID) return;
         const result = await cardsStore.removeCardFromList(boardId, resolvedListId, cardID);
         if (result !== null) {
             handleCloseAllMenu(props.menuId ?? "card-edit-menu");
@@ -106,25 +111,26 @@ export const CardEditMenu = forwardRef<HTMLDivElement, CardEditMenuProps>((props
         {
             id: "editlabels", label: "Edit Labels", icon: <TagIcon className={iconClass} />,
             menuToOpen: ({ onClose, ref }) => <CardLabelMenu onClose={onClose} ref={ref} cardID={cardID} />,
-            menuId: "card-edit-menu-labels"
+            menuId: "card-edit-menu-labels", shouldShow: !isInboxSource
         },
         {
             id: "editMembers", label: "Edit Members", icon: <User2 className={iconClass} />,
-            menuToOpen: ({ onClose, ref }) => <CardMembersMenu onClose={onClose} ref={ref} boardId={boardId} cardId={cardID} />
+            menuToOpen: ({ onClose, ref }) => <CardMembersMenu onClose={onClose} ref={ref} boardId={boardId} cardId={cardID} />,
+            menuId: "card-edit-menu-members", shouldShow: !isInboxSource
         },
         {
             id: "editCover", label: "Edit Cover", icon: <CreditCardIcon className={iconClass} />,
-            menuToOpen: ({ onClose, ref }) => <CardCoverTabSelector onClose={onClose} ref={ref} cardId={cardID} />,
+            menuToOpen: ({ onClose, ref }) => <CardCoverTabSelector onClose={onClose} ref={ref} cardId={cardID} source={source} />,
             menuId: "card-edit-menu-cover"
         },
         {
             id: "editDates", label: "Edit Dates", icon: <Clock10Icon className={iconClass} />,
-            menuToOpen: ({ onClose, ref }) => <CardDatesMenu onClose={onClose} ref={ref} cardId={cardID} />,
+            menuToOpen: ({ onClose, ref }) => <CardDatesMenu onClose={onClose} ref={ref} cardId={cardID} source={source} />,
             menuId: "card-edit-menu-dates"
         },
         {
             id: "move", label: "Move", icon: <ArrowRight className={iconClass} />,
-            menuToOpen: ({ onClose, ref }) => <CardMoveMenu onClose={onClose} ref={ref} cardId={cardID} listId={listId} mode={inboxMode ? "moveInboxCard" : "move"} />,
+            menuToOpen: ({ onClose, ref }) => <CardMoveMenu onClose={onClose} ref={ref} cardId={cardID} listId={listId} mode={isInboxSource ? "moveInboxCard" : "move"} />,
             menuId: "card-edit-menu-move"
         },
         {
@@ -134,18 +140,33 @@ export const CardEditMenu = forwardRef<HTMLDivElement, CardEditMenuProps>((props
         },
         {
             id: "copyLink", label: "Copy Link", icon: <Link2Icon className={iconClass} />,
-            menuToOpen: null
         },
+
         {
             id: "mirror", label: "Mirror", icon: <ArrowBigRight className={iconClass} />,
             menuToOpen: ({ onClose, ref }) => <CardMoveMenu onClose={onClose} ref={ref} cardId={cardID} listId={listId} mode="mirror" />,
-            menuId: "card-edit-menu-mirror"
+            menuId: "card-edit-menu-mirror", shouldShow: !isInboxSource
         },
+        {
+            id: "insertIntoBoard", label: "Insert into Board", icon: <ArrowBigRight className={iconClass} />,
+            menuToOpen: ({ onClose, ref }) => <CardMoveMenu onClose={onClose} ref={ref} cardId={cardID} listId={listId} mode="mirror" />,
+            menuId: "card-edit-menu-insert-into-board", shouldShow: source === "inbox"
+        },
+
+
         {
             id: "archive",
             label: "Archive",
             icon: <ArchiveIcon className={iconClass} />,
             actionToPerform: () => archiveCardWithConfirmation(),
+            shouldShow: source !== "inbox-mirror",
+        },
+        {
+            id: "removeFromInbox",
+            label: "Remove from Inbox",
+            icon: <ArchiveIcon className={iconClass} />,
+            actionToPerform: () => archiveCardWithConfirmation(),
+            shouldShow: source === "inbox-mirror",
         }
 
     ]
@@ -162,7 +183,7 @@ export const CardEditMenu = forwardRef<HTMLDivElement, CardEditMenuProps>((props
     }
 
     function handleOpenCardActionModal(
-        menuToOpen?: (props: { onClose: () => void; ref: React.RefObject<HTMLDivElement | null> }) => JSX.Element,
+        menuToOpen?: (props: { onClose: () => void; ref: React.RefObject<HTMLDivElement | null> }) => JSX.Element | null,
         anchorKey?: string, menuId?: string) {
         // console.log("Opening respond modal for share offer");
         const id = "card-edit-menu-labels";
@@ -197,28 +218,20 @@ export const CardEditMenu = forwardRef<HTMLDivElement, CardEditMenuProps>((props
         <div className=" relative flex flex-col gap-1"
             ref={ref}>
             {menuItems.map((item) => {
-
-
+                if (item.shouldShow === false) return null;
 
                 return (
-                    <>
-
-                        <div
-                            key={item.id} >
-                            {item.id === "archive" && inboxMode ? null : (
-                                <LabeledButtonPresetB
-                                    registerAnchor={registerAnchor}
-                                    anchorKey={item.id}
-
-                                    className="w-fit bg-neutral-800 text-white
+                    <div key={item.id}>
+                        <LabeledButtonPresetB
+                            registerAnchor={registerAnchor}
+                            anchorKey={item.id}
+                            className="w-fit bg-neutral-800 text-white
                              hover:bg-neutral-700 rounded-[4px] px-2 py-1 text-left"
-                                    label={item.label}
-                                    onClick={() => { item.actionToPerform?.(); item.menuToOpen && handleOpenCardActionModal(item.menuToOpen, item.id, item.menuId); }} >
-                                    {item.icon}
-                                </LabeledButtonPresetB>
-                            )}
-                        </div>
-                    </>
+                            label={item.label}
+                            onClick={() => { item.actionToPerform?.(); item.menuToOpen && handleOpenCardActionModal(item.menuToOpen, item.id, item.menuId); }} >
+                            {item.icon}
+                        </LabeledButtonPresetB>
+                    </div>
                 )
             })}
 

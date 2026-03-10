@@ -53,7 +53,9 @@ function getStableIndexFromString(value: string, length: number): number {
 export const CardRow = ({ boardID, listId, listCardID: listCardID, cardId, index, isDragDisabled = false, source = "board", inboxCardId, rootListCardId }: CardRowProps) => {
 
     const isInbox = source === "inbox"
+    const isInboxMirror = source === "inbox-mirror"
     const isInboxMode = source === "inbox" || source === "inbox-mirror"
+
 
     const [editMode, setEditMode] = useState(false)
     //const boardId = useParams().boardId as string
@@ -107,7 +109,7 @@ export const CardRow = ({ boardID, listId, listCardID: listCardID, cardId, index
     const mode: CardRowMode = hasCover ? (isDetailed ? "detailed" : "compact") : "default"
 
     const effectiveListCardID = listcard?.ID ?? listCardID ?? rootListCardId ?? ""
-    const isInboxMirror = source === "inbox-mirror"
+
     const resolvedRootListCardID = source === "inbox-mirror"
         ? (rootListCardId ?? effectiveListCardID)
         : (listcard?.RootID ?? rootListCardId ?? effectiveListCardID)
@@ -167,7 +169,7 @@ export const CardRow = ({ boardID, listId, listCardID: listCardID, cardId, index
         const descriptor: OverlayDescriptor = {
             id: id,
             render: () => <CardEditMenu
-                ref={ActionsMenuRef} cardID={cardID} listId={listID} onClose={() => onMenuClose(id)} menuId={id} inboxMode={isInboxMode} />,
+                ref={ActionsMenuRef} cardID={cardID} listId={listID} onClose={() => onMenuClose(id)} menuId={id} source={source} />,
             anchorRef: cardRowRef,
             panelRef: ActionsMenuRef,
             type: "modal",

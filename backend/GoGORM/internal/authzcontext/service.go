@@ -25,6 +25,8 @@ func (s *Service) getHandlerForAction(action actions.Action) (AuthzContextHandle
 		return NewWorkspacePatchHandler(s.authzRepo), nil
 	case actions.InboxCardMoveToListInBoard:
 		return NewMoveInboxCardToListInBoardHandler(s.authzRepo), nil
+	case actions.CardInListPatch:
+		return NewAuthzCardsHandlerPatchCardInList(s.authzRepo), nil
 	default:
 		return nil, domainerr.ErrUnsupportedAction
 	}

@@ -1,8 +1,9 @@
 ﻿import { create } from "zustand";
-import type { CreateInboxCardRequest, InboxCard, InboxCardResponse, MirrorCardToInboxRequest, MoveInboxToListRequest, UserEvent, UserInboxCardResponse } from "./types";
+import type { Card, CardProps, CreateInboxCardRequest, InboxCard, InboxCardResponse, MirrorCardToInboxRequest, MoveInboxToListRequest, PatchCardDetailsRequest, PatchCardPropsRequest, UserEvent, UserInboxCardResponse } from "./types";
 import { api } from "@/api/api";
 import { useCardsStore } from "./cardsStore";
-import { useAsyncRequestStore } from "./asyncRequestStore";
+import { useAsyncKey, useAsyncRequestStore } from "./asyncRequestStore";
+import type { AsyncRequestKey } from "./asyncRequestTypes";
 import { useBoardDetailStore, type ListCard } from "./boardDetailStore";
 
 
@@ -18,6 +19,8 @@ type UserInboxStore = {
     replaceInboxCardIds: (newIds: string[]) => void
     moveInboxCard: (cardID: string, request: MoveInboxToListRequest, rollbackInboxCardIds?: string[]) => Promise<void>
     moveInboxCardToListInBoard: (cardID: string, targetWorkspaceID: string, targetBoardID: string, targetListID: string, request: MoveInboxToListRequest, optimisticListCardID?: string, rollbackListCardIds?: string[]) => Promise<void>
+    patchInboxCardDetails: (cardID: string, payload: PatchCardDetailsRequest, asyncKey?: AsyncRequestKey) => Promise<Card | null>
+    patchInboxCardProps: (cardID: string, props: CardProps) => Promise<Card | null>
     setInboxCardIds: (newIds: string[]) => void
     mergeInboxCardEntities: (cards: InboxCard[]) => void
 }
@@ -258,6 +261,40 @@ export const useUserInboxStore = create<UserInboxStore>((set, get) => ({
             rollbackOptimisticMove()
             // console.error("Failed to move inbox card to list in board:", error);
         }
+    },
+    patchInboxCardProps: async (cardID: string, props: CardProps) => {
+        const payload: PatchCardPropsRequest = { Props: props }
+
+        return useAsyncRequestStore.getState().execute<Card>(
+            useAsyncKey("card:edit:props", cardID),
+            async () => {
+                const res = await api.patch(`/inbox/cards/${cardID}/props`, payload)
+                console.log("Patched inbox card props response:", res.data)
+                return res.data as Card
+            },
+            {
+                successResetDelayMs: 1500,
+                onSuccess: (updatedCard) => {
+                    console.log("Updated inbox card props:", updatedCard)
+                    useCardsStore.getState().mergeCardsPatch({ [updatedCard.ID]: updatedCard })
+                }
+            }
+        )
+    },
+    patchInboxCardDetails: async (cardID: string, payload: PatchCardDetailsRequest, asyncKey?: AsyncRequestKey) => {
+        return useAsyncRequestStore.getState().execute<Card>(
+            asyncKey ?? useAsyncKey("card:edit:details", cardID),
+            async () => {
+                const res = await api.patch(`/inbox/cards/${cardID}`, payload)
+                return res.data as Card
+            },
+            {
+                successResetDelayMs: 1500,
+                onSuccess: (updatedCard) => {
+                    useCardsStore.getState().mergeCardsPatch({ [updatedCard.ID]: updatedCard })
+                }
+            }
+        )
     },
     setInboxCardIds: (newIds: string[]) => {
         set({

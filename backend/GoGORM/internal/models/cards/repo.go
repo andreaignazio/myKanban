@@ -63,6 +63,19 @@ func (r *GormCardsRepo) PatchCardDetails(ctx context.Context,
 	return &card, nil
 }
 
+func (r *GormCardsRepo) PatchCardDetailsTX(ctx context.Context, tx *gorm.DB,
+	cardID uuid.UUID, updateMap map[string]any) (*models.Card, error) {
+	var card models.Card
+	if err := tx.WithContext(ctx).
+		Model(&card).
+		Where("id = ?", cardID).
+		Clauses(clause.Returning{}).
+		Updates(updateMap).Error; err != nil {
+		return nil, err
+	}
+	return &card, nil
+}
+
 func (r *GormCardsRepo) GetUserCards(ctx context.Context, userID uuid.UUID, includeDeleted bool) ([]models.Card, error) {
 	var cards []models.Card
 	query := r.db.WithContext(ctx).Table("cards")

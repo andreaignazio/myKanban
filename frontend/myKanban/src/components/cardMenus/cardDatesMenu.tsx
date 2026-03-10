@@ -27,19 +27,22 @@ type CardDatesMenuProps = {
     entryID?: string;
     cardId?: string;
     boardId?: string;
+    source?: "board" | "inbox" | "inbox-mirror";
     headless?: boolean;
     contextKey?: "editmodal" | "cardmenu";
 }
 
-export const CardDatesMenu = forwardRef<HTMLDivElement, CardDatesMenuProps>(({ onClose, entryID, cardId, boardId, headless = false, contextKey = "editmodal" }, ref) => {
+export const CardDatesMenu = forwardRef<HTMLDivElement, CardDatesMenuProps>(({ onClose, entryID, cardId, boardId, source = "board", headless = false, contextKey = "editmodal" }, ref) => {
 
     const { delayedExecute } = useDelayedExecute(onClose)
     const boardID = boardId ?? useParams().boardId as string;
     const cardID = cardId ?? useParams().cardId as string;
     const cardActions = useCardActionRegistry();
     const setCardDates = cardActions.setDatesForCard;
+    const setInboxCardDates = cardActions.setDatesForInboxCard;
     const setEntryDueDate = cardActions.setDueDateForChecklistEntry;
     const isEntryMode = !!entryID;
+    const isInboxMode = source === "inbox" || source === "inbox-mirror";
     const ICON_SIZE_CLASS = "w-5 h-";
     const iconClassName = `${ICON_SIZE_CLASS} text-neutral-300`;
     const icon = (Icon: ComponentType<SVGProps<SVGSVGElement>>) => (
@@ -77,7 +80,9 @@ export const CardDatesMenu = forwardRef<HTMLDivElement, CardDatesMenuProps>(({ o
         }
 
         const exec = async () => {
-            const result = await setCardDates(boardID, cardID, startDate ?? null, dueDate ?? null, key);
+            const result = isInboxMode
+                ? await setInboxCardDates(cardID, startDate ?? null, dueDate ?? null, key)
+                : await setCardDates(boardID, cardID, startDate ?? null, dueDate ?? null, key);
             if (result !== null) onClose();
         }
 
@@ -95,7 +100,9 @@ export const CardDatesMenu = forwardRef<HTMLDivElement, CardDatesMenuProps>(({ o
         setStartDate(undefined);
         setDueDate(undefined);
         const exec = async () => {
-            const result = await setCardDates(boardID, cardID, null, null, removeKey);
+            const result = isInboxMode
+                ? await setInboxCardDates(cardID, null, null, removeKey)
+                : await setCardDates(boardID, cardID, null, null, removeKey);
             if (result !== null);
         }
         exec();

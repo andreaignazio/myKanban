@@ -295,6 +295,18 @@ func (s *InboxService) extractRootListCardIDs(inboxCards []models.UserInboxCard)
 	return rootIDs
 }
 
+func (s *InboxService) isMirrorCard(ctx context.Context, cardID uuid.UUID) (bool, *models.ListCard, error) {
+	isMirror := false
+	listcard, found, err := s.ListCardsRepo.FindAnyListCardByCardIDTX(ctx, s.db, cardID, s.includeDeleted)
+	if err != nil {
+		return false, nil, err
+	}
+	if found {
+		isMirror = listcard.RootID != uuid.Nil
+	}
+	return isMirror, listcard, nil
+}
+
 func (s *InboxService) MoveInboxCardToListInBoard(ctx context.Context, userID, cardID, targetWorkspaceID, targetBoardID, targetListID, correlationID uuid.UUID, req MoveInboxCardRequest) (*dto.ListCardResponse, error) {
 
 	/*authzRequest := authzdto.Request{
@@ -312,13 +324,9 @@ func (s *InboxService) MoveInboxCardToListInBoard(ctx context.Context, userID, c
 		//return nil, domainerr.ErrForbidden
 	}*/
 
-	isMirror := false
-	listcard, found, err := s.ListCardsRepo.FindAnyListCardByCardIDTX(ctx, s.db, cardID, s.includeDeleted)
+	isMirror, listcard, err := s.isMirrorCard(ctx, cardID)
 	if err != nil {
 		return nil, err
-	}
-	if found {
-		isMirror = listcard.RootID != uuid.Nil
 	}
 
 	_, err = s.BoardListRepo.GetBoardListsByListIdTX(ctx, s.db, targetListID, s.includeDeleted)

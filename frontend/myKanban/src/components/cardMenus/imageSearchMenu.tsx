@@ -17,24 +17,29 @@ type CardActionsMenuProps = {
     onImageClick?: (url: string) => void;
     showSearchHelpers?: boolean;
     defaultImageLimit?: number;
-
-
+    cardId?: string;
+    source?: "board" | "inbox" | "inbox-mirror";
 }
 
 const DEFAULT_IMAGE_LIMIT = 30;
 
-export const ImageSearchMenu = forwardRef<HTMLDivElement, CardActionsMenuProps>(({ onClose, setActiveTab, onBack, onImageClick, showSearchHelpers = true, defaultImageLimit = DEFAULT_IMAGE_LIMIT }, ref) => {
+export const ImageSearchMenu = forwardRef<HTMLDivElement, CardActionsMenuProps>(({ onClose, setActiveTab, onBack, onImageClick, showSearchHelpers = true, defaultImageLimit = DEFAULT_IMAGE_LIMIT, cardId, source = "board" }, ref) => {
     const boardID = useParams().boardId as string;
-    const cardID = useParams().cardId as string;
+    const cardID = cardId ?? useParams().cardId as string;
     const cardActions = useCardActionRegistry();
     const removeCover = cardActions.removeCardCover;
     const fetchMedia = useMediaStore((state) => state.fetchMedia);
     const [searchInput, setSearchInput] = useState("");
     //console.log("ImageSearchMenu rendered with coverColor:", coverColor);
     const card = useCardsStore((state) => state.cardsById[cardID]);
+    const isInboxMode = source === "inbox" || source === "inbox-mirror";
 
     const setCardCoverURL = (url: string) => {
-        cardActions.setCardCoverURL(boardID, cardID, url);
+        if (isInboxMode) {
+            void cardActions.setInboxCardCoverURL(cardID, url);
+        } else {
+            void cardActions.setCardCoverURL(boardID, cardID, url);
+        }
         onBack?.();
         //setCoverURL?.(url);
     }

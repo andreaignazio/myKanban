@@ -2,6 +2,7 @@ package authzcontext
 
 import (
 	"GoGORM/internal/authzdto"
+	"GoGORM/internal/domainerr"
 	"GoGORM/internal/rbac"
 	"GoGORM/internal/subscriptionplan"
 	"context"
@@ -32,11 +33,15 @@ func (h *WorkspacePatchHandler) BuildAuthzContext(ctx context.Context, request a
 
 	facts := make(map[authzdto.FactKind]authzdto.Fact)
 
-	userWorkspace, err := h.authzRepo.GetWorkspaceUserRole(request.WorkspaceID, request.UserID)
+	if request.WorkspaceID == nil {
+		return nil, domainerr.ErrForbidden
+	}
+
+	userWorkspace, err := h.authzRepo.GetWorkspaceUserRole(*request.WorkspaceID, request.UserID)
 	if err != nil {
 		return nil, err
 	}
-	subscription, err := h.authzRepo.GetWorkspaceSubscriptionPlan(request.WorkspaceID)
+	subscription, err := h.authzRepo.GetWorkspaceSubscriptionPlan(*request.WorkspaceID)
 	if err != nil {
 		return nil, err
 	}
