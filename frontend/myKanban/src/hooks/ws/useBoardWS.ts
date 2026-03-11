@@ -19,6 +19,7 @@ import { useShareOffersStore } from "@/stores/shareOffersStore"
 import { useBoardsStore } from "@/stores/boardsStore"
 import { useBoardMembersStore } from "@/stores/boardMembersStore"
 import { useUiStore } from "@/stores/uiStore"
+import { getWebSocketOrigin } from "@/config/runtime"
 
 type SharedWsState = {
     ws: WebSocket | null
@@ -37,8 +38,6 @@ const sharedWsState: SharedWsState = {
 }
 
 function buildWebSocketURL(workspaceID: string, boardID?: string): string {
-    const proto = window.location.protocol == "https" ? "wss" : "ws"
-
     const userID = useAuthStore.getState().userID
     if (!userID) {
         console.warn("[ws] missing userID while building WebSocket URL", {
@@ -46,7 +45,7 @@ function buildWebSocketURL(workspaceID: string, boardID?: string): string {
             boardID: boardID ?? null
         })
     }
-    const base = `${proto}://localhost:8090/api/ws?workspaceID=${workspaceID}&userID=${userID}`
+    const base = `${getWebSocketOrigin()}/api/ws?workspaceID=${workspaceID}&userID=${userID}`
     const url = boardID ? `${base}&boardID=${boardID}` : base
     console.debug("[ws] build url", {
         workspaceID,

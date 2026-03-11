@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
+	"strings"
 	"time"
 
 	auditcontext "GoGORM/internal/auditcontext"
@@ -44,6 +46,83 @@ import (
 	"gorm.io/gorm"
 )
 
+func resolveServerAddr() string {
+	if addr := strings.TrimSpace(os.Getenv("SERVER_ADDR")); addr != "" {
+		return addr
+	}
+
+	if port := strings.TrimSpace(os.Getenv("PORT")); port != "" {
+		return ":" + strings.TrimPrefix(port, ":")
+	}
+
+	return "localhost:8090"
+}
+
+func firstEnv(keys ...string) string {
+	for _, key := range keys {
+		if value := strings.TrimSpace(os.Getenv(key)); value != "" {
+			return value
+		}
+	}
+
+	return ""
+}
+
+func buildPostgresURL(host, port, user, password, dbName, sslMode string) string {
+	query := url.Values{}
+	query.Set("sslmode", sslMode)
+
+	postgresURL := &url.URL{
+		Scheme:   "postgres",
+		Host:     host + ":" + port,
+		Path:     dbName,
+		RawQuery: query.Encode(),
+	}
+
+	if password != "" {
+		postgresURL.User = url.UserPassword(user, password)
+	} else if user != "" {
+		postgresURL.User = url.User(user)
+	}
+
+	return postgresURL.String()
+}
+
+func resolvePostgresDSN() string {
+	if dsn := firstEnv("DATABASE_URL", "POSTGRES_DSN"); dsn != "" {
+		return dsn
+	}
+
+	host := firstEnv("DB_HOST", "PGHOST")
+	port := firstEnv("DB_PORT", "PGPORT")
+	user := firstEnv("DB_USER", "PGUSER")
+	password := firstEnv("DB_PASSWORD", "PGPASSWORD")
+	dbName := firstEnv("DB_NAME", "PGDATABASE")
+	sslMode := firstEnv("DB_SSLMODE", "PGSSLMODE")
+
+	if host != "" || port != "" || user != "" || password != "" || dbName != "" || sslMode != "" {
+		if host == "" {
+			host = "localhost"
+		}
+		if port == "" {
+			port = "5432"
+		}
+		if user == "" {
+			user = "postgres"
+		}
+		if dbName == "" {
+			dbName = "goTestDB"
+		}
+		if sslMode == "" {
+			sslMode = "disable"
+		}
+
+		return buildPostgresURL(host, port, user, password, dbName, sslMode)
+	}
+
+	return "host=localhost user=postgres password=fARADAY212 dbname=goTestDB port=5432 sslmode=disable"
+}
+
 func main() {
 	envPaths := []string{".env", "backend/GoGORM/.env", "../.env"}
 	envLoaded := false
@@ -57,7 +136,7 @@ func main() {
 		log.Printf("warning: .env not loaded from known paths")
 	}
 
-	dsn := "host=localhost user=postgres password=fARADAY212 dbname=goTestDB port=5432 sslmode=disable"
+	dsn := resolvePostgresDSN()
 
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
@@ -270,7 +349,9 @@ func main() {
 		subscriptionhandler,
 	)
 
-	if err := r.Run("localhost:8090"); err != nil {
+	listenAddr := resolveServerAddr()
+	log.Printf("server listening on %s", listenAddr)
+	if err := r.Run(listenAddr); err != nil {
 		log.Fatal(err)
 	}
 }

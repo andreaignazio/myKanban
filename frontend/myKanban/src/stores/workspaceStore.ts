@@ -13,6 +13,7 @@ import { useAuthStore } from "./auth";
 import type { RequestSubscriptionCheckout, SubscriptionCheckoutResponse } from "@/types/subscriptiontypes";
 import type { ShareOffer } from "./shareOfferTypes";
 import { useAsyncRequestStore } from "./asyncRequestStore";
+import { buildAppURL } from "@/config/runtime";
 
 export type WorkspaceMembers = {
     User: AnyUser;
@@ -413,12 +414,13 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
         }
     },
     createUpgradeSubscriptionRequest: async (plan: SubscriptionPlan, seats: number, workspaceID: string) => {
+        const subscriptionBasePath = `/workspaces/${workspaceID}/settings/subscription`
 
         const request: RequestSubscriptionCheckout = {
             PlanCode: plan,
             Seats: seats,
-            SuccessUrl: `http://localhost:5173/workspaces/${workspaceID}/settings/subscription/success`,
-            CancelUrl: `http://localhost:5173/workspaces/${workspaceID}/settings/subscription/failed`
+            SuccessUrl: buildAppURL(`${subscriptionBasePath}/success`),
+            CancelUrl: buildAppURL(`${subscriptionBasePath}/failed`)
         }
 
 
