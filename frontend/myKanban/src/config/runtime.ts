@@ -26,6 +26,10 @@ export function getAppOrigin(): string {
     return readRuntimeEnv("VITE_APP_ORIGIN") ?? window.location.origin
 }
 
+export function getApiBaseURL(): string {
+    return readRuntimeEnv("VITE_API_BASE_URL") ?? "/api"
+}
+
 export function buildAppURL(pathname: string): string {
     const normalizedPath = pathname.startsWith("/") ? pathname : `/${pathname}`
     return `${getAppOrigin()}${normalizedPath}`

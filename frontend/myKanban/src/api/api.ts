@@ -1,8 +1,9 @@
 import axios from "axios";
 import { useAuthStore } from "@/stores/auth";
+import { getApiBaseURL } from "@/config/runtime";
 
 export const api = axios.create({
-    baseURL: '/api'
+    baseURL: getApiBaseURL()
 
 })
 
