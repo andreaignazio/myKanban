@@ -117,15 +117,15 @@ type SubscriptionService interface {
 func (s *WorkspaceService) CreateWorkspace(ctx context.Context, userID uuid.UUID, req CreateWorkspaceRequest) (*dto.WorkspaceResponse, *dto.UserWorkspaceResponse, error) {
 	position, err := s.UserWorkspacePositionHelper.UserWorkspacePosAtEnd(ctx, userID)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, domainerr.Wrap(err, "workspaces.service.CreateWorkspace.position")
 	}
 	token, err := tokens.NewPublicToken()
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, domainerr.Wrap(err, "workspaces.service.CreateWorkspace.publicToken")
 	}
 	ok, err := s.SubscriptionService.CheckWorkspaceMembershipLimit(ctx, userID)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, domainerr.Wrap(err, "workspaces.service.CreateWorkspace.membershipLimit")
 	} else if !ok {
 		return nil, nil, domainerr.New(domainerr.ErrForbidden, "workspace membership limit reached")
 	}
@@ -153,18 +153,18 @@ func (s *WorkspaceService) CreateWorkspace(ctx context.Context, userID uuid.UUID
 
 	err = s.db.Transaction(func(tx *gorm.DB) error {
 		if err := s.WorkspaceRepo.CreateWorkspaceTX(ctx, tx, workspace); err != nil {
-			return err
+			return domainerr.Wrap(err, "workspaces.service.CreateWorkspace.insertWorkspace")
 		}
 		if err := s.WorkspaceRepo.CreateUserWorkspaceTX(ctx, tx, userWorkspace); err != nil {
-			return err
+			return domainerr.Wrap(err, "workspaces.service.CreateWorkspace.insertUserWorkspace")
 		}
 		if err := tx.WithContext(ctx).Create(workspaceSubscription).Error; err != nil {
-			return err
+			return domainerr.Wrap(err, "workspaces.service.CreateWorkspace.insertWorkspaceSubscription")
 		}
 		return nil
 	})
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, domainerr.Wrap(err, "workspaces.service.CreateWorkspace.tx")
 	}
 
 	workspaceResponse := dto.WorkspaceToResponse(workspace)

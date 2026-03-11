@@ -5,6 +5,7 @@ import (
 	"GoGORM/internal/rbac"
 	"GoGORM/internal/server/httperr"
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -32,6 +33,7 @@ func (h *WorkspacesHandler) CreateUserWorkspace(c *gin.Context) {
 	}
 	workspaceResponse, userWorkspaceResponse, err := h.WorkspaceService.CreateWorkspace(ctx, userID, req)
 	if err != nil {
+		log.Printf("create workspace failed user=%s name=%q err=%v", userID, req.Name, err)
 		httperr.WriteOp(c, err, "workspaces.handler.CreateUserWorkspace")
 		return
 	}
