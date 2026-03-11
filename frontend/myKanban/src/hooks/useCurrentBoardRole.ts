@@ -27,5 +27,7 @@ export function useCurrentBoardRole(boardId?: string | null) {
         canManageBoard: role === "owner" || role === "admin",
         isOwner: role === "owner",
         isAdminOrOwner: role === "owner" || role === "admin",
+        isMember: role === "member",
+        isViewer: role === "viewer",
     };
 }

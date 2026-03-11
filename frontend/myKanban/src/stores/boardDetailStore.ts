@@ -6,7 +6,7 @@ import { api } from "@/api/api";
 import { useListsStore } from "./listsStore";
 import { useCardsStore, type CrossMoveCardRequest } from "./cardsStore";
 import { useBoardsStore } from "./boardsStore";
-import type { Board, BoardEvent, BoardLabel, BoardListAccessMode, Card, CardChecklist, CardComment, CardLabelLink, Checklist, ChecklistEntry, CrossBoardMoveBoardPayload, Entry, EntryMember, List, ListCardMovedPayload, ListCardRelation, User, UserBoard, UserWorkspace } from "./types";
+import type { Board, BoardEvent, BoardLabel, BoardListAccessMode, Card, CardChecklist, CardComment, CardLabelLink, Checklist, ChecklistEntry, CrossBoardMoveBoardPayload, Entry, EntryMember, List, ListCardMovedPayload, ListCardRelation, RootBoardListResponse, User, UserBoard, UserWorkspace } from "./types";
 
 import type { BoardAuditLogEvent } from "./audittypes";
 import { useLabelsStore } from "./labelsStore";
@@ -100,6 +100,17 @@ function extractInvalidatedRootBoardListCardIds(payloadData: any): string[] {
     return [];
 }
 
+type RootData = {
+    rootListID?: string
+    isUserBoardPurged?: boolean
+    isUserBoardSoftDeleted?: boolean
+    isMainListCardPurged?: boolean
+    isMainListCardSoftDeleted?: boolean
+    isRootPurged?: boolean
+    isRootSoftDeleted?: boolean
+}
+
+
 type BoardDetailStore = {
     OpCounter: number
     processedEventKeys: string[]
@@ -111,6 +122,7 @@ type BoardDetailStore = {
     boardListIdsByBoardId: Record<string, string[]>
 
     rootBoardIdByListCardId: Record<string, string>
+    rootListCardDataByListCardId: Record<string, RootData>
     invalidatedRootBoardListCardIds: Record<string, true>
 
 
@@ -155,11 +167,13 @@ type BoardDetailStore = {
     getListIdForBoardListId: (boardListId: string) => string | null
     getCardIdForListCardId: (listCardId: string) => string | null
     persistMoveCardInBoard: (listCardId: string, targetListID: string, fromListID: string, beforeID: string | null) => Promise<void>
-    fetchRootBoardForListcardId: (boardID: string, listCardID: string) => Promise<Board | null>
+
+    fetchRootBoardForListcardId: (boardID: string, listCardID: string) => Promise<RootBoardListResponse | null>
     getRootBoardForListCardId: (listCardID: string) => Board | null
     invalidateRootBoardCacheForListCards: (listCardIDs: string[]) => void
     clearRootBoardCacheInvalidation: (listCardID: string) => void
     applyListCardDetachEvent: (payload: BoardDetailPatch) => Promise<void>
+    getBoardListForListCardId: (listCardID: string, boardID: string) => BoardList | null
 }
 
 export type DeltaPayload = {
@@ -180,6 +194,7 @@ export const useBoardDetailStore = create<BoardDetailStore>((set, get) => ({
     boardListById: {}, //ORDER OF LISTS IN THE BOARD
     boardListIdsByBoardId: {}, //META OF BOARDLISTS BY ID
     //rootsByRootId: {},
+    rootListCardDataByListCardId: {},
     rootBoardIdByListCardId: {},
     invalidatedRootBoardListCardIds: {},
 
@@ -660,9 +675,11 @@ export const useBoardDetailStore = create<BoardDetailStore>((set, get) => ({
         const prevListCardById = get().listCardById
         const prevListCardIdsByListId = get().listCardIdsByListId
         const prevRootBoardIdByListCardId = get().rootBoardIdByListCardId
+        const prevRootListCardDataByListCardId = get().rootListCardDataByListCardId
         const prevInvalidatedRootBoardListCardIds = get().invalidatedRootBoardListCardIds
         let nextListCardById = { ...prevListCardById }
         const nextRootBoardIdByListCardId = { ...prevRootBoardIdByListCardId }
+        const nextRootListCardDataByListCardId = { ...prevRootListCardDataByListCardId }
         const nextInvalidatedRootBoardListCardIds = { ...prevInvalidatedRootBoardListCardIds }
 
         const nextLCIdsByListId = { ...prevListCardIdsByListId }
@@ -671,6 +688,7 @@ export const useBoardDetailStore = create<BoardDetailStore>((set, get) => ({
         for (const rel of lcPayload) {
             delete nextListCardById[rel.ID]
             delete nextRootBoardIdByListCardId[rel.ID]
+            delete nextRootListCardDataByListCardId[rel.ID]
             delete nextInvalidatedRootBoardListCardIds[rel.ID]
             const ids = [...(nextLCIdsByListId[rel.ListID] ?? [])]
             const idx = ids.findIndex((id) => id === rel.ID)
@@ -697,6 +715,7 @@ export const useBoardDetailStore = create<BoardDetailStore>((set, get) => ({
             listCardById: nextListCardById,
             listCardIdsByListId: nextLCIdsByListId,
             rootBoardIdByListCardId: nextRootBoardIdByListCardId,
+            rootListCardDataByListCardId: nextRootListCardDataByListCardId,
             invalidatedRootBoardListCardIds: nextInvalidatedRootBoardListCardIds,
             OpCounter: state.OpCounter + 1
 
@@ -1057,12 +1076,14 @@ export const useBoardDetailStore = create<BoardDetailStore>((set, get) => ({
         const nextListCardById = { ...get().listCardById }
         const nextListCardIdsByListId = { ...get().listCardIdsByListId }
         const nextRootBoardIdByListCardId = { ...get().rootBoardIdByListCardId }
+        const nextRootListCardDataByListCardId = { ...get().rootListCardDataByListCardId }
         const nextInvalidatedRootBoardListCardIds = { ...get().invalidatedRootBoardListCardIds }
 
         listCardIds.forEach((listCardId) => {
             const listId = nextListCardById[listCardId]?.ListID
             delete nextListCardById[listCardId]
             delete nextRootBoardIdByListCardId[listCardId]
+            delete nextRootListCardDataByListCardId[listCardId]
             delete nextInvalidatedRootBoardListCardIds[listCardId]
 
             if (!listId) return
@@ -1074,6 +1095,7 @@ export const useBoardDetailStore = create<BoardDetailStore>((set, get) => ({
             listCardById: nextListCardById,
             listCardIdsByListId: nextListCardIdsByListId,
             rootBoardIdByListCardId: nextRootBoardIdByListCardId,
+            rootListCardDataByListCardId: nextRootListCardDataByListCardId,
             invalidatedRootBoardListCardIds: nextInvalidatedRootBoardListCardIds,
             OpCounter: state.OpCounter + 1,
         }))
@@ -1105,13 +1127,23 @@ export const useBoardDetailStore = create<BoardDetailStore>((set, get) => ({
         return listCard ? listCard.CardID : null
     },
 
-    fetchRootBoardForListcardId: async (boardID: string, listCardID: string): Promise<Board | null> => {
+    fetchRootBoardForListcardId: async (boardID: string, listCardID: string): Promise<RootBoardListResponse | null> => {
 
-        const response = await useAsyncRequestStore.getState().execute<AxiosResponse<Board | null>>("listcard:rootboard:fetch",
+        const response = await useAsyncRequestStore.getState().execute<AxiosResponse<RootBoardListResponse | null>>("listcard:rootboard:fetch",
             () => api.get(`/boards/${boardID}/listcards/${listCardID}/rootboard`),
             {
                 successResetDelayMs: 2000, onSuccess(result) {
-                    const board = result.data as Board | null
+                    const payload = result.data as RootBoardListResponse | null
+                    const board = payload?.Board ?? null
+                    const rootData = {
+                        rootListID: payload?.List?.ID,
+                        isUserBoardPurged: payload?.IsUserBoardPurged ?? false,
+                        isUserBoardSoftDeleted: payload?.IsUserBoardSoftDeleted ?? false,
+                        isMainListCardPurged: payload?.IsMainListCardPurged ?? false,
+                        isMainListCardSoftDeleted: payload?.IsMainListCardSoftDeleted ?? false,
+                        isRootPurged: payload?.IsRootPurged ?? false,
+                        isRootSoftDeleted: payload?.IsRootSoftDeleted ?? false,
+                    }
                     if (!board?.ID) {
                         set((state) => {
                             const nextRootBoardByListCardId = { ...state.rootBoardIdByListCardId }
@@ -1122,12 +1154,26 @@ export const useBoardDetailStore = create<BoardDetailStore>((set, get) => ({
 
                             return {
                                 rootBoardIdByListCardId: nextRootBoardByListCardId,
+                                rootListCardDataByListCardId: {
+                                    ...state.rootListCardDataByListCardId,
+                                    [listCardID]: rootData,
+                                },
                                 invalidatedRootBoardListCardIds: nextInvalidated,
                             }
                         })
                         return
                     }
                     useBoardsStore.getState().mergeBoardsPatch({ [board.ID]: board })
+                    if (payload?.UserBoard) {
+                        useBoardsStore.getState().mergeUserBoardPatch({ [payload.UserBoard.BoardID]: payload.UserBoard })
+                    }
+                    if (payload?.List?.ID) {
+                        console.log("Merging list patch for List ID:", payload.List.ID)
+                        useListsStore.getState().mergeListsPatch({ [payload.List.ID]: payload.List })
+                    }
+                    if (payload?.BoardList?.ID) {
+                        get().mergeBoardListsPatch({ [payload.BoardList.ID]: payload.BoardList })
+                    }
                     set((state) => {
                         const nextInvalidated = { ...state.invalidatedRootBoardListCardIds }
                         delete nextInvalidated[listCardID]
@@ -1138,6 +1184,10 @@ export const useBoardDetailStore = create<BoardDetailStore>((set, get) => ({
                                 [listCardID]: board.ID
                             },
                             invalidatedRootBoardListCardIds: nextInvalidated,
+                            rootListCardDataByListCardId: {
+                                ...state.rootListCardDataByListCardId,
+                                [listCardID]: rootData,
+                            }
                         }
                     })
 
@@ -1198,6 +1248,13 @@ export const useBoardDetailStore = create<BoardDetailStore>((set, get) => ({
             listCardIdsByListId: nextListCardIdsByListId,
         }))
     },
+    getBoardListForListCardId: (listCardID: string, boardID: string): BoardList | null => {
+        const listCard = get().listCardById[listCardID]
+        if (!listCard) return null
+        const blIds = get().boardListIdsByBoardId[boardID] ?? []
+        const bl = blIds.map((id) => get().boardListById[id]).find((bl) => bl.ListID === listCard.ListID)
+        return bl ?? null
+    }
 
 }
 

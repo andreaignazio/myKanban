@@ -16,6 +16,7 @@ export type CardRowCoverWrapperProps = {
     wrapperClassName?: string
     mainDivClassName?: string
     mirroBgStyle?: React.CSSProperties
+    canEdit?: boolean
 }
 
 
@@ -33,7 +34,8 @@ export const CardRowCoverWrapper = forwardRef<HTMLDivElement, CardRowCoverWrappe
     children,
     wrapperClassName,
     mainDivClassName,
-    mirroBgStyle
+    mirroBgStyle,
+    canEdit
 }, ref) => {
 
 
@@ -61,10 +63,13 @@ export const CardRowCoverWrapper = forwardRef<HTMLDivElement, CardRowCoverWrappe
                     backgroundSize: "cover", backgroundPosition: "center",
 
                 }}
-                className={`relative z-10 flex flex-col text-gray-100
+                className={`relative z-10 flex flex-col text-gray-100 transition-all ease-in-out duration-200
                  bg-[#242528]
-                rounded-lg  min-h-[40px] justify-center overflow-hidden shadow-md shadow-black/40
-                group ring-2 ring-white/0 mx-1 hover:ring-white/100
+                rounded-lg  min-h-[40px] justify-center overflow-hidden shadow-md 
+                ${canEdit
+                        ? "shadow-black/40 hover:ring-white/100"
+                        : "shadow-black/20 hover:ring-white/30"}
+                group ring-2 ring-white/0 mx-1 
                 ${mainDivClassName ?? ""}`}>
 
 

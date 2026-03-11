@@ -33,6 +33,7 @@ export function useCardRootBoardContext({
     const fetchRootBoardForListcardId = useBoardDetailStore((state) => state.fetchRootBoardForListcardId)
     const getRootBoardForListcardId = useBoardDetailStore((state) => state.getRootBoardForListCardId)
     const rootBoardIdByListCardId = useBoardDetailStore((state) => state.rootBoardIdByListCardId)
+    const rootListCardData = useBoardDetailStore((state) => effectiveListCardID ? state.rootListCardDataByListCardId[effectiveListCardID] : undefined)
     const invalidatedRootBoardListCardIds = useBoardDetailStore((state) => state.invalidatedRootBoardListCardIds)
 
     const [effectiveRootBoard, setEffectiveRootBoard] = useState<Board | undefined>(undefined)
@@ -73,13 +74,28 @@ export function useCardRootBoardContext({
     } = useBoardBackground({ board: effectiveRootBoard })
 
     const showMirrorBackdrop = isInboxMirror || (isMirrorCard && !!effectiveRootBoard?.ID && effectiveRootBoard.ID !== boardId)
+    const isUserBoardPurged = !!rootListCardData?.isUserBoardPurged
+    const isUserBoardSoftDeleted = !!rootListCardData?.isUserBoardSoftDeleted
+    const isMainListCardPurged = !!rootListCardData?.isMainListCardPurged
+    const isMainListCardSoftDeleted = !!rootListCardData?.isMainListCardSoftDeleted
+    const isRootPurged = !!rootListCardData?.isRootPurged
+    const isRootSoftDeleted = !!rootListCardData?.isRootSoftDeleted
 
     return {
         ...mirrorState,
         effectiveRootBoard,
+        rootListCardData,
+        isUserBoardPurged,
+        isUserBoardSoftDeleted,
+        isMainListCardPurged,
+        isMainListCardSoftDeleted,
+        isRootPurged: isRootPurged,
+        isRootSoftDeleted: isRootSoftDeleted,
         rootBoardBackgroundType,
         rootBoardBgImage,
         rootBoardBgColorClass,
         showMirrorBackdrop,
     }
 }
+
+export type CardRootBoardContextValue = ReturnType<typeof useCardRootBoardContext>

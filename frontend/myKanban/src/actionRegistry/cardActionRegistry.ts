@@ -22,14 +22,14 @@ export function useCardActionRegistry() {
     const navigate = useNavigate();
 
 
-    function setCardCoverSize(boardID: string, cardId: string, size: "small" | "large") {
+    function setCardCoverSize(boardID: string, cardId: string, size: "small" | "large", listCardId?: string) {
         const props: CardProps = {
             Display: {
                 Size: size,
             }
         }
 
-        return cardsStore.patchCardProps(boardID, cardId, props)
+        return cardsStore.patchCardProps(boardID, cardId, props, listCardId)
     }
 
     function setInboxCardCoverSize(cardId: string, size: "small" | "large") {
@@ -42,7 +42,7 @@ export function useCardActionRegistry() {
         return inboxStore.patchInboxCardProps(cardId, props)
     }
 
-    function setCardColor(boardID: string, cardId: string, color: string) {
+    function setCardColor(boardID: string, cardId: string, color: string, listCardId?: string) {
         const props: CardProps = {
             Display: {
                 Cover: {
@@ -51,7 +51,7 @@ export function useCardActionRegistry() {
                 }
             }
         }
-        return cardsStore.patchCardProps(boardID, cardId, props)
+        return cardsStore.patchCardProps(boardID, cardId, props, listCardId)
     }
 
     function setInboxCardColor(cardId: string, color: string) {
@@ -66,14 +66,14 @@ export function useCardActionRegistry() {
         return inboxStore.patchInboxCardProps(cardId, props)
     }
 
-    function removeCardCover(boardID: string, cardId: string) {
+    function removeCardCover(boardID: string, cardId: string, listCardId?: string) {
         const props: CardProps = {
             Display: {
                 Cover: null
             }
         }
         // console.log("Removing card cover with props:", props);
-        return cardsStore.patchCardProps(boardID, cardId, props)
+        return cardsStore.patchCardProps(boardID, cardId, props, listCardId)
     }
 
     function removeInboxCardCover(cardId: string) {
@@ -85,23 +85,39 @@ export function useCardActionRegistry() {
         return inboxStore.patchInboxCardProps(cardId, props)
     }
 
-    async function setCardTitle(boardID: string, cardId: string, title: string, asyncKey?: AsyncRequestKey) {
+    async function setCardTitle(boardID: string, cardId: string, title: string, asyncKey?: AsyncRequestKey, listCardId?: string) {
         const payload: PatchCardDetailsRequest = {
             Title: title
         }
-        await cardsStore.patchCardDetails(boardID, cardId, payload, asyncKey ?? useAsyncKey("card:edit:title", cardId))
+        await cardsStore.patchCardDetails(boardID, cardId, payload, asyncKey ?? useAsyncKey("card:edit:title", cardId), listCardId)
         return
     }
 
-    async function setCardDone(boardID: string, cardId: string, done: boolean) {
+    async function setInboxCardTitle(cardId: string, title: string, asyncKey?: AsyncRequestKey) {
+        const payload: PatchCardDetailsRequest = {
+            Title: title
+        }
+        await inboxStore.patchInboxCardDetails(cardId, payload, asyncKey ?? useAsyncKey("card:edit:title", cardId))
+        return
+    }
+
+    async function setCardDone(boardID: string, cardId: string, done: boolean, listCardId?: string) {
         const payload: PatchCardDetailsRequest = {
             Done: done
         }
-        await cardsStore.patchCardDetails(boardID, cardId, payload, useAsyncKey("card:edit:done", cardId))
+        await cardsStore.patchCardDetails(boardID, cardId, payload, useAsyncKey("card:edit:done", cardId), listCardId)
         return
     }
 
-    async function setCardCoverURL(boardID: string, cardId: string, url: string) {
+    async function setInboxCardDone(cardId: string, done: boolean) {
+        const payload: PatchCardDetailsRequest = {
+            Done: done
+        }
+        await inboxStore.patchInboxCardDetails(cardId, payload, useAsyncKey("card:edit:done", cardId))
+        return
+    }
+
+    async function setCardCoverURL(boardID: string, cardId: string, url: string, listCardId?: string) {
         const props: CardProps = {
             Display: {
                 Cover: {
@@ -110,7 +126,7 @@ export function useCardActionRegistry() {
                 }
             }
         }
-        await cardsStore.patchCardProps(boardID, cardId, props)
+        await cardsStore.patchCardProps(boardID, cardId, props, listCardId)
         return
     }
 
@@ -209,12 +225,12 @@ export function useCardActionRegistry() {
         return checklistStore.removeMemberFromEntry(boardID, cardID, checklistId, entryId, userId)
     }
 
-    async function setDatesForCard(boardID: string, cardID: string, from: Date | null, to: Date | null, asyncKey?: AsyncRequestKey) {
+    async function setDatesForCard(boardID: string, cardID: string, from: Date | null, to: Date | null, asyncKey?: AsyncRequestKey, listCardId?: string) {
         const payload: PatchCardDetailsRequest = {
             StartDate: from ? from.toISOString() : null,
             EndDate: to ? to.toISOString() : null
         };
-        return cardsStore.patchCardDetails(boardID, cardID, payload, asyncKey ?? useAsyncKey("card:edit:dates", cardID))
+        return cardsStore.patchCardDetails(boardID, cardID, payload, asyncKey ?? useAsyncKey("card:edit:dates", cardID), listCardId)
     }
 
     async function setDatesForInboxCard(cardID: string, from: Date | null, to: Date | null, asyncKey?: AsyncRequestKey) {
@@ -240,11 +256,18 @@ export function useCardActionRegistry() {
         await latestChecklistState.patchChecklistEntry(boardID, cardID, checklistId, entryID, payload);
     }
 
-    async function setCardDescription(boardID: string, cardID: string, description: string) {
+    async function setCardDescription(boardID: string, cardID: string, description: string, listCardId?: string) {
         const payload: PatchCardDetailsRequest = {
             Description: description
         }
-        await cardsStore.patchCardDetails(boardID, cardID, payload, useAsyncKey("card:edit:description", cardID))
+        await cardsStore.patchCardDetails(boardID, cardID, payload, useAsyncKey("card:edit:description", cardID), listCardId)
+    }
+
+    async function setInboxCardDescription(cardID: string, description: string) {
+        const payload: PatchCardDetailsRequest = {
+            Description: description
+        }
+        await inboxStore.patchInboxCardDetails(cardID, payload, useAsyncKey("card:edit:description", cardID))
     }
 
     async function crossMoveChecklistEntry(boardID: string, cardID: string, sourceChecklistId: string, entryId: string, targetChecklistId: string, targetBeforeId?: string, insertAtEnd?: boolean) {
@@ -348,7 +371,9 @@ export function useCardActionRegistry() {
         setCardCoverSize,
         setCardColor,
         setCardTitle,
+        setInboxCardTitle,
         setCardDone,
+        setInboxCardDone,
         removeCardCover,
         setCardCoverURL,
         addMemberToCard,
@@ -370,6 +395,7 @@ export function useCardActionRegistry() {
         setDatesForInboxCard,
         setDueDateForChecklistEntry,
         setCardDescription,
+        setInboxCardDescription,
         crossMoveChecklistEntry,
         addCommentToCard,
         editCommentForCard,

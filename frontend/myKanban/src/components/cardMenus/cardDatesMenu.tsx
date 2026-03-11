@@ -21,18 +21,21 @@ import type { AsyncRequestKey } from "@/stores/asyncRequestTypes";
 import { useAsyncKey } from "@/stores/asyncRequestStore";
 import { useDelayedExecute } from "@/hooks/useDelayedExecute";
 
+const DATE_FIELD_LEFT_PADDING = 35;
+
 
 type CardDatesMenuProps = {
     onClose: () => void;
     entryID?: string;
     cardId?: string;
     boardId?: string;
+    listCardId?: string;
     source?: "board" | "inbox" | "inbox-mirror";
     headless?: boolean;
     contextKey?: "editmodal" | "cardmenu";
 }
 
-export const CardDatesMenu = forwardRef<HTMLDivElement, CardDatesMenuProps>(({ onClose, entryID, cardId, boardId, source = "board", headless = false, contextKey = "editmodal" }, ref) => {
+export const CardDatesMenu = forwardRef<HTMLDivElement, CardDatesMenuProps>(({ onClose, entryID, cardId, boardId, listCardId, source = "board", headless = false, contextKey = "editmodal" }, ref) => {
 
     const { delayedExecute } = useDelayedExecute(onClose)
     const boardID = boardId ?? useParams().boardId as string;
@@ -82,7 +85,7 @@ export const CardDatesMenu = forwardRef<HTMLDivElement, CardDatesMenuProps>(({ o
         const exec = async () => {
             const result = isInboxMode
                 ? await setInboxCardDates(cardID, startDate ?? null, dueDate ?? null, key)
-                : await setCardDates(boardID, cardID, startDate ?? null, dueDate ?? null, key);
+                : await setCardDates(boardID, cardID, startDate ?? null, dueDate ?? null, key, listCardId);
             if (result !== null) onClose();
         }
 
@@ -94,7 +97,9 @@ export const CardDatesMenu = forwardRef<HTMLDivElement, CardDatesMenuProps>(({ o
         if (isEntryMode && entryID) {
             setDueDate(undefined);
             const result = await setEntryDueDate(boardID, cardID, entryID, null);
-            if (result !== null);
+            if (result !== null) {
+                onClose();
+            }
             return;
         }
         setStartDate(undefined);
@@ -102,8 +107,10 @@ export const CardDatesMenu = forwardRef<HTMLDivElement, CardDatesMenuProps>(({ o
         const exec = async () => {
             const result = isInboxMode
                 ? await setInboxCardDates(cardID, null, null, removeKey)
-                : await setCardDates(boardID, cardID, null, null, removeKey);
-            if (result !== null);
+                : await setCardDates(boardID, cardID, null, null, removeKey, listCardId);
+            if (result !== null) {
+                onClose();
+            }
         }
         exec();
         //delayedExecute(exec, 200)
@@ -181,7 +188,7 @@ export const CardDatesMenu = forwardRef<HTMLDivElement, CardDatesMenuProps>(({ o
                     enabled={isStartDateSelected}
                     onEnabledChange={(enabled) => setStartDate(enabled ? (startDate ?? new Date()) : undefined)}
                     onChange={setStartDate}
-                    leftPadding={PADDING_L}
+                    leftPadding={DATE_FIELD_LEFT_PADDING}
                 />,
             },
         ] as MenuItemExtended[] : []),
@@ -193,7 +200,7 @@ export const CardDatesMenu = forwardRef<HTMLDivElement, CardDatesMenuProps>(({ o
                 enabled={isDueDateSelected}
                 onEnabledChange={(enabled) => setDueDate(enabled ? (dueDate ?? new Date()) : undefined)}
                 onChange={setDueDate}
-                leftPadding={PADDING_L}
+                leftPadding={DATE_FIELD_LEFT_PADDING}
             />,
         },
         {

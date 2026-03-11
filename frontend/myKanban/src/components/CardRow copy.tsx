@@ -17,6 +17,7 @@ import { CardFieldsLabels } from "./cardRowElements/CardFieldsLabels"
 import { Mirrors } from "./cardRowElements/CardMirrorsField"
 import { CardRowTitle } from "./cardRowElements/CardRowTitle"
 import { CardRowFields } from "./cardRowElements/CardRowFields"
+import { useCardRootBoardContext } from "@/hooks/useCardRootBoardContext"
 
 import { Draggable } from "@hello-pangea/dnd"
 
@@ -78,6 +79,12 @@ export const CardRow = ({ boardID, listId, listCardID: listCardID, cardId, index
 
 
     const mode: CardRowMode = hasCover ? (isDetailed ? "detailed" : "compact") : "default"
+    const rootBoardContext = useCardRootBoardContext({
+        boardId,
+        source: "board",
+        listCard: listcard,
+        listCardID,
+    })
 
 
     const done = card?.Done
@@ -190,7 +197,7 @@ export const CardRow = ({ boardID, listId, listCardID: listCardID, cardId, index
                             cardCoverURL={cardCoverURL} ref={cardRowRef}>
 
                             <div className="flex flex-col ">
-                                <Mirrors listcardID={listcard.ID} mode={"board"} />
+                                <Mirrors cardId={cardID!} listCardId={listcard.ID} rootBoardContext={rootBoardContext} mode={"board"} />
                                 <CardFieldsLabels hasLabels={cardHasLabels} cardID={cardID} />
                                 <CardRowTitle
                                     minHeight={rowHeight}

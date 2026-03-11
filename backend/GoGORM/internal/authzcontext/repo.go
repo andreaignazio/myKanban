@@ -25,6 +25,7 @@ type authzRepo interface {
 	GetBoardListByCardIDAndBoardID(cardID, boardID uuid.UUID) (*models.BoardList, error)
 	GetBoardListByRootListCardIDAndBoardID(rootListCardID, boardID uuid.UUID) (*models.BoardList, error)
 	GetInboxCardByCardID(ctx context.Context, userID, cardID uuid.UUID, includeDeleted bool) (*models.UserInboxCard, error)
+	GetBoardListByListCardIDAndBoardID(ctx context.Context, listCardID, boardID uuid.UUID) (*models.BoardList, error)
 }
 
 func (r *GormRepo) GetWorkspaceUserRole(workspaceID, userID uuid.UUID) (*models.UserWorkspace, error) {
@@ -135,4 +136,21 @@ func (r *GormRepo) GetInboxCardByCardID(ctx context.Context, userID, cardID uuid
 		return nil, result.Error
 	}
 	return &inboxCard, nil
+}
+
+func (r *GormRepo) GetBoardListByListCardIDAndBoardID(ctx context.Context, listCardID, boardID uuid.UUID) (*models.BoardList, error) {
+	var boardList models.BoardList
+	result := r.db.WithContext(ctx).Table("board_lists").
+		Select("board_lists.*").
+		Joins("join list_cards on list_cards.list_id = board_lists.list_id").
+		Where("list_cards.id = ? AND board_lists.board_id = ?", listCardID, boardID).
+		Order("CASE WHEN board_lists.id = board_lists.root_id THEN 0 ELSE 1 END, board_lists.id").
+		First(&boardList)
+	if result.Error != nil {
+		if result.Error == gorm.ErrRecordNotFound {
+			return nil, nil
+		}
+		return nil, result.Error
+	}
+	return &boardList, nil
 }

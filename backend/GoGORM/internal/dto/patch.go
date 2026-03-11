@@ -160,3 +160,16 @@ type UserInboxCardResponse struct {
 	Cards             map[uuid.UUID]CardResponse            `json:"Cards"`
 	ExternalRootsByID map[uuid.UUID]ExternalRootRefResponse `json:"ExternalRootsByID"`
 }
+
+type RootBoardListResponse struct {
+	Board                     *BoardResponse     `json:"Board,omitempty"`
+	List                      *ListResponse      `json:"List,omitempty"`
+	BoardList                 *BoardListResponse `json:"BoardList,omitempty"`
+	UserBoard                 *UserBoardResponse `json:"UserBoard"`
+	IsUserBoardPurged         *bool              `json:"IsUserBoardPurged,omitempty"`
+	IsUserBoardSoftDeleted    *bool              `json:"IsUserBoardSoftDeleted,omitempty"`
+	IsMainListCardPurged      *bool              `json:"IsMainListCardPurged,omitempty"`
+	IsMainListCardSoftDeleted *bool              `json:"IsMainListCardSoftDeleted,omitempty"`
+	IsRootPurged              *bool              `json:"IsRootPurged,omitempty"`
+	IsRootSoftDeleted         *bool              `json:"IsRootSoftDeleted,omitempty"`
+}

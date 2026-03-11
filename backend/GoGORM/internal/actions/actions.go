@@ -7,8 +7,9 @@ const (
 	InboxCardMoveToListInBoard Action = "inbox:card:move:board:list"
 	InboxCardDetatch           Action = "inbox:card:detatch"
 
-	CardInListPatch Action = "card:patch:board:list"
-	ReadListCard    Action = "card:read:board:list"
-	CreateListCard  Action = "card:create:board:list"
-	CopyListCard    Action = "card:copy:board:list"
+	PatchBoardCard       Action = "card:patch:board:list"
+	PatchInboxMirrorCard Action = "card:patch:inbox:mirror"
+	ReadListCard         Action = "card:read:board:list"
+	CreateListCard       Action = "card:create:board:list"
+	CopyListCard         Action = "card:copy:board:list"
 )

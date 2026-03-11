@@ -25,8 +25,10 @@ func (s *Service) getHandlerForAction(action actions.Action) (AuthzContextHandle
 		return NewWorkspacePatchHandler(s.authzRepo), nil
 	case actions.InboxCardMoveToListInBoard:
 		return NewMoveInboxCardToListInBoardHandler(s.authzRepo), nil
-	case actions.CardInListPatch:
-		return NewAuthzCardsHandlerPatchCardInList(s.authzRepo), nil
+	case actions.PatchBoardCard:
+		return NewAuthzCardsHandlerPatchBoardCard(s.authzRepo), nil
+	case actions.PatchInboxMirrorCard:
+		return NewAuthzCardsHandlerPatchInboxMirrorCard(s.authzRepo), nil
 	case actions.ReadListCard:
 		return NewReadListCardHandler(s.authzRepo), nil
 	case actions.CreateListCard:

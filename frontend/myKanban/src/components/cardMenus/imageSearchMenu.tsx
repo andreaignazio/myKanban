@@ -18,12 +18,13 @@ type CardActionsMenuProps = {
     showSearchHelpers?: boolean;
     defaultImageLimit?: number;
     cardId?: string;
+    listCardId?: string;
     source?: "board" | "inbox" | "inbox-mirror";
 }
 
 const DEFAULT_IMAGE_LIMIT = 30;
 
-export const ImageSearchMenu = forwardRef<HTMLDivElement, CardActionsMenuProps>(({ onClose, setActiveTab, onBack, onImageClick, showSearchHelpers = true, defaultImageLimit = DEFAULT_IMAGE_LIMIT, cardId, source = "board" }, ref) => {
+export const ImageSearchMenu = forwardRef<HTMLDivElement, CardActionsMenuProps>(({ onClose, setActiveTab, onBack, onImageClick, showSearchHelpers = true, defaultImageLimit = DEFAULT_IMAGE_LIMIT, cardId, listCardId, source = "board" }, ref) => {
     const boardID = useParams().boardId as string;
     const cardID = cardId ?? useParams().cardId as string;
     const cardActions = useCardActionRegistry();
@@ -38,7 +39,7 @@ export const ImageSearchMenu = forwardRef<HTMLDivElement, CardActionsMenuProps>(
         if (isInboxMode) {
             void cardActions.setInboxCardCoverURL(cardID, url);
         } else {
-            void cardActions.setCardCoverURL(boardID, cardID, url);
+            void cardActions.setCardCoverURL(boardID, cardID, url, listCardId);
         }
         onBack?.();
         //setCoverURL?.(url);

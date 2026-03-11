@@ -1,6 +1,9 @@
 package cards
 
 import (
+	"GoGORM/internal/actions"
+	"GoGORM/internal/authz"
+	"GoGORM/internal/authzdto"
 	"GoGORM/internal/domainerr"
 	"GoGORM/internal/dto"
 	EventRegistry "GoGORM/internal/eventregistry"
@@ -19,6 +22,7 @@ import (
 
 type CardsService struct {
 	db               *gorm.DB
+	authz            *authz.Service
 	Hub              *ws.Hub
 	EventRegistry    *EventRegistry.EventRegistryService
 	CardsRepo        CardsRepo
@@ -34,13 +38,14 @@ type CardsService struct {
 	IncludeDeleted   bool
 }
 
-func NewCardsService(db *gorm.DB, cardsRepo CardsRepo, listCardsRepo ListCardsRepo,
+func NewCardsService(db *gorm.DB, authzService *authz.Service, cardsRepo CardsRepo, listCardsRepo ListCardsRepo,
 	listsRepo ListsRepo, boardListsRepo BoardListsRepo, boardsRepo BoardsRepo, boardLabelsRepo BoardLabelsRepo, workspacesRepo WorkspacesRepo,
 	membershipRepo MembershipRepo, capabilitiesRepo CapabilitiesRepo,
 	inboxRepo UserInboxRepo,
 	hub *ws.Hub, eventRegistry *EventRegistry.EventRegistryService) *CardsService {
 	return &CardsService{
 		db:               db,
+		authz:            authzService,
 		Hub:              hub,
 		EventRegistry:    eventRegistry,
 		CardsRepo:        cardsRepo,
@@ -95,6 +100,29 @@ type CapabilitiesRepo interface {
 
 func (s *CardsService) PatchCardDetails(ctx context.Context, userID, workspaceID, boardID, cardID uuid.UUID,
 	req PatchCardDetailsRequest, correlationID uuid.UUID) (*models.Card, error) {
+	if req.ListCardID == nil {
+		return nil, domainerr.ErrValidation
+	}
+	if req.ListCardID != nil {
+		authorization, err := s.authz.AuthorizeRequest(ctx, authzdto.Request{
+			UserID:        userID,
+			Action:        actions.PatchBoardCard,
+			CorrelationID: correlationID,
+			Payload: authzdto.RequestPayload{
+				BoardCardPatchPayload: &authzdto.BoardCardPatchPayload{
+					CardID:     cardID,
+					ListCardID: *req.ListCardID,
+					BoardID:    boardID,
+				},
+			},
+		})
+		if err != nil {
+			return nil, err
+		}
+		if !authorization.Authorized {
+			return nil, domainerr.ErrForbidden
+		}
+	}
 
 	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Member, s.IncludeDeleted); err != nil {
 		return nil, err
@@ -183,6 +211,31 @@ func (s *CardsService) GetUserCards(ctx context.Context, userID uuid.UUID) ([]mo
 
 func (s *CardsService) PatchCardProps(ctx context.Context, userID, workspaceID, boardID, cardID uuid.UUID,
 	req PatchCardPropsRequest, correlationID uuid.UUID) (*models.Card, error) {
+	if req.ListCardID == nil {
+		return nil, domainerr.ErrValidation
+	}
+
+	if req.ListCardID != nil {
+		authorization, err := s.authz.AuthorizeRequest(ctx, authzdto.Request{
+			UserID:        userID,
+			Action:        actions.PatchBoardCard,
+			CorrelationID: correlationID,
+			Payload: authzdto.RequestPayload{
+				BoardCardPatchPayload: &authzdto.BoardCardPatchPayload{
+					CardID:     cardID,
+					ListCardID: *req.ListCardID,
+					BoardID:    boardID,
+				},
+			},
+		})
+		if err != nil {
+			return nil, err
+		}
+		if !authorization.Authorized {
+			return nil, domainerr.ErrForbidden
+		}
+	}
+
 	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Member, s.IncludeDeleted); err != nil {
 		return nil, err
 	}
@@ -193,6 +246,7 @@ func (s *CardsService) PatchCardProps(ctx context.Context, userID, workspaceID, 
 	} else if !*ok {
 		return nil, domainerr.ErrForbidden
 	}
+
 	var card models.Card
 	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		//Get card props

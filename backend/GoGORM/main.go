@@ -96,6 +96,9 @@ func main() {
 	eventRegistryService := EventRegistry.NewEventRegistryService(eventRegistruRepo, wsHub, workspaceResolver, membarshipsRepo, auditContextRepo)
 	eventRegistryHandler := EventRegistry.NewEventRegistryHandler(eventRegistryService)
 	capabilitiesRepo := capabilities.NewGormCapabilitiesRepo(db)
+	authzRepo := authzcontext.NewGormRepo(db)
+	authzContextService := authzcontext.NewService(authzRepo)
+	authzService := authz.NewService(authzContextService)
 
 	listsRepo := lists.NewGormListsRepo(db)
 	listsService := lists.NewListsService(db, wsHub, eventRegistryService, listsRepo, membarshipsRepo, capabilitiesRepo)
@@ -107,6 +110,7 @@ func main() {
 	boardLabelsRepo := BoardLabels.NewGormBoardLabelsRepo(db)
 	cardsService := cards.NewCardsService(
 		db,
+		authzService,
 		cardsRepo,
 		listCardsRepo,
 		listsRepo,
@@ -133,9 +137,6 @@ func main() {
 
 	webhookRepo := subscription.NewGormWebhookInboxRepo(db)
 	subscriptionService := subscription.NewSubscriptionService(db, subscriptionRepo, membarshipsRepo, stripeBuillingProvider, webhookRepo, false)
-	authzRepo := authzcontext.NewGormRepo(db)
-	authzContextService := authzcontext.NewService(authzRepo)
-	authzService := authz.NewService(authzContextService)
 
 	positionGenerator := rank.NewRankGenerator()
 	positionService := pos.NewPositionService(positionGenerator, linksRepo, listCardsRepo, membarshipsRepo, workspacesRepo)

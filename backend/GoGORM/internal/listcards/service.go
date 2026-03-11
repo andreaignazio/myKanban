@@ -13,6 +13,7 @@ import (
 	"GoGORM/internal/ws"
 	"GoGORM/models"
 	"context"
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -40,6 +41,39 @@ type ListCardsService struct {
 	CapabilitiesRepo CapabilitiesRepo
 	BoardsRepo       BoardRepo
 	IncludeDeleted   bool
+}
+
+func isNotFoundError(err error) bool {
+	return errors.Is(err, gorm.ErrRecordNotFound) || errors.Is(err, domainerr.ErrNotFound)
+}
+
+func (s *ListCardsService) resolveUserBoardResponse(ctx context.Context, userID, boardID uuid.UUID) (*dto.UserBoardResponse, *bool, *bool, error) {
+	userBoard, err := s.BoardsRepo.GetUserBoardTX(ctx, s.db, userID, boardID, s.IncludeDeleted)
+	if err != nil {
+		if !isNotFoundError(err) {
+			return nil, nil, nil, domainerr.MapRepoErr(err, true)
+		}
+
+		userBoard, err = s.BoardsRepo.GetUserBoardTX(ctx, s.db, userID, boardID, true)
+		if err != nil {
+			if isNotFoundError(err) {
+				isUserBoardPurged := true
+				return nil, &isUserBoardPurged, nil, nil
+			}
+			return nil, nil, nil, domainerr.MapRepoErr(err, true)
+		}
+
+		if userBoard.DeletedAt.Valid {
+			isUserBoardSoftDeleted := true
+			return nil, nil, &isUserBoardSoftDeleted, nil
+		}
+
+		isUserBoardPurged := true
+		return nil, &isUserBoardPurged, nil, nil
+	}
+
+	mapped := dto.UserBoardToResponse(userBoard)
+	return &mapped, nil, nil, nil
 }
 
 func NewListCardsService(db *gorm.DB, authzService *authz.Service, hub *ws.Hub, eventRegistry *EventRegistry.EventRegistryService, listCardsRepo ListCardsRepo, cardsRepo CardsRepo, cardCommentsRepo CardCommentsRepo, cardMembersRepo CardMembersRepo, boardLabelsRepo BoardLabelsRepo, checklistRepo ChecklistRepo, listRepo ListRepo, boardListRepo BoardListRepo, positionHelper PositionHelper, membershipRepo MembershipRepo, capabilitiesRepo CapabilitiesRepo, boardsRepo BoardRepo) *ListCardsService {
@@ -1852,23 +1886,168 @@ func (s *ListCardsService) CopyCardChecklistsTX(ctx context.Context, tx *gorm.DB
 	return nil
 }
 
-func (s *ListCardsService) GetRootBoardForListCard(ctx context.Context, boardId uuid.UUID, listCardID uuid.UUID) (*dto.BoardResponse, error) {
+func (s *ListCardsService) GetRootBoardForListCard(ctx context.Context, userID, boardId uuid.UUID, listCardID uuid.UUID) (*dto.RootBoardListResponse, error) {
 
 	listcard, err := s.ListCardsRepo.GetListCardByIDTX(ctx, s.db, listCardID, s.IncludeDeleted)
 	if err != nil {
-		return nil, domainerr.MapRepoErr(err, true)
+		fmt.Println("GetRootBoardForListCard warning: fetching list card with deleted filter failed, retrying with unscoped", err)
+		if !isNotFoundError(err) {
+			fmt.Println("GetRootBoardForListCard return: error fetching list card", err)
+			return nil, domainerr.MapRepoErr(err, true)
+		}
+
+		listcard, err = s.ListCardsRepo.GetListCardByIDTX(ctx, s.db, listCardID, true)
+		if err != nil {
+			if isNotFoundError(err) {
+				isMainListCardPurged := true
+				fmt.Println("GetRootBoardForListCard return: main list card purged")
+				return &dto.RootBoardListResponse{IsMainListCardPurged: &isMainListCardPurged}, nil
+			}
+			return nil, domainerr.MapRepoErr(err, true)
+		}
+
+		if listcard.DeletedAt.Valid {
+			isMainListCardSoftDeleted := true
+			fmt.Println("GetRootBoardForListCard warning: main list card is soft deleted, attempting to fetch root board info with unscoped list card", err)
+			if listcard.RootID == uuid.Nil {
+				return &dto.RootBoardListResponse{IsMainListCardSoftDeleted: &isMainListCardSoftDeleted}, nil
+			}
+
+			rootResponse, rootErr := s.buildRootBoardResponse(ctx, userID, listcard, &isMainListCardSoftDeleted, nil)
+			if rootErr != nil {
+				return nil, rootErr
+			}
+			return rootResponse, nil
+		}
+
+		isMainListCardPurged := true
+		return &dto.RootBoardListResponse{IsMainListCardPurged: &isMainListCardPurged}, nil
 	}
 
 	if listcard.RootID == uuid.Nil {
 		return nil, nil
 	}
 
+	return s.buildRootBoardResponse(ctx, userID, listcard, nil, nil)
+}
+
+func (s *ListCardsService) buildRootBoardResponse(ctx context.Context, userID uuid.UUID, listcard *models.ListCard, mainListCardSoftDeleted *bool, mainListCardPurged *bool) (*dto.RootBoardListResponse, error) {
+
 	rootListcard, err := s.ListCardsRepo.GetListCardByIDTX(ctx, s.db, listcard.RootID, s.IncludeDeleted)
 	if err != nil {
-		return nil, domainerr.MapRepoErr(err, true)
+		if !isNotFoundError(err) {
+			return nil, domainerr.MapRepoErr(err, true)
+		}
+
+		rootListcard, err = s.ListCardsRepo.GetListCardByIDTX(ctx, s.db, listcard.RootID, true)
+		if err != nil {
+			if isNotFoundError(err) {
+				isRootPurged := true
+				return &dto.RootBoardListResponse{
+					IsMainListCardPurged:      mainListCardPurged,
+					IsMainListCardSoftDeleted: mainListCardSoftDeleted,
+					IsRootPurged:              &isRootPurged,
+				}, nil
+			}
+			return nil, domainerr.MapRepoErr(err, true)
+		}
+
+		if rootListcard.DeletedAt.Valid {
+			isRootSoftDeleted := true
+			board, boardErr := s.resolveRootBoardPayloadBoard(ctx, rootListcard)
+			if boardErr != nil {
+				return nil, boardErr
+			}
+			list, listErr := s.ListRepo.GetListMeta(ctx, rootListcard.ListID, s.IncludeDeleted)
+			if listErr != nil {
+				return nil, domainerr.MapRepoErr(listErr, true)
+			}
+			boardList, boardListErr := s.resolveRootBoardList(ctx, rootListcard.ListID)
+			if boardListErr != nil {
+				return nil, boardListErr
+			}
+			if board == nil || boardList == nil {
+				return &dto.RootBoardListResponse{
+					IsMainListCardPurged:      mainListCardPurged,
+					IsMainListCardSoftDeleted: mainListCardSoftDeleted,
+					IsRootSoftDeleted:         &isRootSoftDeleted,
+				}, nil
+			}
+
+			userBoardResponse, isUserBoardPurged, isUserBoardSoftDeleted, userBoardErr := s.resolveUserBoardResponse(ctx, userID, boardList.BoardID)
+			if userBoardErr != nil {
+				return nil, userBoardErr
+			}
+
+			boardResponse := dto.BoardToResponse(board)
+			listResponse := dto.ListToResponse(list)
+			boardListResponse := dto.BoardListToResponse(boardList)
+			return &dto.RootBoardListResponse{
+				IsUserBoardPurged:         isUserBoardPurged,
+				IsUserBoardSoftDeleted:    isUserBoardSoftDeleted,
+				IsMainListCardPurged:      mainListCardPurged,
+				IsMainListCardSoftDeleted: mainListCardSoftDeleted,
+				Board:                     &boardResponse,
+				List:                      &listResponse,
+				BoardList:                 &boardListResponse,
+				UserBoard:                 userBoardResponse,
+				IsRootSoftDeleted:         &isRootSoftDeleted,
+			}, nil
+		}
+
+		isRootPurged := true
+		return &dto.RootBoardListResponse{
+			IsMainListCardPurged:      mainListCardPurged,
+			IsMainListCardSoftDeleted: mainListCardSoftDeleted,
+			IsRootPurged:              &isRootPurged,
+		}, nil
 	}
 	listID := rootListcard.ListID
 
+	rootBoardList, err := s.resolveRootBoardList(ctx, listID)
+	if err != nil {
+		return nil, err
+	}
+	if rootBoardList == nil {
+		return nil, nil
+	}
+
+	board, err := s.resolveRootBoardPayloadBoard(ctx, rootListcard)
+	if err != nil {
+		return nil, err
+	}
+	if board == nil {
+		return nil, nil
+	}
+
+	list, err := s.ListRepo.GetListMeta(ctx, rootListcard.ListID, s.IncludeDeleted)
+	if err != nil {
+		return nil, domainerr.MapRepoErr(err, true)
+	}
+
+	userBoardResponse, isUserBoardPurged, isUserBoardSoftDeleted, err := s.resolveUserBoardResponse(ctx, userID, rootBoardList.BoardID)
+	if err != nil {
+		return nil, err
+	}
+	boardResponse := dto.BoardToResponse(board)
+	listResponse := dto.ListToResponse(list)
+	boardListResponse := dto.BoardListToResponse(rootBoardList)
+
+	response := dto.RootBoardListResponse{
+		IsUserBoardPurged:         isUserBoardPurged,
+		IsUserBoardSoftDeleted:    isUserBoardSoftDeleted,
+		IsMainListCardPurged:      mainListCardPurged,
+		IsMainListCardSoftDeleted: mainListCardSoftDeleted,
+		Board:                     &boardResponse,
+		List:                      &listResponse,
+		BoardList:                 &boardListResponse,
+		UserBoard:                 userBoardResponse,
+	}
+
+	return &response, nil
+}
+
+func (s *ListCardsService) resolveRootBoardList(ctx context.Context, listID uuid.UUID) (*models.BoardList, error) {
 	boardLists, err := s.BoardListRepo.GetBoardListsByListIdTX(ctx, s.db, listID, s.IncludeDeleted)
 	if err != nil {
 		return nil, domainerr.MapRepoErr(err, true)
@@ -1878,19 +2057,27 @@ func (s *ListCardsService) GetRootBoardForListCard(ctx context.Context, boardId 
 		return nil, nil
 	}
 
-	var rootBoardList *models.BoardList
-	if len(boardLists) > 1 {
-		for _, bl := range boardLists {
-			if bl.RootID == bl.ID {
-				rootBoardList = &bl
-				break
-			}
+	if len(boardLists) == 1 {
+		return &boardLists[0], nil
+	}
+
+	for _, bl := range boardLists {
+		if bl.RootID == bl.ID {
+			copy := bl
+			return &copy, nil
 		}
-		if rootBoardList == nil {
-			return nil, nil
-		}
-	} else {
-		rootBoardList = &boardLists[0]
+	}
+
+	return nil, nil
+}
+
+func (s *ListCardsService) resolveRootBoardPayloadBoard(ctx context.Context, rootListcard *models.ListCard) (*models.Board, error) {
+	rootBoardList, err := s.resolveRootBoardList(ctx, rootListcard.ListID)
+	if err != nil {
+		return nil, err
+	}
+	if rootBoardList == nil {
+		return nil, nil
 	}
 
 	board, err := s.BoardsRepo.GetBoardByIDTX(ctx, s.db, rootBoardList.BoardID, s.IncludeDeleted)
@@ -1898,9 +2085,7 @@ func (s *ListCardsService) GetRootBoardForListCard(ctx context.Context, boardId 
 		return nil, domainerr.MapRepoErr(err, true)
 	}
 
-	response := dto.BoardToResponse(board)
-
-	return &response, nil
+	return board, nil
 }
 
 func (s *ListCardsService) getBoardListForCardInBoard(ctx context.Context, cardID, boardID uuid.UUID) (*models.BoardList, error) {

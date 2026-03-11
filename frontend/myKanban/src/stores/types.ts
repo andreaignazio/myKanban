@@ -248,6 +248,19 @@ export type BoardList = {
     DeletedAt: string | null;
 };
 
+export type RootBoardListResponse = {
+    Board?: Board | null;
+    List?: List | null;
+    BoardList?: BoardList | null;
+    UserBoard: UserBoard | null;
+    IsUserBoardPurged?: boolean;
+    IsUserBoardSoftDeleted?: boolean;
+    IsMainListCardPurged?: boolean;
+    IsMainListCardSoftDeleted?: boolean;
+    IsRootPurged?: boolean;
+    IsRootSoftDeleted?: boolean;
+};
+
 export type BoardListAccessMode = "readonly" | "editable";
 
 export type PatchListAccessModeRequest = {
@@ -279,6 +292,7 @@ export type ListCardMovedPayload = {
 };
 
 export type PatchCardPropsRequest = {
+    ListCardID?: string;
     Props: CardProps;
 };
 
@@ -487,6 +501,7 @@ export type UserNotificationReadAllPayload = {
 }
 
 export type PatchCardDetailsRequest = {
+    ListCardID?: string
     Title?: string
     Done?: boolean
     Description?: string

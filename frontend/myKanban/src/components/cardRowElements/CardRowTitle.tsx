@@ -11,7 +11,7 @@ type CardRowTitleProps = {
     minHeight?: number
 }
 
-export const CardRowTitle = ({ title, editMode, done, setDone, minHeight = 36 }: CardRowTitleProps) => {
+export const CardRowTitle = ({ title, editMode, done, setDone, minHeight = 36, canEdit }: CardRowTitleProps) => {
 
 
 
@@ -20,8 +20,8 @@ export const CardRowTitle = ({ title, editMode, done, setDone, minHeight = 36 }:
             className="flex flex-col  justify-center">
             <div className={`group flex flex-row items-center ${done ? "ps-3" : "ps-2"}  gap-2`}>
                 <div className={`transition-all duration-200 ease-in-out -translate-y-[1px]
-                             ${done ? "w-4 opacity-100 "
-                        : "w-0 opacity-0 group-hover:w-4 group-hover:opacity-100 "}`} >
+                             ${done ? "w-4 opacity-100 " : "w-0 opacity-0 "} ${canEdit ? "group-hover:w-4 group-hover:opacity-100 " : ""}`} >
+
 
 
                     <CardDoneIconDummy done={done} size={17} handleDoneToggle={setDone} />
@@ -33,7 +33,7 @@ export const CardRowTitle = ({ title, editMode, done, setDone, minHeight = 36 }:
                 ${done ? " text-gray-500" : "text-gray-100"}
                  ${editMode ? "text-gray-400" : ""} 
                  transition-colors duration-200 ease-in-out break-all`}>
-                    {title} {editMode && "(edit mode)"}
+                    {title}
                 </span>
 
             </div>

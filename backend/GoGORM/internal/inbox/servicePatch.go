@@ -36,9 +36,9 @@ func (s *InboxService) PatchInboxCardDetails(ctx context.Context, userID, cardID
 		request := authzdto.Request{
 			UserID:        userID,
 			CorrelationID: correlationID,
-			Action:        actions.CardInListPatch,
+			Action:        actions.PatchInboxMirrorCard,
 			Payload: authzdto.RequestPayload{
-				CardInListPatchPayload: &authzdto.CardInListPatchPayload{
+				InboxMirrorCardPatchPayload: &authzdto.InboxMirrorCardPatchPayload{
 					CardID:      cardID,
 					BoardListID: rootBoardList.ID,
 				},
@@ -110,9 +110,9 @@ func (s *InboxService) PatchInboxCardProps(ctx context.Context, userID, cardID, 
 			UserID: userID,
 
 			CorrelationID: correlationID,
-			Action:        actions.CardInListPatch,
+			Action:        actions.PatchInboxMirrorCard,
 			Payload: authzdto.RequestPayload{
-				CardInListPatchPayload: &authzdto.CardInListPatchPayload{
+				InboxMirrorCardPatchPayload: &authzdto.InboxMirrorCardPatchPayload{
 					CardID:      cardID,
 					BoardListID: rootBoardList.ID,
 				},

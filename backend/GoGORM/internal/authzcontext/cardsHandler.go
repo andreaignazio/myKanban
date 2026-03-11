@@ -4,8 +4,10 @@ import (
 	"GoGORM/internal/authzdto"
 	"GoGORM/internal/domainerr"
 	"GoGORM/internal/rbac"
+	"GoGORM/models"
 	"context"
-	"fmt"
+
+	"github.com/google/uuid"
 )
 
 type AuthzCardsHandler struct {
@@ -16,36 +18,28 @@ type AuthzCardsHandler struct {
 type AuthzCardsHandlerMode string
 
 const (
-	AuthzCardsHandlerModePatchCardInList AuthzCardsHandlerMode = "patchCardInList"
+	AuthzCardsHandlerModePatchBoardCard       AuthzCardsHandlerMode = "patchBoardCard"
+	AuthzCardsHandlerModePatchInboxMirrorCard AuthzCardsHandlerMode = "patchInboxMirrorCard"
 )
 
-func NewAuthzCardsHandlerPatchCardInList(authzRepo authzRepo) *AuthzCardsHandler {
+func NewAuthzCardsHandlerPatchBoardCard(authzRepo authzRepo) *AuthzCardsHandler {
 	return &AuthzCardsHandler{
 		authzRepo: authzRepo,
-		mode:      AuthzCardsHandlerModePatchCardInList,
+		mode:      AuthzCardsHandlerModePatchBoardCard,
+	}
+}
+
+func NewAuthzCardsHandlerPatchInboxMirrorCard(authzRepo authzRepo) *AuthzCardsHandler {
+	return &AuthzCardsHandler{
+		authzRepo: authzRepo,
+		mode:      AuthzCardsHandlerModePatchInboxMirrorCard,
 	}
 }
 
 func (h *AuthzCardsHandler) BuildAuthzContext(ctx context.Context, authzRequest authzdto.Request) (*authzdto.AuthzContext, error) {
-	payload := authzRequest.Payload.CardInListPatchPayload
-	if payload == nil {
-		return nil, domainerr.ErrValidation
-	}
-
-	cardID := payload.CardID
-	boardListID := payload.BoardListID
-
-	boardList, err := h.authzRepo.GetBoardListByID(boardListID)
+	_, boardListID, effectiveBoardListID, boardList, err := h.resolveBoardListContext(ctx, authzRequest)
 	if err != nil {
 		return nil, err
-	}
-	if boardList == nil {
-		return nil, domainerr.ErrNotFound
-	}
-
-	effectiveBoardList, err := h.authzRepo.GetBoardListByCardIDAndBoardID(cardID, boardList.BoardID)
-	if err != nil {
-		return nil, domainerr.ErrForbidden
 	}
 
 	boardMinRoleSpec := authzdto.PolicySpec{
@@ -69,7 +63,7 @@ func (h *AuthzCardsHandler) BuildAuthzContext(ctx context.Context, authzRequest 
 	cardEffectiveListSpec := authzdto.PolicySpec{
 		PolicyKind: authzdto.PolicyRequireExactFactValue,
 		FactKind:   authzdto.FactCardEffectiveBoardListID,
-		Value:      authzdto.NewCardEffectiveBoardListIDFact(effectiveBoardList.ID),
+		Value:      authzdto.NewCardEffectiveBoardListIDFact(effectiveBoardListID),
 	}
 
 	policies := []authzdto.PolicySpec{boardMinRoleSpec, workspaceMinRoleSpec, boardListEditableSpec, cardEffectiveListSpec}
@@ -113,7 +107,7 @@ func (h *AuthzCardsHandler) BuildAuthzContext(ctx context.Context, authzRequest 
 	if err != nil {
 		return nil, err
 	}
-	err = authzdto.SetFact(facts, authzdto.FactCardEffectiveBoardListID, authzdto.NewCardEffectiveBoardListIDFact(effectiveBoardList.ID))
+	err = authzdto.SetFact(facts, authzdto.FactCardEffectiveBoardListID, authzdto.NewCardEffectiveBoardListIDFact(boardListID))
 	if err != nil {
 		return nil, err
 	}
@@ -122,6 +116,52 @@ func (h *AuthzCardsHandler) BuildAuthzContext(ctx context.Context, authzRequest 
 		Facts:       facts,
 		PolicySpecs: policies,
 	}
-	fmt.Println("Built authz context for PatchCardInList:", context)
+	//fmt.Println("Built authz context for card patch:", context)
 	return context, nil
+}
+
+func (h *AuthzCardsHandler) resolveBoardListContext(ctx context.Context, authzRequest authzdto.Request) (uuid.UUID, uuid.UUID, uuid.UUID, *models.BoardList, error) {
+	switch h.mode {
+	case AuthzCardsHandlerModePatchBoardCard:
+		payload := authzRequest.Payload.BoardCardPatchPayload
+		if payload == nil {
+			return uuid.Nil, uuid.Nil, uuid.Nil, nil, domainerr.ErrValidation
+		}
+
+		boardList, err := h.authzRepo.GetBoardListByListCardIDAndBoardID(ctx, payload.ListCardID, payload.BoardID)
+		if err != nil {
+			return uuid.Nil, uuid.Nil, uuid.Nil, nil, err
+		}
+		if boardList == nil {
+			return uuid.Nil, uuid.Nil, uuid.Nil, nil, domainerr.ErrNotFound
+		}
+
+		return payload.CardID, boardList.ID, boardList.ID, boardList, nil
+
+	case AuthzCardsHandlerModePatchInboxMirrorCard:
+		payload := authzRequest.Payload.InboxMirrorCardPatchPayload
+		if payload == nil {
+			return uuid.Nil, uuid.Nil, uuid.Nil, nil, domainerr.ErrValidation
+		}
+
+		boardList, err := h.authzRepo.GetBoardListByID(payload.BoardListID)
+		if err != nil {
+			return uuid.Nil, uuid.Nil, uuid.Nil, nil, err
+		}
+		if boardList == nil {
+			return uuid.Nil, uuid.Nil, uuid.Nil, nil, domainerr.ErrNotFound
+		}
+
+		effectiveBoardList, err := h.authzRepo.GetBoardListByCardIDAndBoardID(payload.CardID, boardList.BoardID)
+		if err != nil {
+			return uuid.Nil, uuid.Nil, uuid.Nil, nil, domainerr.ErrForbidden
+		}
+		if effectiveBoardList == nil {
+			return uuid.Nil, uuid.Nil, uuid.Nil, nil, domainerr.ErrForbidden
+		}
+
+		return payload.CardID, payload.BoardListID, effectiveBoardList.ID, boardList, nil
+	default:
+		return uuid.Nil, uuid.Nil, uuid.Nil, nil, domainerr.ErrUnsupportedAction
+	}
 }

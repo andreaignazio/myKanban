@@ -65,10 +65,11 @@ export const CardActionMenuBtn = forwardRef<HTMLDivElement, CardActionMenuBtnPro
 type CardCoverTabSelectorProps = {
     onClose: () => void;
     cardId?: string;
+    listCardId?: string;
     source?: "board" | "inbox" | "inbox-mirror";
 }
 
-export const CardCoverTabSelector = forwardRef<HTMLDivElement, CardCoverTabSelectorProps>(({ onClose, cardId, source = "board" }, ref) => {
+export const CardCoverTabSelector = forwardRef<HTMLDivElement, CardCoverTabSelectorProps>(({ onClose, cardId, listCardId, source = "board" }, ref) => {
     const [activeTab, setActiveTab] = useState<"main" | "search">("main");
     const Title = activeTab === "main" ? "Cover" : "Search Photos";
 
@@ -85,8 +86,8 @@ export const CardCoverTabSelector = forwardRef<HTMLDivElement, CardCoverTabSelec
                 width={300}
                 titleStyle={{ color: "rgba(255, 255, 255, 0.7)", fontSize: "14px", fontWeight: 600 }}>
                 <div className="relative w-full h-full px-3" >
-                    {activeTab === "main" && <CardCoverMenu ref={ref} onClose={onClose} setActiveTab={setActiveTab} cardId={cardId} source={source} />}
-                    {activeTab === "search" && <ImageSearchMenu ref={ref} onClose={onClose} onBack={() => setActiveTab("main")} cardId={cardId} source={source} />}
+                    {activeTab === "main" && <CardCoverMenu ref={ref} onClose={onClose} setActiveTab={setActiveTab} cardId={cardId} listCardId={listCardId} source={source} />}
+                    {activeTab === "search" && <ImageSearchMenu ref={ref} onClose={onClose} onBack={() => setActiveTab("main")} cardId={cardId} listCardId={listCardId} source={source} />}
                 </div>
             </ActionMenuWrapper>
         </>
@@ -98,11 +99,12 @@ type CardActionsMenuProps = {
     onClose: () => void;
     setActiveTab?: (tab: "main" | "search") => void;
     cardId?: string;
+    listCardId?: string;
     source?: "board" | "inbox" | "inbox-mirror";
 
 }
 
-export const CardCoverMenu = forwardRef<HTMLDivElement, CardActionsMenuProps>(({ onClose, setActiveTab, cardId, source = "board" }, ref) => {
+export const CardCoverMenu = forwardRef<HTMLDivElement, CardActionsMenuProps>(({ onClose, setActiveTab, cardId, listCardId, source = "board" }, ref) => {
     const boardID = useParams().boardId as string;
     const cardID = cardId ?? useParams().cardId as string;
     const cardActions = useCardActionRegistry();
@@ -140,7 +142,7 @@ export const CardCoverMenu = forwardRef<HTMLDivElement, CardActionsMenuProps>(({
 
 
     const coverSizeSelector = (coverColor?: string, coverURL?: string, hasCover?: boolean) => {
-        return <CoverSizeMenu coverColor={coverColor} coverURL={coverURL} hasCover={hasCover} cardId={cardID} activeCoverSize={coverSize} source={source} />
+        return <CoverSizeMenu coverColor={coverColor} coverURL={coverURL} hasCover={hasCover} cardId={cardID} listCardId={listCardId} activeCoverSize={coverSize} source={source} />
     }
 
     const handleRemoveCover = () => {
@@ -148,14 +150,14 @@ export const CardCoverMenu = forwardRef<HTMLDivElement, CardActionsMenuProps>(({
             void cardActions.removeInboxCardCover(cardID);
             return;
         }
-        void cardActions.removeCardCover(boardID, cardID);
+        void cardActions.removeCardCover(boardID, cardID, listCardId);
 
     }
     const handleSetCoverColor = (color: string) => {
         if (isInboxMode) {
             void cardActions.setInboxCardColor(cardID, color);
         } else {
-            void cardActions.setCardColor(boardID, cardID, color);
+            void cardActions.setCardColor(boardID, cardID, color, listCardId);
         }
         setCoverColor(color);
     }
@@ -224,18 +226,19 @@ type CoverSizeMenuProps = {
     coverURL?: string;
     hasCover?: boolean;
     cardId?: string;
+    listCardId?: string;
     activeCoverSize?: "small" | "large";
     source?: "board" | "inbox" | "inbox-mirror";
 }
 
-export const CoverSizeMenu = ({ coverColor, coverURL, hasCover, cardId, activeCoverSize, source = "board" }: CoverSizeMenuProps) => {
+export const CoverSizeMenu = ({ coverColor, coverURL, hasCover, cardId, listCardId, activeCoverSize, source = "board" }: CoverSizeMenuProps) => {
     const boardID = useParams().boardId as string;
     const cardID = cardId ?? useParams().cardId as string;
     const cardActions = useCardActionRegistry();
     const isInboxMode = source === "inbox" || source === "inbox-mirror";
     const setCardCoverSize = (size: "small" | "large") => {
         if (isInboxMode) return cardActions.setInboxCardCoverSize(cardID, size);
-        return cardActions.setCardCoverSize(boardID, cardID, size);
+        return cardActions.setCardCoverSize(boardID, cardID, size, listCardId);
     };
     //console.log("CoverSizeMenu rendered with coverColor:", coverColor);
     return (

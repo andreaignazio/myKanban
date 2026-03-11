@@ -97,4 +97,5 @@ type PositionHelper interface {
 
 type BoardRepo interface {
 	GetBoardByIDTX(ctx context.Context, tx *gorm.DB, boardID uuid.UUID, includeDeleted bool) (*models.Board, error)
+	GetUserBoardTX(ctx context.Context, db *gorm.DB, userID, boardID uuid.UUID, includeDeleted bool) (*models.UserBoard, error)
 }

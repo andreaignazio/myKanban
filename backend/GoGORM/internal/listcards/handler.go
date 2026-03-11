@@ -530,11 +530,8 @@ func (h *ListCardsHandler) CopyCardToList(c *gin.Context) {
 }
 
 func (h *ListCardsHandler) GetRootBoardForListCard(c *gin.Context) {
-	ctx := c.Request.Context()
-	boardIDStr := c.Param("boardID")
-	boardID, err := uuid.Parse(boardIDStr)
+	ctx, userID, boardID, err := getUserBoardContext(c)
 	if err != nil {
-		httperr.WriteParamsError(c, err, "listcards.handler.GetRootBoardForListCard")
 		return
 	}
 	listCardIDStr := c.Param("listCardID")
@@ -547,7 +544,7 @@ func (h *ListCardsHandler) GetRootBoardForListCard(c *gin.Context) {
 		return
 	}
 
-	rootBoard, err := h.ListCardsService.GetRootBoardForListCard(ctx, boardID, listCardID)
+	rootBoard, err := h.ListCardsService.GetRootBoardForListCard(ctx, *userID, *boardID, listCardID)
 	if err != nil {
 		httperr.Write(c, err)
 		return

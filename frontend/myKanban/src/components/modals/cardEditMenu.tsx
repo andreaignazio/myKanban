@@ -23,6 +23,7 @@ type CardEditMenuProps = {
     cardContext: CardContext;
     onClose: () => void;
     menuId?: string;
+    canEdit?: boolean;
 }
 
 
@@ -38,7 +39,7 @@ type MenuItem = {
 type MenuItemAndID = MenuItem & { menuId?: string }
 
 export const CardEditMenu = forwardRef<HTMLDivElement, CardEditMenuProps>((props, ref) => {
-    const { cardContext, onClose } = props;
+    const { cardContext, onClose, canEdit = true } = props;
     const { cardId: cardID, sourceListId: listId, source = "board" } = cardContext;
     const iconClass = "w-4 h-4 text-neutral-400"
     const isInboxSource = source === "inbox" || source === "inbox-mirror"
@@ -148,12 +149,12 @@ export const CardEditMenu = forwardRef<HTMLDivElement, CardEditMenuProps>((props
         },
         {
             id: "editCover", label: "Edit Cover", icon: <CreditCardIcon className={iconClass} />,
-            menuToOpen: ({ onClose, ref }) => <CardCoverTabSelector onClose={onClose} ref={ref} cardId={cardID} source={source} />,
+            menuToOpen: ({ onClose, ref }) => <CardCoverTabSelector onClose={onClose} ref={ref} cardId={cardID} listCardId={cardContext.listCardId} source={source} />,
             menuId: "card-edit-menu-cover"
         },
         {
             id: "editDates", label: "Edit Dates", icon: <Clock10Icon className={iconClass} />,
-            menuToOpen: ({ onClose, ref }) => <CardDatesMenu onClose={onClose} ref={ref} cardId={cardID} source={source} />,
+            menuToOpen: ({ onClose, ref }) => <CardDatesMenu onClose={onClose} ref={ref} cardId={cardID} listCardId={cardContext.listCardId} source={source} />,
             menuId: "card-edit-menu-dates"
         },
         {
@@ -246,6 +247,7 @@ export const CardEditMenu = forwardRef<HTMLDivElement, CardEditMenuProps>((props
         <div className=" relative flex flex-col gap-1"
             ref={ref}>
             {menuItems.map((item) => {
+                if (!canEdit && item.id !== "openCard" && item.id !== "copy" && item.id !== "copyLink") return null;
                 if (item.shouldShow === false) return null;
 
                 return (

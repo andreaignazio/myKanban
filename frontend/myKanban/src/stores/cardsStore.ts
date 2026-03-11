@@ -44,8 +44,8 @@ type CardsStore = {
     mergeCards: (cards: Card[]) => void
     removeCards: (cardIDs: string[]) => void
     removeCardFromList: (boardID: string, listID: string, cardID: string) => Promise<void | null>
-    patchCardProps: (boardID: string, cardId: string, props: CardProps) => Promise<Card | null>
-    patchCardDetails: (boardID: string, cardId: string, payload: PatchCardDetailsRequest, asyncKey?: AsyncRequestKey) => Promise<void | null>
+    patchCardProps: (boardID: string, cardId: string, props: CardProps, listCardId?: string) => Promise<Card | null>
+    patchCardDetails: (boardID: string, cardId: string, payload: PatchCardDetailsRequest, asyncKey?: AsyncRequestKey, listCardId?: string) => Promise<void | null>
     applyCardPropsPatch: (cardId: string, props: CardProps) => void
     moveCardToBoard: (boardId: string, cardId: string, payload: MoveCardToBoardRequest) => Promise<void | null>
     bulkMoveListCardsInBoard: (boardId: string, payload: BulkMoveListCardsInBoardRequest) => Promise<BulkMoveListCardsInBoardResponse | null>
@@ -117,16 +117,23 @@ export const useCardsStore = create<CardsStore>((set, get) => ({
             { successResetDelayMs: 1500 }
         )
     },
-    patchCardDetails: async (boardID: string, cardId: string, payload: PatchCardDetailsRequest, asyncKey?: AsyncRequestKey) => {
+    patchCardDetails: async (boardID: string, cardId: string, payload: PatchCardDetailsRequest, asyncKey?: AsyncRequestKey, listCardId?: string) => {
+        const requestPayload: PatchCardDetailsRequest = listCardId
+            ? { ...payload, ListCardID: listCardId }
+            : payload
+
         return useAsyncRequestStore.getState().execute(
             asyncKey ?? useAsyncKey("card:edit:details", cardId),
-            () => api.patch(`/boards/${boardID}/cards/${cardId}/`, payload),
+            () => api.patch(`/boards/${boardID}/cards/${cardId}/`, requestPayload),
             { successResetDelayMs: 1500 }
         )
     },
 
-    patchCardProps: async (boardID: string, cardId: string, props: CardProps) => {
-        const payload: PatchCardPropsRequest = { Props: props }
+    patchCardProps: async (boardID: string, cardId: string, props: CardProps, listCardId?: string) => {
+        const payload: PatchCardPropsRequest = listCardId
+            ? { Props: props, ListCardID: listCardId }
+            : { Props: props }
+
         return useAsyncRequestStore.getState().execute<Card>(
             useAsyncKey("card:edit:props", cardId),
             async () => {

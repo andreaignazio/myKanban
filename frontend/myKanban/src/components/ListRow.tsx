@@ -59,6 +59,16 @@ export function ListRow({ boardID: boardID, boardListID: boardListID, index: ind
     const alreadyContainsDraggedCard = !!draggedCardId && !isDragSourceList && listCardIds.some((listCardId) => getCardIdForListCardId(listCardId) === draggedCardId)
 
     const { listColor, listTheme, listTextColor, hasListTheme, isReadonly } = useListTheme(list, accessMode)
+    const stack = useOverlayStore(useShallow((state) => state.stack))
+    const [isCardEditing, setIsCardEditing] = useState(false)
+    const cardEditMenuIdPrefix = `card-edit-menu-${boardListID}`
+    useEffect(() => {
+        const isEditMenuOpen = stack.some((overlay) => overlay.id.startsWith(cardEditMenuIdPrefix))
+        setIsCardEditing(isEditMenuOpen)
+    }, [stack, cardEditMenuIdPrefix])
+
+
+    //const isCardEditing = true
     return (
 
         <Draggable draggableId={boardListID} index={index}>
@@ -72,13 +82,13 @@ export function ListRow({ boardID: boardID, boardListID: boardListID, index: ind
                         color: listTextColor,
                     }}>
                     <div className={`relative group/readonly ${isReadonly
-                        ? "border-2 border-fuchsia-400/50 pt-1 hover:pt-6  bg-fuchsia-500/50"
+                        ? `border-2 border-fuchsia-400/50 pt-1 hover:pt-6 ${isCardEditing ? "pt-6" : ""}  bg-fuchsia-500/50`
                         : " "}
                      transition-all ease-in-out duration-300
                      rounded-xl  `}>
 
                         {isReadonly && (
-                            <div className="pointer-events-none absolute top-1 left-2 text-xs opacity-0 transition-opacity duration-200 group-hover/readonly:opacity-40">
+                            <div className={`pointer-events-none absolute top-1 left-2 text-xs ${isCardEditing ? "opacity-40" : "opacity-0"} transition-opacity duration-200 group-hover/readonly:opacity-40`}>
                                 READONLY
                             </div>
                         )}
@@ -120,6 +130,7 @@ export function ListRow({ boardID: boardID, boardListID: boardListID, index: ind
                                                         key={listCardID}
                                                         index={cardIndex}
                                                         isDragDisabled={isReadonly}
+                                                        editMenuPrefix={cardEditMenuIdPrefix}
                                                         boardID={boardID} listId={listID} listCardID={listCardID} />
 
                                                 )

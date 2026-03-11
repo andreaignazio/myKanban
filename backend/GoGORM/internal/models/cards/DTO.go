@@ -3,6 +3,8 @@ package cards
 import (
 	"GoGORM/internal/dto"
 	"encoding/json"
+
+	"github.com/google/uuid"
 )
 
 type PatchNullableString struct {
@@ -26,6 +28,7 @@ func (p *PatchNullableString) UnmarshalJSON(data []byte) error {
 }
 
 type PatchCardDetailsRequest struct {
+	ListCardID  *uuid.UUID          `json:"ListCardID,omitempty" binding:"omitempty"`
 	Title       *string             `json:"Title" binding:"omitempty"`
 	Done        *bool               `json:"Done" binding:"omitempty"`
 	Description *string             `json:"Description" binding:"omitempty"`
@@ -41,7 +44,8 @@ type PatchCardLabelRequest struct {
 }
 
 type PatchCardPropsRequest struct {
-	Props map[string]any `json:"Props" binding:"required"`
+	ListCardID *uuid.UUID     `json:"ListCardID,omitempty" binding:"omitempty"`
+	Props      map[string]any `json:"Props" binding:"required"`
 }
 
 type CardProps struct {

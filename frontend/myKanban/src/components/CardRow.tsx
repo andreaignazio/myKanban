@@ -31,6 +31,7 @@ type CardRowProps = {
     source?: CardSource
     inboxCardId?: string
     rootListCardId?: string
+    editMenuPrefix?: string
 }
 
 function getStableIndexFromString(value: string, length: number): number {
@@ -44,7 +45,7 @@ function getStableIndexFromString(value: string, length: number): number {
     return hash % length
 }
 
-export const CardRow = ({ boardID, listId, listCardID: listCardID, cardId, index, isDragDisabled = false, source = "board", inboxCardId, rootListCardId }: CardRowProps) => {
+export const CardRow = ({ boardID, listId, listCardID: listCardID, cardId, index, isDragDisabled = false, source = "board", inboxCardId, rootListCardId, editMenuPrefix }: CardRowProps) => {
 
 
     const [editMode, setEditMode] = useState(false)
@@ -92,6 +93,14 @@ export const CardRow = ({ boardID, listId, listCardID: listCardID, cardId, index
 
     const mode: CardRowMode = hasCover ? (isDetailed ? "detailed" : "compact") : "default"
 
+    const rootBoardContext = useCardRootBoardContext({
+        boardId,
+        source,
+        listCard: listcard,
+        listCardID,
+        rootListCardId,
+    })
+
     const {
         isInbox,
         isInboxMode,
@@ -101,13 +110,7 @@ export const CardRow = ({ boardID, listId, listCardID: listCardID, cardId, index
         rootBoardBackgroundType,
         rootBoardBgImage,
         rootBoardBgColorClass,
-    } = useCardRootBoardContext({
-        boardId,
-        source,
-        listCard: listcard,
-        listCardID,
-        rootListCardId,
-    })
+    } = rootBoardContext
 
     const cardContext: CardContext = {
         cardId: cardID,
@@ -119,6 +122,8 @@ export const CardRow = ({ boardID, listId, listCardID: listCardID, cardId, index
     }
 
     const done = card?.Done
+
+    const { canEdit, isReadOnlyList } = useCardEditableContext({ cardContext, boardId })
 
 
 
@@ -156,14 +161,14 @@ export const CardRow = ({ boardID, listId, listCardID: listCardID, cardId, index
     const ActionsMenuRef = useRef<HTMLDivElement>(null)
     const anchorRef = useRef<HTMLDivElement>(null)
 
-    const editMenutID = "card-action-menu"
+    const editMenutID = editMenuPrefix + "card-action-menu"
     function handleOpenCardActionModal() {
         // console.log("Opening respond modal for share offer");
         const id = editMenutID;
         const descriptor: OverlayDescriptor = {
             id: id,
             render: () => <CardEditMenu
-                ref={ActionsMenuRef} cardContext={cardContext} onClose={() => onMenuClose(id)} menuId={id} />,
+                ref={ActionsMenuRef} cardContext={cardContext} onClose={() => onMenuClose(id)} menuId={id} canEdit={canEdit} />,
             anchorRef: cardRowRef,
             panelRef: ActionsMenuRef,
             type: "modal",
@@ -176,7 +181,8 @@ export const CardRow = ({ boardID, listId, listCardID: listCardID, cardId, index
                 lockBackdrop: true,
             },
             position: {
-                placement: "left-start",
+                placement: "right-start",
+                offset: [8, 0],
             },
             desiredBackdropOpacity: 0.8,
         }
@@ -195,8 +201,13 @@ export const CardRow = ({ boardID, listId, listCardID: listCardID, cardId, index
     const setDone = cardActions.setCardDone
 
     const handleDoneToggle = () => {
-        if (!cardID || !boardID) return
-        setDone(boardID, cardID, !done)
+        if (!cardID) return
+        if (isInboxMode) {
+            cardActions.setInboxCardDone(cardID, !done)
+            return
+        }
+        if (!boardID) return
+        setDone(boardID, cardID, !done, listCardID)
     }
 
     const rowHeight = 36
@@ -217,8 +228,13 @@ export const CardRow = ({ boardID, listId, listCardID: listCardID, cardId, index
     }, [editMode])
 
     const onSubmitTitle = () => {
-        if (!cardID || !boardId) return
-        cardActions.setCardTitle(boardId, cardID, draftTitle, useAsyncKey("card:edit:title:inline", cardID))
+        if (!cardID) return
+        if (isInboxMode) {
+            cardActions.setInboxCardTitle(cardID, draftTitle, useAsyncKey("card:edit:title:inline", cardID))
+        } else {
+            if (!boardId) return
+            cardActions.setCardTitle(boardId, cardID, draftTitle, useAsyncKey("card:edit:title:inline", cardID), listCardID)
+        }
         setEditMode(false)
         onMenuClose(editMenutID)
     }
@@ -244,7 +260,7 @@ export const CardRow = ({ boardID, listId, listCardID: listCardID, cardId, index
                 openCard(cardID!)
             }}
             data-list-card-id={listCardID}
-            className="relative -mt-2 pt-2  "
+            className="relative -mt-2 pt-2 overflow-visible "
         >
 
             <Draggable draggableId={resolvedDraggableId} index={index} isDragDisabled={isDragDisabled}>
@@ -268,6 +284,7 @@ export const CardRow = ({ boardID, listId, listCardID: listCardID, cardId, index
                                 mirrorBackdropBackgroundType={rootBoardBackgroundType}
                                 mirrorBackdropBgImage={rootBoardBgImage}
                                 mirrorBackdropBgColorClass={rootBoardBgColorClass}
+                                canEdit={canEdit}
 
                                 ref={cardRowRef}>
 
@@ -276,27 +293,29 @@ export const CardRow = ({ boardID, listId, listCardID: listCardID, cardId, index
                                     <Mirrors
                                         cardId={cardID!}
                                         listCardId={listCardID}
-                                        board={effectiveRootBoard}
+                                        rootBoardContext={rootBoardContext}
                                         mode={source}
                                         placement="cover"
                                     />
                                 )}
+                                <div className={`absolute inset-0 z-10 bg-gray-500/20 ${!canEdit ? "opacity-100" : "opacity-0"} transition-opacity ease-in-out duration-300`} />
 
                                 <div className="flex flex-col ">
 
-                                    {mode !== "detailed" && <Mirrors cardId={cardID!} listCardId={listCardID} board={effectiveRootBoard} mode={source} />}
+                                    {mode !== "detailed" && <Mirrors cardId={cardID!} listCardId={listCardID} rootBoardContext={rootBoardContext} mode={source} />}
 
                                     <CardFieldsLabels hasLabels={cardHasLabels} cardID={cardID}
                                         boardID={boardId} mode={source}
                                     />
 
-                                    {!editMode &&
+                                    {(!editMode || (editMode && !canEdit)) &&
                                         <CardRowTitle
+                                            canEdit={canEdit}
                                             minHeight={rowHeight}
                                             title={title || ""} done={done}
                                             editMode={editMode} setDone={handleDoneToggle} />}
 
-                                    {editMode &&
+                                    {editMode && canEdit &&
                                         <div style={{ minHeight: rowHeight }}
                                             className="flex flex-col gap-1">
                                             <input
@@ -311,9 +330,9 @@ export const CardRow = ({ boardID, listId, listCardID: listCardID, cardId, index
 
                                 <CardRowFields cardID={cardID!} />
 
-                                <div className="absolute top-[10px] right-[11px] 
+                                <div className={`absolute top-[10px] right-[11px] 
                             flex flex-row gap-2
-                             z-10 opacity-0 group-hover:opacity-100 transition-all duration-200">
+                             z-10 opacity-0 ${canEdit ? "group-hover:opacity-100" : ""} transition-all duration-200`}>
 
                                     <ArchiveIcon className="w-5 h-5 text-neutral-300 cursor-pointer "
                                         onClickCapture={(e) => {
@@ -348,10 +367,16 @@ export const CardRow = ({ boardID, listId, listCardID: listCardID, cardId, index
                     return draggableNode
                 }}
             </Draggable>
-            <div>
-                {editMode === true &&
+            <div className={` ${`/*absolute -bottom-14*/`}
+                ${editMode ? "opacity-100 h-full " : "opacity-0 h-0"} transition-opacity duration-200
+                ${canEdit ? "" : "filter grayscale brightness-50 pointer-events-none"}
+                flex flex-row justify-start items-start ps-1`}>
+                {true === true &&
 
-                    <LabeledButtonPresetBSubmit label="Save"
+                    <LabeledButtonPresetBSubmit
+                        className="!w-fit px-8 !opacity-100 "
+                        disabled={!canEdit}
+                        label="Save"
                         onClick={() => { }}
                         onPointerDownCapture={(e) => {
                             e.stopPropagation()
@@ -400,6 +425,8 @@ import { useAsyncKey } from "@/stores/asyncRequestStore"
 import { useCardBackground } from "@/hooks/useCardBackground"
 import { useCardRootBoardContext } from "@/hooks/useCardRootBoardContext"
 import type { CardSource } from "@/domain/cardContext"
+import { useCardEditableContext } from "@/hooks/useCardEditableContext"
+import { create } from "zustand"
 
 
 

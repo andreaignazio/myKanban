@@ -1,32 +1,54 @@
 import { ImageColorRenderer } from "@/components/menuElements/ImageColorRenderer"
-import { getClassNamesForColorToken } from "@/domain/colorTokens"
-import type { Board } from "@/stores/types"
+import type { CardRootBoardContextValue } from "@/hooks/useCardRootBoardContext"
 import { CardRowMenuBtn } from "../cardMenus/cardRowMenus"
 import { CardMirrorsMenu } from "../cardMenus/cardMirrorsMenu"
 import { useDateTimeParser } from "@/hooks/useDateTimeParser"
 
 type CardMirrorsFieldProps = {
-    board?: Board
+    rootBoardContext: CardRootBoardContextValue
     mode: "board" | "inbox-mirror" | "inbox"
     placement?: "default" | "cover"
     cardId: string;
     listCardId?: string;
 }
 
-export const Mirrors = ({ board, mode, placement = "default", cardId, listCardId }: CardMirrorsFieldProps) => {
-    if (!board) return null
-    if (mode === "inbox") return null
+export const Mirrors = ({ rootBoardContext, mode, placement = "default", cardId, listCardId }: CardMirrorsFieldProps) => {
+    const {
+        effectiveRootBoard: board,
+        rootBoardBackgroundType,
+        rootBoardBgImage,
+        rootBoardBgColorClass,
+        isUserBoardPurged,
+        isUserBoardSoftDeleted,
+        isMainListCardPurged,
+        isMainListCardSoftDeleted,
+        isRootPurged: isRootPurged,
+        isRootSoftDeleted: isRootSoftDeleted,
+    } = rootBoardContext
 
-    const rootBoardBackgroundType = board?.Props?.Background?.Type
-    const rootBoardBgImage = rootBoardBackgroundType === "image" ? board?.Props?.Background?.Image?.Url : undefined
-    const rootBoardBgColorToken = rootBoardBackgroundType === "color" ? board?.Props?.Background?.Color?.Token : undefined
-    const rootBoardBgColorClass = rootBoardBgColorToken ? getClassNamesForColorToken(rootBoardBgColorToken) : undefined
+    const showResourceWarning = isMainListCardPurged || isMainListCardSoftDeleted || isRootPurged || isRootSoftDeleted
+    const showAccessWarning = isUserBoardPurged || isUserBoardSoftDeleted
+    const showWarning = showResourceWarning || showAccessWarning
+    if (!board && !showWarning) return null
+
     const wrapperClassName = placement === "cover"
         ? "absolute top-1 left-2 z-20 text-white"
         : "bg-transparent text-white pt-3 px-3"
 
-    const boardCreatedAt = new Date(board.CreatedAt)
-    const boardCreatedAtFormatted = useDateTimeParser().stringifyDatePretty(boardCreatedAt, true)?.date
+    const boardCreatedAt = board ? new Date(board.CreatedAt) : null
+    const boardCreatedAtFormatted = boardCreatedAt ? useDateTimeParser().stringifyDatePretty(boardCreatedAt, true)?.date : undefined
+    const detailLabel = showAccessWarning
+        ? "you have lost access to this resource"
+        : isMainListCardPurged
+            ? "Main instance purged"
+            : isMainListCardSoftDeleted
+                ? "Main instance soft-deleted"
+                : isRootPurged
+                    ? "Root purged"
+                    : isRootSoftDeleted
+                        ? "Root soft-deleted"
+                        : boardCreatedAtFormatted
+
     return (
         <CardRowMenuBtn
             menuComponent={
@@ -34,32 +56,15 @@ export const Mirrors = ({ board, mode, placement = "default", cardId, listCardId
             }
         >
             <DummyMirrorUI
-                name={board.Name}
-                detailLabel={boardCreatedAtFormatted}
+                name={board?.Name ?? "Root unavailable"}
+                detailLabel={detailLabel}
                 bgImage={rootBoardBgImage}
                 bgColorClass={rootBoardBgColorClass}
                 bgColorType={rootBoardBackgroundType === "color" ? "color" : rootBoardBackgroundType === "image" ? "image" : null}
+                showResourceWarning={showResourceWarning}
+                showAccessWarning={showAccessWarning}
                 wrapperClassName={wrapperClassName}
             />
-            {/*<div className={wrapperClassName}>
-                <div
-                    className="h-[30px] max-w-[170px] p-0 gap-1 w-fit pe-2 flex items-center justify-start rounded-[7px] bg-neutral-700/45 text-[11px] font-semibold"
-                >
-                    <ImageColorRenderer
-                        style={{ width: "26px", height: "26px" }}
-                        overrideClassName
-                        className="rounded-[6px] overflow-hidden shrink-0"
-                        bgImage={rootBoardBgImage}
-                        bgColor={rootBoardBgColorClass}
-
-                        backgroundType={rootBoardBackgroundType ?? null}
-                    />
-                    <div className="flex flex-col items-start">
-                        <span className="truncate text-[10px] font-medium">{board?.Name}</span>
-                        <span className="text-[10px] font-extralight">{"X"}</span>
-                    </div>
-                </div>
-            </div>*/}
         </CardRowMenuBtn>
 
     )
@@ -72,10 +77,12 @@ type DummyMirrorUIProps = {
     bgColorClass?: string;
     bgColorType?: "image" | "color" | null;
     wrapperClassName?: string;
+    showResourceWarning?: boolean;
+    showAccessWarning?: boolean;
 
 }
 
-export const DummyMirrorUI = ({ name, detailLabel, bgImage, bgColorClass, bgColorType, wrapperClassName }: DummyMirrorUIProps) => {
+export const DummyMirrorUI = ({ name, detailLabel, bgImage, bgColorClass, bgColorType, wrapperClassName, showResourceWarning, showAccessWarning }: DummyMirrorUIProps) => {
 
     return (
         <div className={wrapperClassName}>
@@ -95,6 +102,16 @@ export const DummyMirrorUI = ({ name, detailLabel, bgImage, bgColorClass, bgColo
                     <span className="truncate text-[10px] font-medium">{name}</span>
                     <span className="text-[8px] font-extralight">{detailLabel}</span>
                 </div>
+                {showResourceWarning && (
+                    <span className="ml-1 flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 text-[10px] font-bold text-black">
+                        !
+                    </span>
+                )}
+                {showAccessWarning && (
+                    <span className="ml-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white">
+                        !
+                    </span>
+                )}
             </div>
         </div>
     )

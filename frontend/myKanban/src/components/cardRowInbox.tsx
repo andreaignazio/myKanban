@@ -5,9 +5,12 @@ import type { CardRowMode } from "./CardRow"
 import { CardRowTitle } from "./cardRowElements/CardRowTitle"
 import { Mirrors } from "./cardRowElements/CardMirrorsField"
 import { useBoardDetailStore } from "@/stores/boardDetailStore"
+import { useCardRootBoardContext } from "@/hooks/useCardRootBoardContext"
+import { useParams } from "react-router-dom"
 
 
 export const CardRowInbox = ({ inboxCardId }: { inboxCardId: string }) => {
+    const { boardId } = useParams<{ boardId: string }>()
     const inboxCardsById = useUserInboxStore(state => state.inboxCardsById)
     const inboxCard = inboxCardsById[inboxCardId]
     if (!inboxCard) return null
@@ -25,6 +28,11 @@ export const CardRowInbox = ({ inboxCardId }: { inboxCardId: string }) => {
     const isDetailed = hasCover && coverSize === "large"
 
     const mode: CardRowMode = hasCover ? (isDetailed ? "detailed" : "compact") : "default"
+    const rootBoardContext = useCardRootBoardContext({
+        boardId,
+        source: "inbox",
+        rootListCardId: inboxCard.RootListCardID,
+    })
 
 
     const done = false
@@ -37,7 +45,7 @@ export const CardRowInbox = ({ inboxCardId }: { inboxCardId: string }) => {
     return (
         <CardRowCoverWrapper mode={mode} cardColor={cardColor} cardCoverURL={cardCoverURL}>
 
-            {!isInboxOnlyCard() && <Mirrors listcardID={inboxCard.RootListCardID} mode={"inbox"} />}
+            {!isInboxOnlyCard() && <Mirrors cardId={cardID!} listCardId={inboxCard.RootListCardID} rootBoardContext={rootBoardContext} mode={"inbox"} />}
             <div className="flex flex-col p-2 pb-2 gap-1">
                 <CardRowTitle title={card?.Title || "Untitled Card"} editMode={false} done={done} />
             </div>

@@ -18,7 +18,8 @@ type Request struct {
 
 type RequestPayload struct {
 	WorkspacePatchPayload       *WorkspacePatchPayload
-	CardInListPatchPayload      *CardInListPatchPayload
+	BoardCardPatchPayload       *BoardCardPatchPayload
+	InboxMirrorCardPatchPayload *InboxMirrorCardPatchPayload
 	InboxCardMoveToBoardPayload *InboxCardMoveToBoardPayload
 	InboxCardDetatchPayload     *InboxCardDetatchPayload
 	ReadListCardPayload         *ReadListCardPayload
@@ -30,7 +31,13 @@ type WorkspacePatchPayload struct {
 	WorkspaceID uuid.UUID
 }
 
-type CardInListPatchPayload struct {
+type BoardCardPatchPayload struct {
+	CardID     uuid.UUID
+	ListCardID uuid.UUID
+	BoardID    uuid.UUID
+}
+
+type InboxMirrorCardPatchPayload struct {
 	CardID      uuid.UUID
 	BoardListID uuid.UUID
 }
