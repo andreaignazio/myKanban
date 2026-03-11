@@ -1,0 +1,524 @@
+
+[audit_event_targets]
+- constraint audit_event_targets_audit_id_not_null: NOT NULL audit_id
+- constraint audit_event_targets_board_id_not_null: NOT NULL board_id
+- constraint audit_event_targets_created_at_not_null: NOT NULL created_at
+- constraint audit_event_targets_entity_id_not_null: NOT NULL entity_id
+- constraint audit_event_targets_entity_type_not_null: NOT NULL entity_type
+- constraint audit_event_targets_id_not_null: NOT NULL id
+- constraint audit_event_targets_pkey: PRIMARY KEY (id)
+- index audit_event_targets_pkey: CREATE UNIQUE INDEX audit_event_targets_pkey ON public.audit_event_targets USING btree (id)
+- index idx_audit_event_targets_audit_id: CREATE INDEX idx_audit_event_targets_audit_id ON public.audit_event_targets USING btree (audit_id)
+- index idx_audit_event_targets_board_id: CREATE INDEX idx_audit_event_targets_board_id ON public.audit_event_targets USING btree (board_id)
+- index idx_audit_event_targets_entity_id: CREATE INDEX idx_audit_event_targets_entity_id ON public.audit_event_targets USING btree (entity_id)
+- index idx_audit_event_targets_workspace_id: CREATE INDEX idx_audit_event_targets_workspace_id ON public.audit_event_targets USING btree (workspace_id)
+
+[billing_webhook_events]
+- constraint billing_webhook_events_event_id_not_null: NOT NULL event_id
+- constraint billing_webhook_events_id_not_null: NOT NULL id
+- constraint billing_webhook_events_payloadhash_not_null: NOT NULL payloadhash
+- constraint billing_webhook_events_pkey: PRIMARY KEY (id)
+- constraint billing_webhook_events_provider_not_null: NOT NULL provider
+- constraint billing_webhook_events_status_not_null: NOT NULL status
+- constraint chk_billing_webhook_events_status: CHECK ((status = ANY (ARRAY['received'::text, 'processed'::text, 'failed'::text])))
+- index billing_webhook_events_pkey: CREATE UNIQUE INDEX billing_webhook_events_pkey ON public.billing_webhook_events USING btree (id)
+- index idx_billing_webhook_events_deleted_at: CREATE INDEX idx_billing_webhook_events_deleted_at ON public.billing_webhook_events USING btree (deleted_at)
+- index idx_billing_webhook_events_event_id: CREATE INDEX idx_billing_webhook_events_event_id ON public.billing_webhook_events USING btree (event_id)
+- index idx_billing_webhook_events_provider: CREATE INDEX idx_billing_webhook_events_provider ON public.billing_webhook_events USING btree (provider)
+- index ix_billing_webhook_event_created_at: CREATE INDEX ix_billing_webhook_event_created_at ON public.billing_webhook_events USING btree (created_at)
+- index ix_billing_webhook_event_processed_at: CREATE INDEX ix_billing_webhook_event_processed_at ON public.billing_webhook_events USING btree (processed_at)
+- index ux_billing_webhook_events_provider_event: CREATE UNIQUE INDEX ux_billing_webhook_events_provider_event ON public.billing_webhook_events USING btree (provider, event_id)
+
+[board_audit_events]
+- constraint board_audit_events_action_type_not_null: NOT NULL action_type
+- constraint board_audit_events_actor_user_id_not_null: NOT NULL actor_user_id
+- constraint board_audit_events_created_at_not_null: NOT NULL created_at
+- constraint board_audit_events_id_not_null: NOT NULL id
+- constraint board_audit_events_main_entity_id_not_null: NOT NULL main_entity_id
+- constraint board_audit_events_main_entity_type_not_null: NOT NULL main_entity_type
+- constraint board_audit_events_pkey: PRIMARY KEY (id)
+- index board_audit_events_pkey: CREATE UNIQUE INDEX board_audit_events_pkey ON public.board_audit_events USING btree (id)
+- index idx_board_audit_events_actor_user_id: CREATE INDEX idx_board_audit_events_actor_user_id ON public.board_audit_events USING btree (actor_user_id)
+- index idx_board_audit_events_board_id: CREATE INDEX idx_board_audit_events_board_id ON public.board_audit_events USING btree (board_id)
+- index idx_board_audit_events_deleted_at: CREATE INDEX idx_board_audit_events_deleted_at ON public.board_audit_events USING btree (deleted_at)
+- index idx_board_audit_events_main_entity_id: CREATE INDEX idx_board_audit_events_main_entity_id ON public.board_audit_events USING btree (main_entity_id)
+- index idx_board_audit_events_workspace_id: CREATE INDEX idx_board_audit_events_workspace_id ON public.board_audit_events USING btree (workspace_id)
+
+[board_labels]
+- constraint board_labels_board_id_not_null: NOT NULL board_id
+- constraint board_labels_id_not_null: NOT NULL id
+- constraint board_labels_pkey: PRIMARY KEY (id)
+- constraint chk_board_labels_title_or_color_not_both_null: CHECK (((title IS NOT NULL) OR (color IS NOT NULL)))
+- constraint fk_board_labels_board_id: FOREIGN KEY (board_id) REFERENCES boards(id) ON DELETE CASCADE
+- constraint uq_board_labels_id_board_id: UNIQUE (id, board_id)
+- index board_labels_pkey: CREATE UNIQUE INDEX board_labels_pkey ON public.board_labels USING btree (id)
+- index idx_board_labels_active_board_lower_title_unique: CREATE UNIQUE INDEX idx_board_labels_active_board_lower_title_unique ON public.board_labels USING btree (board_id, lower(title)) WHERE ((deleted_at IS NULL) AND (title IS NOT NULL) AND (btrim(title) <> ''::text))
+- index idx_board_labels_board_id: CREATE INDEX idx_board_labels_board_id ON public.board_labels USING btree (board_id)
+- index idx_board_labels_deleted_at: CREATE INDEX idx_board_labels_deleted_at ON public.board_labels USING btree (deleted_at)
+- index uq_board_labels_id_board_id: CREATE UNIQUE INDEX uq_board_labels_id_board_id ON public.board_labels USING btree (id, board_id)
+
+[board_list_offer_events]
+- constraint board_list_offer_events_actor_board_id_not_null: NOT NULL actor_board_id
+- constraint board_list_offer_events_actor_user_id_not_null: NOT NULL actor_user_id
+- constraint board_list_offer_events_created_at_not_null: NOT NULL created_at
+- constraint board_list_offer_events_event_type_not_null: NOT NULL event_type
+- constraint board_list_offer_events_id_not_null: NOT NULL id
+- constraint board_list_offer_events_offer_id_not_null: NOT NULL offer_id
+- constraint board_list_offer_events_pkey: PRIMARY KEY (id)
+- constraint board_list_offer_events_updated_at_not_null: NOT NULL updated_at
+- constraint chk_offer_events_type: CHECK ((event_type = ANY (ARRAY['offered'::text, 'respond_accepted'::text, 'respond_rejected'::text, 'revoked'::text, 'auto_mounted'::text, 'auto_unmounted'::text])))
+- constraint fk_offer_events_actor_user: FOREIGN KEY (actor_user_id) REFERENCES users(id) ON DELETE RESTRICT
+- constraint fk_offer_events_offer: FOREIGN KEY (offer_id) REFERENCES board_list_share_offers(id) ON DELETE CASCADE
+- index board_list_offer_events_pkey: CREATE UNIQUE INDEX board_list_offer_events_pkey ON public.board_list_offer_events USING btree (id)
+- index idx_board_list_offer_events_deleted_at: CREATE INDEX idx_board_list_offer_events_deleted_at ON public.board_list_offer_events USING btree (deleted_at)
+- index idx_offer_events_actor_created: CREATE INDEX idx_offer_events_actor_created ON public.board_list_offer_events USING btree (actor_user_id, created_at)
+- index idx_offer_events_offer_created: CREATE INDEX idx_offer_events_offer_created ON public.board_list_offer_events USING btree (offer_id, created_at)
+
+[board_list_share_offers]
+- constraint board_list_share_offers_created_by_user_id_not_null: NOT NULL created_by_user_id
+- constraint board_list_share_offers_id_not_null: NOT NULL id
+- constraint board_list_share_offers_list_id_not_null: NOT NULL list_id
+- constraint board_list_share_offers_pkey: PRIMARY KEY (id)
+- constraint board_list_share_offers_proposed_access_mode_not_null: NOT NULL proposed_access_mode
+- constraint board_list_share_offers_source_board_id_not_null: NOT NULL source_board_id
+- constraint board_list_share_offers_status_not_null: NOT NULL status
+- constraint board_list_share_offers_target_board_id_not_null: NOT NULL target_board_id
+- constraint chk_share_offer_access_mode: CHECK ((proposed_access_mode = ANY (ARRAY['readonly'::text, 'editable'::text])))
+- constraint chk_share_offer_decision_consistency: CHECK ((((status = 'pending'::text) AND (decided_by_user_id IS NULL) AND (decided_at IS NULL)) OR ((status <> 'pending'::text) AND (decided_by_user_id IS NOT NULL) AND (decided_at IS NOT NULL))))
+- constraint chk_share_offer_not_self: CHECK ((source_board_id <> target_board_id))
+- constraint chk_share_offer_status: CHECK ((status = ANY (ARRAY['pending'::text, 'accepted'::text, 'rejected'::text, 'revoked'::text])))
+- constraint fk_share_created_by: FOREIGN KEY (created_by_user_id) REFERENCES users(id) ON DELETE RESTRICT
+- constraint fk_share_decided_by: FOREIGN KEY (decided_by_user_id) REFERENCES users(id) ON DELETE RESTRICT
+- constraint fk_share_list: FOREIGN KEY (list_id) REFERENCES lists(id) ON DELETE CASCADE
+- constraint fk_share_source_board: FOREIGN KEY (source_board_id) REFERENCES boards(id) ON DELETE CASCADE
+- constraint fk_share_target_board: FOREIGN KEY (target_board_id) REFERENCES boards(id) ON DELETE CASCADE
+- index board_list_share_offers_pkey: CREATE UNIQUE INDEX board_list_share_offers_pkey ON public.board_list_share_offers USING btree (id)
+- index idx_board_list_share_offers_deleted_at: CREATE INDEX idx_board_list_share_offers_deleted_at ON public.board_list_share_offers USING btree (deleted_at)
+- index idx_share_offers_list: CREATE INDEX idx_share_offers_list ON public.board_list_share_offers USING btree (list_id)
+- index idx_share_offers_source_status_created: CREATE INDEX idx_share_offers_source_status_created ON public.board_list_share_offers USING btree (source_board_id, status, created_at DESC)
+- index idx_share_offers_target_status_created: CREATE INDEX idx_share_offers_target_status_created ON public.board_list_share_offers USING btree (target_board_id, status, created_at DESC)
+- index uq_share: CREATE UNIQUE INDEX uq_share ON public.board_list_share_offers USING btree (target_board_id, source_board_id, list_id)
+- index uq_share_offer_pending_only: CREATE UNIQUE INDEX uq_share_offer_pending_only ON public.board_list_share_offers USING btree (source_board_id, target_board_id, list_id) WHERE (status = 'pending'::text)
+- index uq_share_offer_triple: CREATE UNIQUE INDEX uq_share_offer_triple ON public.board_list_share_offers USING btree (source_board_id, target_board_id, list_id)
+
+[board_lists]
+- constraint board_lists_access_mode_not_null: NOT NULL access_mode
+- constraint board_lists_board_id_list_id_key: UNIQUE (board_id, list_id)
+- constraint board_lists_board_id_not_null: NOT NULL board_id
+- constraint board_lists_id_not_null: NOT NULL id
+- constraint board_lists_list_id_not_null: NOT NULL list_id
+- constraint board_lists_pkey: PRIMARY KEY (id)
+- constraint board_lists_pos_not_null: NOT NULL pos
+- constraint board_lists_root_id_not_null: NOT NULL root_id
+- constraint fk_board_lists_board: FOREIGN KEY (board_id) REFERENCES boards(id) ON DELETE CASCADE
+- constraint fk_board_lists_list: FOREIGN KEY (list_id) REFERENCES lists(id) ON DELETE RESTRICT
+- index board_lists_board_id_list_id_key: CREATE UNIQUE INDEX board_lists_board_id_list_id_key ON public.board_lists USING btree (board_id, list_id)
+- index board_lists_pkey: CREATE UNIQUE INDEX board_lists_pkey ON public.board_lists USING btree (id)
+- index idx_board_lists_board_id: CREATE INDEX idx_board_lists_board_id ON public.board_lists USING btree (board_id)
+- index idx_board_lists_board_pos: CREATE INDEX idx_board_lists_board_pos ON public.board_lists USING btree (board_id, pos)
+- index idx_board_lists_deleted_at: CREATE INDEX idx_board_lists_deleted_at ON public.board_lists USING btree (deleted_at)
+- index idx_board_lists_list: CREATE INDEX idx_board_lists_list ON public.board_lists USING btree (list_id)
+- index idx_board_lists_list_id: CREATE INDEX idx_board_lists_list_id ON public.board_lists USING btree (list_id)
+- index idx_board_lists_pos: CREATE INDEX idx_board_lists_pos ON public.board_lists USING btree (pos)
+- index idx_board_lists_root_id: CREATE INDEX idx_board_lists_root_id ON public.board_lists USING btree (root_id)
+
+[board_watches]
+- constraint board_watches_active_not_null: NOT NULL active
+- constraint board_watches_board_id_not_null: NOT NULL board_id
+- constraint board_watches_id_not_null: NOT NULL id
+- constraint board_watches_pos_not_null: NOT NULL pos
+- constraint board_watches_user_id_not_null: NOT NULL user_id
+- constraint board_watches_workspace_id_not_null: NOT NULL workspace_id
+- constraint chk_board_watches_pos_not_blank: CHECK ((char_length(TRIM(BOTH FROM pos)) > 0))
+- constraint fk_board_watches_board_id: FOREIGN KEY (board_id) REFERENCES boards(id) ON DELETE CASCADE
+- constraint fk_board_watches_user_id: FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+- constraint fk_board_watches_workspace_id: FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
+- constraint pk_board_watches_id: PRIMARY KEY (id)
+- index idx_board_watches_active_board_user: CREATE INDEX idx_board_watches_active_board_user ON public.board_watches USING btree (board_id, user_id) WHERE (deleted_at IS NULL)
+- index idx_board_watches_active_user_board_unique: CREATE UNIQUE INDEX idx_board_watches_active_user_board_unique ON public.board_watches USING btree (user_id, board_id) WHERE (deleted_at IS NULL)
+- index idx_board_watches_active_user_pos: CREATE INDEX idx_board_watches_active_user_pos ON public.board_watches USING btree (user_id, pos COLLATE "C") WHERE (deleted_at IS NULL)
+- index idx_board_watches_active_workspace_user: CREATE INDEX idx_board_watches_active_workspace_user ON public.board_watches USING btree (workspace_id, user_id) WHERE (deleted_at IS NULL)
+- index idx_board_watches_board_id: CREATE INDEX idx_board_watches_board_id ON public.board_watches USING btree (board_id)
+- index idx_board_watches_deleted_at: CREATE INDEX idx_board_watches_deleted_at ON public.board_watches USING btree (deleted_at)
+- index idx_board_watches_pos: CREATE INDEX idx_board_watches_pos ON public.board_watches USING btree (pos)
+- index idx_board_watches_user_id: CREATE INDEX idx_board_watches_user_id ON public.board_watches USING btree (user_id)
+- index idx_board_watches_workspace_id: CREATE INDEX idx_board_watches_workspace_id ON public.board_watches USING btree (workspace_id)
+- index pk_board_watches_id: CREATE UNIQUE INDEX pk_board_watches_id ON public.board_watches USING btree (id)
+
+[boards]
+- constraint boards_id_not_null: NOT NULL id
+- constraint boards_is_pending_suspend_not_null: NOT NULL is_pending_suspend
+- constraint boards_is_suspended_not_null: NOT NULL is_suspended
+- constraint boards_pkey: PRIMARY KEY (id)
+- constraint boards_visibility_not_null: NOT NULL visibility
+- constraint fk_boards_created_by: FOREIGN KEY (created_by_user_id) REFERENCES users(id) ON DELETE RESTRICT
+- constraint uni_boards_public_token: UNIQUE (public_token)
+- index boards_pkey: CREATE UNIQUE INDEX boards_pkey ON public.boards USING btree (id)
+- index idx_boards_deleted_at: CREATE INDEX idx_boards_deleted_at ON public.boards USING btree (deleted_at)
+- index idx_boards_public_token: CREATE INDEX idx_boards_public_token ON public.boards USING btree (public_token)
+- index idx_boards_workspace_suspension_flags: CREATE INDEX idx_boards_workspace_suspension_flags ON public.boards USING btree (workspace_id, is_suspended, is_pending_suspend) WHERE (deleted_at IS NULL)
+- index uni_boards_public_token: CREATE UNIQUE INDEX uni_boards_public_token ON public.boards USING btree (public_token)
+
+[card_checklists]
+- constraint card_checklists_card_id_not_null: NOT NULL card_id
+- constraint card_checklists_checklist_id_not_null: NOT NULL checklist_id
+- constraint card_checklists_id_not_null: NOT NULL id
+- constraint card_checklists_pkey: PRIMARY KEY (id)
+- constraint card_checklists_pos_not_null: NOT NULL pos
+- index card_checklists_pkey: CREATE UNIQUE INDEX card_checklists_pkey ON public.card_checklists USING btree (id)
+- index idx_card_checklists_deleted_at: CREATE INDEX idx_card_checklists_deleted_at ON public.card_checklists USING btree (deleted_at)
+- index idx_card_checklists_pos: CREATE INDEX idx_card_checklists_pos ON public.card_checklists USING btree (pos COLLATE "C")
+
+[card_comments]
+- constraint card_comments_card_id_not_null: NOT NULL card_id
+- constraint card_comments_content_not_null: NOT NULL content
+- constraint card_comments_id_not_null: NOT NULL id
+- constraint card_comments_pkey: PRIMARY KEY (id)
+- constraint chk_card_comments_content_not_blank: CHECK ((char_length(TRIM(BOTH FROM content)) > 0))
+- constraint fk_card_comments_card_id: FOREIGN KEY (card_id) REFERENCES cards(id) ON DELETE CASCADE
+- constraint fk_card_comments_created_by_user_id: FOREIGN KEY (created_by_user_id) REFERENCES users(id) ON DELETE RESTRICT
+- constraint fk_cards_card_comments: FOREIGN KEY (card_id) REFERENCES cards(id) ON DELETE CASCADE
+- constraint fk_users_card_comments: FOREIGN KEY (created_by_user_id) REFERENCES users(id) ON DELETE RESTRICT
+- index card_comments_pkey: CREATE UNIQUE INDEX card_comments_pkey ON public.card_comments USING btree (id)
+- index idx_card_comments_active_card_created: CREATE INDEX idx_card_comments_active_card_created ON public.card_comments USING btree (card_id, created_at DESC) WHERE (deleted_at IS NULL)
+- index idx_card_comments_card_id: CREATE INDEX idx_card_comments_card_id ON public.card_comments USING btree (card_id)
+- index idx_card_comments_deleted_at: CREATE INDEX idx_card_comments_deleted_at ON public.card_comments USING btree (deleted_at)
+
+[card_label_links]
+- constraint card_label_links_board_id_not_null: NOT NULL board_id
+- constraint card_label_links_board_label_id_not_null: NOT NULL board_label_id
+- constraint card_label_links_card_id_not_null: NOT NULL card_id
+- constraint card_label_links_id_not_null: NOT NULL id
+- constraint card_label_links_pkey: PRIMARY KEY (id)
+- constraint fk_card_label_links_board_id: FOREIGN KEY (board_id) REFERENCES boards(id) ON DELETE CASCADE
+- constraint fk_card_label_links_board_label_id: FOREIGN KEY (board_label_id) REFERENCES board_labels(id) ON DELETE CASCADE
+- constraint fk_card_label_links_board_label_id_board_id: FOREIGN KEY (board_label_id, board_id) REFERENCES board_labels(id, board_id) ON DELETE CASCADE
+- constraint fk_card_label_links_card_id: FOREIGN KEY (card_id) REFERENCES cards(id) ON DELETE CASCADE
+- index card_label_links_pkey: CREATE UNIQUE INDEX card_label_links_pkey ON public.card_label_links USING btree (id)
+- index idx_card_label_links_active_board_label_card: CREATE INDEX idx_card_label_links_active_board_label_card ON public.card_label_links USING btree (board_id, board_label_id, card_id) WHERE (deleted_at IS NULL)
+- index idx_card_label_links_active_card_board_label_unique: CREATE UNIQUE INDEX idx_card_label_links_active_card_board_label_unique ON public.card_label_links USING btree (card_id, board_id, board_label_id) WHERE (deleted_at IS NULL)
+- index idx_card_label_links_active_label_card: CREATE INDEX idx_card_label_links_active_label_card ON public.card_label_links USING btree (board_label_id, card_id) WHERE (deleted_at IS NULL)
+- index idx_card_label_links_board_id: CREATE INDEX idx_card_label_links_board_id ON public.card_label_links USING btree (board_id)
+- index idx_card_label_links_board_label_id: CREATE INDEX idx_card_label_links_board_label_id ON public.card_label_links USING btree (board_label_id)
+- index idx_card_label_links_card_id: CREATE INDEX idx_card_label_links_card_id ON public.card_label_links USING btree (card_id)
+- index idx_card_label_links_deleted_at: CREATE INDEX idx_card_label_links_deleted_at ON public.card_label_links USING btree (deleted_at)
+
+[card_members]
+- constraint card_members_card_id_not_null: NOT NULL card_id
+- constraint card_members_id_not_null: NOT NULL id
+- constraint card_members_pkey: PRIMARY KEY (id)
+- constraint card_members_user_id_not_null: NOT NULL user_id
+- constraint fk_card_members_card_id: FOREIGN KEY (card_id) REFERENCES cards(id) ON DELETE CASCADE
+- constraint fk_card_members_user_id: FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+- index card_members_pkey: CREATE UNIQUE INDEX card_members_pkey ON public.card_members USING btree (id)
+- index idx_card_members_active_card_user_unique: CREATE UNIQUE INDEX idx_card_members_active_card_user_unique ON public.card_members USING btree (card_id, user_id) WHERE (deleted_at IS NULL)
+- index idx_card_members_active_user_card: CREATE INDEX idx_card_members_active_user_card ON public.card_members USING btree (user_id, card_id) WHERE (deleted_at IS NULL)
+- index idx_card_members_card_id: CREATE INDEX idx_card_members_card_id ON public.card_members USING btree (card_id)
+- index idx_card_members_deleted_at: CREATE INDEX idx_card_members_deleted_at ON public.card_members USING btree (deleted_at)
+- index idx_card_members_user_id: CREATE INDEX idx_card_members_user_id ON public.card_members USING btree (user_id)
+
+[card_watches]
+- constraint card_watches_active_not_null: NOT NULL active
+- constraint card_watches_board_id_not_null: NOT NULL board_id
+- constraint card_watches_card_id_not_null: NOT NULL card_id
+- constraint card_watches_id_not_null: NOT NULL id
+- constraint card_watches_pos_not_null: NOT NULL pos
+- constraint card_watches_user_id_not_null: NOT NULL user_id
+- constraint card_watches_workspace_id_not_null: NOT NULL workspace_id
+- constraint chk_card_watches_pos_not_blank: CHECK ((char_length(TRIM(BOTH FROM pos)) > 0))
+- constraint fk_card_watches_board_id: FOREIGN KEY (board_id) REFERENCES boards(id) ON DELETE CASCADE
+- constraint fk_card_watches_card_id: FOREIGN KEY (card_id) REFERENCES cards(id) ON DELETE CASCADE
+- constraint fk_card_watches_user_id: FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+- constraint fk_card_watches_workspace_id: FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
+- constraint pk_card_watches_id: PRIMARY KEY (id)
+- index idx_card_watches_active_card_user: CREATE INDEX idx_card_watches_active_card_user ON public.card_watches USING btree (card_id, user_id) WHERE (deleted_at IS NULL)
+- index idx_card_watches_active_user_card_unique: CREATE UNIQUE INDEX idx_card_watches_active_user_card_unique ON public.card_watches USING btree (user_id, card_id) WHERE (deleted_at IS NULL)
+- index idx_card_watches_active_user_pos: CREATE INDEX idx_card_watches_active_user_pos ON public.card_watches USING btree (user_id, pos COLLATE "C") WHERE (deleted_at IS NULL)
+- index idx_card_watches_active_workspace_user: CREATE INDEX idx_card_watches_active_workspace_user ON public.card_watches USING btree (workspace_id, user_id) WHERE (deleted_at IS NULL)
+- index idx_card_watches_board_id: CREATE INDEX idx_card_watches_board_id ON public.card_watches USING btree (board_id)
+- index idx_card_watches_card_id: CREATE INDEX idx_card_watches_card_id ON public.card_watches USING btree (card_id)
+- index idx_card_watches_deleted_at: CREATE INDEX idx_card_watches_deleted_at ON public.card_watches USING btree (deleted_at)
+- index idx_card_watches_pos: CREATE INDEX idx_card_watches_pos ON public.card_watches USING btree (pos)
+- index idx_card_watches_user_id: CREATE INDEX idx_card_watches_user_id ON public.card_watches USING btree (user_id)
+- index idx_card_watches_workspace_id: CREATE INDEX idx_card_watches_workspace_id ON public.card_watches USING btree (workspace_id)
+- index pk_card_watches_id: CREATE UNIQUE INDEX pk_card_watches_id ON public.card_watches USING btree (id)
+
+[cards]
+- constraint cards_id_not_null: NOT NULL id
+- constraint cards_pkey: PRIMARY KEY (id)
+- index cards_pkey: CREATE UNIQUE INDEX cards_pkey ON public.cards USING btree (id)
+- index idx_cards_deleted_at: CREATE INDEX idx_cards_deleted_at ON public.cards USING btree (deleted_at)
+
+[checklist_entries]
+- constraint checklist_entries_checklist_id_not_null: NOT NULL checklist_id
+- constraint checklist_entries_entry_id_not_null: NOT NULL entry_id
+- constraint checklist_entries_id_not_null: NOT NULL id
+- constraint checklist_entries_pkey: PRIMARY KEY (id)
+- constraint checklist_entries_pos_not_null: NOT NULL pos
+- index checklist_entries_pkey: CREATE UNIQUE INDEX checklist_entries_pkey ON public.checklist_entries USING btree (id)
+- index idx_checklist_entries_deleted_at: CREATE INDEX idx_checklist_entries_deleted_at ON public.checklist_entries USING btree (deleted_at)
+- index idx_checklist_entries_pos: CREATE INDEX idx_checklist_entries_pos ON public.checklist_entries USING btree (pos COLLATE "C")
+
+[checklists]
+- constraint checklists_created_by_user_id_not_null: NOT NULL created_by_user_id
+- constraint checklists_created_in_card_id_not_null: NOT NULL created_in_card_id
+- constraint checklists_id_not_null: NOT NULL id
+- constraint checklists_pkey: PRIMARY KEY (id)
+- constraint checklists_title_not_null: NOT NULL title
+- constraint fk_checklists_created_by_user_id: FOREIGN KEY (created_by_user_id) REFERENCES users(id) ON DELETE RESTRICT
+- constraint fk_checklists_created_in_card_id: FOREIGN KEY (created_in_card_id) REFERENCES cards(id) ON DELETE CASCADE
+- index checklists_pkey: CREATE UNIQUE INDEX checklists_pkey ON public.checklists USING btree (id)
+- index idx_checklists_deleted_at: CREATE INDEX idx_checklists_deleted_at ON public.checklists USING btree (deleted_at)
+
+[comment_mentions]
+- constraint fk_card_comments_comment_mentions: FOREIGN KEY (card_comment_id) REFERENCES card_comments(id) ON DELETE CASCADE
+- constraint fk_comment_mentions_card_comment_id: FOREIGN KEY (card_comment_id) REFERENCES card_comments(id) ON DELETE CASCADE
+- constraint fk_comment_mentions_created_by_user_id: FOREIGN KEY (created_by_user_id) REFERENCES users(id) ON DELETE RESTRICT
+- constraint fk_comment_mentions_mentioned_user_id: FOREIGN KEY (mentioned_user_id) REFERENCES users(id) ON DELETE CASCADE
+- index idx_comment_mentions_active_comment_user_unique: CREATE UNIQUE INDEX idx_comment_mentions_active_comment_user_unique ON public.comment_mentions USING btree (card_comment_id, mentioned_user_id) WHERE (deleted_at IS NULL)
+- index idx_comment_mentions_active_mentioned_user: CREATE INDEX idx_comment_mentions_active_mentioned_user ON public.comment_mentions USING btree (mentioned_user_id, card_comment_id) WHERE (deleted_at IS NULL)
+- index idx_comment_mentions_deleted_at: CREATE INDEX idx_comment_mentions_deleted_at ON public.comment_mentions USING btree (deleted_at)
+
+[entries]
+- constraint entries_created_by_user_id_not_null: NOT NULL created_by_user_id
+- constraint entries_done_not_null: NOT NULL done
+- constraint entries_id_not_null: NOT NULL id
+- constraint entries_pkey: PRIMARY KEY (id)
+- constraint entries_title_not_null: NOT NULL title
+- constraint fk_entries_created_by_user_id: FOREIGN KEY (created_by_user_id) REFERENCES users(id) ON DELETE RESTRICT
+- index entries_pkey: CREATE UNIQUE INDEX entries_pkey ON public.entries USING btree (id)
+- index idx_entries_deleted_at: CREATE INDEX idx_entries_deleted_at ON public.entries USING btree (deleted_at)
+
+[entry_members]
+- constraint entry_members_entry_id_not_null: NOT NULL entry_id
+- constraint entry_members_id_not_null: NOT NULL id
+- constraint entry_members_pkey: PRIMARY KEY (id)
+- constraint entry_members_user_id_not_null: NOT NULL user_id
+- index entry_members_pkey: CREATE UNIQUE INDEX entry_members_pkey ON public.entry_members USING btree (id)
+- index idx_entry_members_deleted_at: CREATE INDEX idx_entry_members_deleted_at ON public.entry_members USING btree (deleted_at)
+
+[labels]
+- constraint fk_cards_labels: FOREIGN KEY (card_id) REFERENCES cards(id) ON DELETE CASCADE
+- constraint labels_card_id_not_null: NOT NULL card_id
+- constraint labels_color_not_null: NOT NULL color
+- constraint labels_id_not_null: NOT NULL id
+- constraint labels_pkey: PRIMARY KEY (id)
+- constraint labels_title_not_null: NOT NULL title
+- index idx_labels_card_id: CREATE INDEX idx_labels_card_id ON public.labels USING btree (card_id)
+- index idx_labels_deleted_at: CREATE INDEX idx_labels_deleted_at ON public.labels USING btree (deleted_at)
+- index labels_pkey: CREATE UNIQUE INDEX labels_pkey ON public.labels USING btree (id)
+
+[list_cards]
+- constraint fk_list_cards_card: FOREIGN KEY (card_id) REFERENCES cards(id) ON DELETE RESTRICT
+- constraint fk_list_cards_list: FOREIGN KEY (list_id) REFERENCES lists(id) ON DELETE CASCADE
+- constraint list_cards_card_id_not_null: NOT NULL card_id
+- constraint list_cards_id_not_null: NOT NULL id
+- constraint list_cards_list_id_card_id_key: UNIQUE (list_id, card_id)
+- constraint list_cards_list_id_not_null: NOT NULL list_id
+- constraint list_cards_pkey: PRIMARY KEY (id)
+- constraint list_cards_pos_not_null: NOT NULL pos
+- constraint list_cards_root_id_not_null: NOT NULL root_id
+- index idx_list_cards_active_card_id_root_id: CREATE INDEX idx_list_cards_active_card_id_root_id ON public.list_cards USING btree (card_id, root_id) WHERE (deleted_at IS NULL)
+- index idx_list_cards_active_root_id: CREATE INDEX idx_list_cards_active_root_id ON public.list_cards USING btree (root_id) WHERE (deleted_at IS NULL)
+- index idx_list_cards_card: CREATE INDEX idx_list_cards_card ON public.list_cards USING btree (card_id)
+- index idx_list_cards_card_id: CREATE INDEX idx_list_cards_card_id ON public.list_cards USING btree (card_id)
+- index idx_list_cards_deleted_at: CREATE INDEX idx_list_cards_deleted_at ON public.list_cards USING btree (deleted_at)
+- index idx_list_cards_list_id: CREATE INDEX idx_list_cards_list_id ON public.list_cards USING btree (list_id)
+- index idx_list_cards_list_pos: CREATE INDEX idx_list_cards_list_pos ON public.list_cards USING btree (list_id, pos)
+- index idx_list_cards_pos: CREATE INDEX idx_list_cards_pos ON public.list_cards USING btree (pos)
+- index idx_list_cards_root_id: CREATE INDEX idx_list_cards_root_id ON public.list_cards USING btree (root_id)
+- index list_cards_list_id_card_id_key: CREATE UNIQUE INDEX list_cards_list_id_card_id_key ON public.list_cards USING btree (list_id, card_id)
+- index list_cards_pkey: CREATE UNIQUE INDEX list_cards_pkey ON public.list_cards USING btree (id)
+
+[list_watches]
+- constraint chk_list_watches_pos_not_blank: CHECK ((char_length(TRIM(BOTH FROM pos)) > 0))
+- constraint fk_list_watches_board_id: FOREIGN KEY (board_id) REFERENCES boards(id) ON DELETE CASCADE
+- constraint fk_list_watches_list_id: FOREIGN KEY (list_id) REFERENCES lists(id) ON DELETE CASCADE
+- constraint fk_list_watches_user_id: FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+- constraint fk_list_watches_workspace_id: FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
+- constraint list_watches_active_not_null: NOT NULL active
+- constraint list_watches_board_id_not_null: NOT NULL board_id
+- constraint list_watches_id_not_null: NOT NULL id
+- constraint list_watches_list_id_not_null: NOT NULL list_id
+- constraint list_watches_pos_not_null: NOT NULL pos
+- constraint list_watches_user_id_not_null: NOT NULL user_id
+- constraint list_watches_workspace_id_not_null: NOT NULL workspace_id
+- constraint pk_list_watches_id: PRIMARY KEY (id)
+- index idx_list_watches_active_list_user: CREATE INDEX idx_list_watches_active_list_user ON public.list_watches USING btree (list_id, user_id) WHERE (deleted_at IS NULL)
+- index idx_list_watches_active_user_list_unique: CREATE UNIQUE INDEX idx_list_watches_active_user_list_unique ON public.list_watches USING btree (user_id, list_id) WHERE (deleted_at IS NULL)
+- index idx_list_watches_active_user_pos: CREATE INDEX idx_list_watches_active_user_pos ON public.list_watches USING btree (user_id, pos COLLATE "C") WHERE (deleted_at IS NULL)
+- index idx_list_watches_active_workspace_user: CREATE INDEX idx_list_watches_active_workspace_user ON public.list_watches USING btree (workspace_id, user_id) WHERE (deleted_at IS NULL)
+- index idx_list_watches_board_id: CREATE INDEX idx_list_watches_board_id ON public.list_watches USING btree (board_id)
+- index idx_list_watches_deleted_at: CREATE INDEX idx_list_watches_deleted_at ON public.list_watches USING btree (deleted_at)
+- index idx_list_watches_list_id: CREATE INDEX idx_list_watches_list_id ON public.list_watches USING btree (list_id)
+- index idx_list_watches_pos: CREATE INDEX idx_list_watches_pos ON public.list_watches USING btree (pos)
+- index idx_list_watches_user_id: CREATE INDEX idx_list_watches_user_id ON public.list_watches USING btree (user_id)
+- index idx_list_watches_workspace_id: CREATE INDEX idx_list_watches_workspace_id ON public.list_watches USING btree (workspace_id)
+- index pk_list_watches_id: CREATE UNIQUE INDEX pk_list_watches_id ON public.list_watches USING btree (id)
+
+[lists]
+- constraint lists_id_not_null: NOT NULL id
+- constraint lists_pkey: PRIMARY KEY (id)
+- index idx_lists_deleted_at: CREATE INDEX idx_lists_deleted_at ON public.lists USING btree (deleted_at)
+- index lists_pkey: CREATE UNIQUE INDEX lists_pkey ON public.lists USING btree (id)
+
+[public_share_links]
+- constraint chk_public_share_links_mode: CHECK ((mode = ANY (ARRAY['autojoin'::text, 'sendrequest'::text])))
+- constraint public_share_links_created_by_user_id_not_null: NOT NULL created_by_user_id
+- constraint public_share_links_id_not_null: NOT NULL id
+- constraint public_share_links_mode_not_null: NOT NULL mode
+- constraint public_share_links_pkey: PRIMARY KEY (id)
+- constraint public_share_links_role_not_null: NOT NULL role
+- constraint public_share_links_target_id_not_null: NOT NULL target_id
+- constraint public_share_links_target_type_not_null: NOT NULL target_type
+- constraint public_share_links_token_not_null: NOT NULL token
+- index idx_public_share_links_deleted_at: CREATE INDEX idx_public_share_links_deleted_at ON public.public_share_links USING btree (deleted_at)
+- index idx_public_share_links_token: CREATE UNIQUE INDEX idx_public_share_links_token ON public.public_share_links USING btree (token)
+- index public_share_links_pkey: CREATE UNIQUE INDEX public_share_links_pkey ON public.public_share_links USING btree (id)
+
+[share_offer_events]
+- constraint fk_share_offer_events_offer: FOREIGN KEY (offer_id) REFERENCES share_offers(id) ON DELETE CASCADE
+- constraint share_offer_events_created_at_not_null: NOT NULL created_at
+- constraint share_offer_events_event_type_not_null: NOT NULL event_type
+- constraint share_offer_events_id_not_null: NOT NULL id
+- constraint share_offer_events_offer_id_not_null: NOT NULL offer_id
+- constraint share_offer_events_pkey: PRIMARY KEY (id)
+- constraint share_offer_events_target_id_not_null: NOT NULL target_id
+- constraint share_offer_events_target_type_not_null: NOT NULL target_type
+- index ix_share_offer_events_offer: CREATE INDEX ix_share_offer_events_offer ON public.share_offer_events USING btree (offer_id, created_at DESC)
+- index ix_share_offer_events_target: CREATE INDEX ix_share_offer_events_target ON public.share_offer_events USING btree (target_type, target_id, created_at DESC)
+- index share_offer_events_pkey: CREATE UNIQUE INDEX share_offer_events_pkey ON public.share_offer_events USING btree (id)
+
+[share_offers]
+- constraint share_offers_from_user_id_not_null: NOT NULL from_user_id
+- constraint share_offers_id_not_null: NOT NULL id
+- constraint share_offers_kind_not_null: NOT NULL kind
+- constraint share_offers_offered_role_not_null: NOT NULL offered_role
+- constraint share_offers_pkey: PRIMARY KEY (id)
+- constraint share_offers_status_not_null: NOT NULL status
+- constraint share_offers_target_id_not_null: NOT NULL target_id
+- constraint share_offers_target_type_not_null: NOT NULL target_type
+- index idx_share_offers_deleted_at: CREATE INDEX idx_share_offers_deleted_at ON public.share_offers USING btree (deleted_at)
+- index idx_share_offers_requester_pending: CREATE INDEX idx_share_offers_requester_pending ON public.share_offers USING btree (from_user_id, target_type, target_id, kind, status) WHERE (deleted_at IS NULL)
+- index idx_share_offers_target_kind_status: CREATE INDEX idx_share_offers_target_kind_status ON public.share_offers USING btree (target_type, target_id, kind, status) WHERE (deleted_at IS NULL)
+- index ix_share_offers_from_user: CREATE INDEX ix_share_offers_from_user ON public.share_offers USING btree (from_user_id, status, created_at DESC)
+- index ix_share_offers_target: CREATE INDEX ix_share_offers_target ON public.share_offers USING btree (target_type, target_id, status)
+- index ix_share_offers_to_user: CREATE INDEX ix_share_offers_to_user ON public.share_offers USING btree (to_user_id, status, created_at DESC)
+- index share_offers_pkey: CREATE UNIQUE INDEX share_offers_pkey ON public.share_offers USING btree (id)
+- index uq_share_offers_pending_target_from_to_kind: CREATE UNIQUE INDEX uq_share_offers_pending_target_from_to_kind ON public.share_offers USING btree (target_type, target_id, from_user_id, COALESCE(to_user_id, '00000000-0000-0000-0000-000000000000'::uuid), kind) WHERE ((deleted_at IS NULL) AND (status = 'pending'::text))
+
+[user_audit_notifications]
+- constraint fk_user_audit_notifications_audit_id: FOREIGN KEY (audit_id) REFERENCES board_audit_events(id) ON DELETE CASCADE
+- constraint fk_user_audit_notifications_user_id: FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+- constraint user_audit_notifications_audit_id_not_null: NOT NULL audit_id
+- constraint user_audit_notifications_id_not_null: NOT NULL id
+- constraint user_audit_notifications_pkey: PRIMARY KEY (id)
+- constraint user_audit_notifications_read_not_null: NOT NULL read
+- constraint user_audit_notifications_user_id_not_null: NOT NULL user_id
+- index idx_user_audit_notifications_audit_id: CREATE INDEX idx_user_audit_notifications_audit_id ON public.user_audit_notifications USING btree (audit_id)
+- index idx_user_audit_notifications_deleted_at: CREATE INDEX idx_user_audit_notifications_deleted_at ON public.user_audit_notifications USING btree (deleted_at)
+- index idx_user_audit_notifications_unread_user_audit: CREATE INDEX idx_user_audit_notifications_unread_user_audit ON public.user_audit_notifications USING btree (user_id, audit_id) WHERE (read = false)
+- index idx_user_audit_notifications_user_audit_unique: CREATE UNIQUE INDEX idx_user_audit_notifications_user_audit_unique ON public.user_audit_notifications USING btree (user_id, audit_id)
+- index idx_user_audit_notifications_user_id: CREATE INDEX idx_user_audit_notifications_user_id ON public.user_audit_notifications USING btree (user_id)
+- index user_audit_notifications_pkey: CREATE UNIQUE INDEX user_audit_notifications_pkey ON public.user_audit_notifications USING btree (id)
+
+[user_boards]
+- constraint chk_user_boards_role: CHECK ((role = ANY (ARRAY['owner'::text, 'admin'::text, 'member'::text, 'viewer'::text])))
+- constraint fk_user_boards_user: FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+- constraint user_boards_board_id_fkey: FOREIGN KEY (board_id) REFERENCES boards(id) ON DELETE RESTRICT
+- constraint user_boards_board_id_not_null: NOT NULL board_id
+- constraint user_boards_pkey: PRIMARY KEY (user_id, board_id)
+- constraint user_boards_pos_not_null: NOT NULL pos
+- constraint user_boards_user_id_not_null: NOT NULL user_id
+- index idx_user_boards_board: CREATE INDEX idx_user_boards_board ON public.user_boards USING btree (board_id)
+- index idx_user_boards_deleted_at: CREATE INDEX idx_user_boards_deleted_at ON public.user_boards USING btree (deleted_at)
+- index idx_user_boards_pos: CREATE INDEX idx_user_boards_pos ON public.user_boards USING btree (pos)
+- index user_boards_pkey: CREATE UNIQUE INDEX user_boards_pkey ON public.user_boards USING btree (user_id, board_id)
+
+[user_inbox_cards]
+- constraint chk_user_inbox_cards_pos_not_blank: CHECK ((char_length(TRIM(BOTH FROM pos)) > 0))
+- constraint fk_user_inbox_cards_card_id: FOREIGN KEY (card_id) REFERENCES cards(id) ON DELETE CASCADE
+- constraint fk_user_inbox_cards_source_board_id: FOREIGN KEY (source_board_id) REFERENCES boards(id) ON DELETE CASCADE
+- constraint fk_user_inbox_cards_user_id: FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+- constraint user_inbox_cards_card_id_not_null: NOT NULL card_id
+- constraint user_inbox_cards_id_not_null: NOT NULL id
+- constraint user_inbox_cards_pkey: PRIMARY KEY (id)
+- constraint user_inbox_cards_pos_not_null: NOT NULL pos
+- constraint user_inbox_cards_user_id_not_null: NOT NULL user_id
+- index idx_user_inbox_cards_active_user_board_pos: CREATE INDEX idx_user_inbox_cards_active_user_board_pos ON public.user_inbox_cards USING btree (user_id, source_board_id, pos COLLATE "C") WHERE (deleted_at IS NULL)
+- index idx_user_inbox_cards_active_user_card_unique: CREATE UNIQUE INDEX idx_user_inbox_cards_active_user_card_unique ON public.user_inbox_cards USING btree (user_id, card_id) WHERE (deleted_at IS NULL)
+- index idx_user_inbox_cards_card_id: CREATE INDEX idx_user_inbox_cards_card_id ON public.user_inbox_cards USING btree (card_id)
+- index idx_user_inbox_cards_deleted_at: CREATE INDEX idx_user_inbox_cards_deleted_at ON public.user_inbox_cards USING btree (deleted_at)
+- index idx_user_inbox_cards_root_list_card_id: CREATE INDEX idx_user_inbox_cards_root_list_card_id ON public.user_inbox_cards USING btree (root_list_card_id)
+- index idx_user_inbox_cards_source_board_id: CREATE INDEX idx_user_inbox_cards_source_board_id ON public.user_inbox_cards USING btree (source_board_id)
+- index idx_user_inbox_cards_user_id: CREATE INDEX idx_user_inbox_cards_user_id ON public.user_inbox_cards USING btree (user_id)
+- index user_inbox_cards_pkey: CREATE UNIQUE INDEX user_inbox_cards_pkey ON public.user_inbox_cards USING btree (id)
+
+[user_workspaces]
+- constraint chk_user_workspaces_role: CHECK ((role = ANY (ARRAY[('owner'::character varying)::text, ('admin'::character varying)::text, ('member'::character varying)::text, ('viewer'::character varying)::text])))
+- constraint fk_user_workspaces_user: FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+- constraint fk_user_workspaces_workspace: FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
+- constraint user_workspaces_id_not_null: NOT NULL id
+- constraint user_workspaces_is_pending_suspend_not_null: NOT NULL is_pending_suspend
+- constraint user_workspaces_is_suspended_not_null: NOT NULL is_suspended
+- constraint user_workspaces_pkey: PRIMARY KEY (id)
+- constraint user_workspaces_pos_not_null: NOT NULL pos
+- constraint user_workspaces_role_not_null: NOT NULL role
+- constraint user_workspaces_user_id_not_null: NOT NULL user_id
+- constraint user_workspaces_workspace_id_not_null: NOT NULL workspace_id
+- index idx_user_workspaces_deleted_at: CREATE INDEX idx_user_workspaces_deleted_at ON public.user_workspaces USING btree (deleted_at)
+- index idx_user_workspaces_pos: CREATE INDEX idx_user_workspaces_pos ON public.user_workspaces USING btree (pos)
+- index idx_user_workspaces_user_id: CREATE INDEX idx_user_workspaces_user_id ON public.user_workspaces USING btree (user_id)
+- index idx_user_workspaces_workspace_id: CREATE INDEX idx_user_workspaces_workspace_id ON public.user_workspaces USING btree (workspace_id)
+- index idx_user_workspaces_workspace_suspension_flags: CREATE INDEX idx_user_workspaces_workspace_suspension_flags ON public.user_workspaces USING btree (workspace_id, is_suspended, is_pending_suspend) WHERE (deleted_at IS NULL)
+- index ix_user_workspaces_workspace_pos: CREATE INDEX ix_user_workspaces_workspace_pos ON public.user_workspaces USING btree (workspace_id, pos)
+- index user_workspaces_pkey: CREATE UNIQUE INDEX user_workspaces_pkey ON public.user_workspaces USING btree (id)
+- index ux_user_workspaces_one_owner: CREATE UNIQUE INDEX ux_user_workspaces_one_owner ON public.user_workspaces USING btree (workspace_id) WHERE (role = 'owner'::text)
+- index ux_user_workspaces_workspace_user: CREATE UNIQUE INDEX ux_user_workspaces_workspace_user ON public.user_workspaces USING btree (workspace_id, user_id)
+
+[users]
+- constraint users_id_not_null: NOT NULL id
+- constraint users_password_hash_not_null: NOT NULL password_hash
+- constraint users_pkey: PRIMARY KEY (id)
+- index idx_users_clerk_user_id: CREATE UNIQUE INDEX idx_users_clerk_user_id ON public.users USING btree (clerk_user_id)
+- index idx_users_deleted_at: CREATE INDEX idx_users_deleted_at ON public.users USING btree (deleted_at)
+- index idx_users_email: CREATE UNIQUE INDEX idx_users_email ON public.users USING btree (email)
+- index idx_users_username: CREATE UNIQUE INDEX idx_users_username ON public.users USING btree (username)
+- index users_email_trgm_idx: CREATE INDEX users_email_trgm_idx ON public.users USING gin (email gin_trgm_ops)
+- index users_pkey: CREATE UNIQUE INDEX users_pkey ON public.users USING btree (id)
+- index users_username_trgm_idx: CREATE INDEX users_username_trgm_idx ON public.users USING gin (username gin_trgm_ops)
+
+[workspace_subscriptions]
+- constraint chk_workspace_subscriptions_pending_plan: CHECK (((pending_plan IS NULL) OR (pending_plan = ANY (ARRAY['free'::text, 'pro'::text, 'premium'::text]))))
+- constraint chk_workspace_subscriptions_provider: CHECK ((provider = 'stripe'::text))
+- constraint chk_workspace_subscriptions_status: CHECK ((status = ANY (ARRAY['none'::text, 'trial'::text, 'active'::text, 'past_due'::text, 'canceled'::text, 'incomplete'::text, 'unpaid'::text])))
+- constraint workspace_subscriptions_cancel_at_period_end_not_null: NOT NULL cancel_at_period_end
+- constraint workspace_subscriptions_pkey: PRIMARY KEY (workspace_id)
+- constraint workspace_subscriptions_plan_not_null: NOT NULL plan
+- constraint workspace_subscriptions_provider_not_null: NOT NULL provider
+- constraint workspace_subscriptions_seat_quantity_not_null: NOT NULL seat_quantity
+- constraint workspace_subscriptions_status_not_null: NOT NULL status
+- constraint workspace_subscriptions_workspace_id_not_null: NOT NULL workspace_id
+- index idx_workspace_subscriptions_deleted_at: CREATE INDEX idx_workspace_subscriptions_deleted_at ON public.workspace_subscriptions USING btree (deleted_at)
+- index idx_workspace_subscriptions_provider_schedule_id: CREATE INDEX idx_workspace_subscriptions_provider_schedule_id ON public.workspace_subscriptions USING btree (provider_schedule_id)
+- index idx_workspace_subscriptions_provider_subscription_id: CREATE INDEX idx_workspace_subscriptions_provider_subscription_id ON public.workspace_subscriptions USING btree (provider_subscription_id)
+- index ix_ws_sub_pending_change_effective_at: CREATE INDEX ix_ws_sub_pending_change_effective_at ON public.workspace_subscriptions USING btree (pending_change_effective_at) WHERE (pending_change_effective_at IS NOT NULL)
+- index ix_ws_sub_pending_plan: CREATE INDEX ix_ws_sub_pending_plan ON public.workspace_subscriptions USING btree (pending_plan) WHERE (pending_plan IS NOT NULL)
+- index ix_ws_sub_plan: CREATE INDEX ix_ws_sub_plan ON public.workspace_subscriptions USING btree (plan)
+- index ix_ws_sub_provider_customer_id: CREATE INDEX ix_ws_sub_provider_customer_id ON public.workspace_subscriptions USING btree (provider_customer_id)
+- index ix_ws_sub_status: CREATE INDEX ix_ws_sub_status ON public.workspace_subscriptions USING btree (status)
+- index ux_ws_sub_provider_schedule_id: CREATE UNIQUE INDEX ux_ws_sub_provider_schedule_id ON public.workspace_subscriptions USING btree (provider_schedule_id) WHERE (provider_schedule_id IS NOT NULL)
+- index ux_ws_sub_provider_subscription_id: CREATE UNIQUE INDEX ux_ws_sub_provider_subscription_id ON public.workspace_subscriptions USING btree (provider_subscription_id) WHERE (provider_subscription_id IS NOT NULL)
+- index workspace_subscriptions_pkey: CREATE UNIQUE INDEX workspace_subscriptions_pkey ON public.workspace_subscriptions USING btree (workspace_id)
+
+[workspaces]
+- constraint uni_workspaces_public_token: UNIQUE (public_token)
+- constraint workspaces_created_by_user_id_not_null: NOT NULL created_by_user_id
+- constraint workspaces_id_not_null: NOT NULL id
+- constraint workspaces_name_not_null: NOT NULL name
+- constraint workspaces_pkey: PRIMARY KEY (id)
+- constraint workspaces_workspace_visibility_not_null: NOT NULL workspace_visibility
+- index idx_workspaces_deleted_at: CREATE INDEX idx_workspaces_deleted_at ON public.workspaces USING btree (deleted_at)
+- index idx_workspaces_public_token: CREATE INDEX idx_workspaces_public_token ON public.workspaces USING btree (public_token)
+- index uni_workspaces_public_token: CREATE UNIQUE INDEX uni_workspaces_public_token ON public.workspaces USING btree (public_token)
+- index workspaces_pkey: CREATE UNIQUE INDEX workspaces_pkey ON public.workspaces USING btree (id)

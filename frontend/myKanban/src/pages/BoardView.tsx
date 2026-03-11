@@ -78,13 +78,17 @@ export default function BoardView() {
     const board = useBoardsStore(useShallow((state) => boardId ? state.boardsById[boardId] : undefined))
 
     useEffect(() => {
-        // console.log("BoardView: boardId changed to", boardId)
-        if (boardId) {
-            (async () => {
-                await useBoardDetailStore.getState().getBoardDetailPatch(boardId)
+        if (!boardId) {
+            setCurrentBoardId(null)
+            return
+        }
 
-                setCurrentBoardId(boardId)
-            })()
+        setCurrentBoardId(boardId)
+
+        void useBoardDetailStore.getState().getBoardDetailPatch(boardId)
+
+        return () => {
+            setCurrentBoardId(null)
         }
     }, [boardId, setCurrentBoardId])
 
