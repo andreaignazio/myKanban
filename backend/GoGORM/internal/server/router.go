@@ -21,6 +21,8 @@ import (
 	"GoGORM/internal/sharelinks"
 	"GoGORM/internal/shares"
 	"GoGORM/internal/subscription"
+	"os"
+	"strings"
 	userNotification "GoGORM/internal/usernotification"
 	userWatch "GoGORM/internal/userwatch"
 	"GoGORM/internal/ws"
@@ -29,6 +31,32 @@ import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
+
+func resolveCORSAllowedOrigins() []string {
+	defaults := []string{
+		"http://localhost:5173",
+		"http://127.0.0.1:5173",
+		"http://localhost:5174",
+		"http://127.0.0.1:5174",
+		"https://*.vercel.app",
+	}
+
+	raw := strings.TrimSpace(os.Getenv("CORS_ALLOWED_ORIGINS"))
+	if raw == "" {
+		return defaults
+	}
+
+	parts := strings.Split(raw, ",")
+	origins := make([]string, 0, len(parts)+len(defaults))
+	origins = append(origins, defaults...)
+	for _, part := range parts {
+		origin := strings.TrimSpace(part)
+		if origin != "" {
+			origins = append(origins, origin)
+		}
+	}
+	return origins
+}
 
 func NewRouter(db *gorm.DB,
 	authenticator *authn.Service,
@@ -56,15 +84,8 @@ func NewRouter(db *gorm.DB,
 
 	r := gin.Default()
 	r.Use(cors.New(cors.Config{
-		AllowOrigins: []string{
-			"http://localhost:5173",
-			"http://127.0.0.1:5173",
-			"http://localhost:5174",
-			"http://127.0.0.1:5174",
-		},
-		AllowOriginFunc: func(origin string) bool {
-			return true
-		},
+		AllowOrigins:     resolveCORSAllowedOrigins(),
+		AllowWildcard:    true,
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization", "x-userID"},
 		ExposeHeaders:    []string{"Content-Length"},

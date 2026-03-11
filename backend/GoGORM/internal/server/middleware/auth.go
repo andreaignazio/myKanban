@@ -9,6 +9,11 @@ import (
 
 func AuthFromHeader(authenticator *authn.Service) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		if c.Request.Method == http.MethodOptions {
+			c.Next()
+			return
+		}
+
 		identity, err := authenticator.AuthenticateRequest(c.Request.Context(), c.Request)
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "authentication required"})
