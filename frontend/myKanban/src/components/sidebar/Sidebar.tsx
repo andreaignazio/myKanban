@@ -1,4 +1,5 @@
 import { NavLink, useMatch, useNavigate, useParams } from "react-router-dom"
+import { useClerk } from "@clerk/react"
 import { WorkspaceRow } from "@/components/sidebar/WorkspaceRow"
 import { useWorkspaceStore } from "@/stores/workspaceStore"
 import { useShallow } from "zustand/shallow"
@@ -268,18 +269,37 @@ const WorkspaceList = ({ isSingleMode }: { isSingleMode?: boolean }) => {
 
 function SidebarFooter() {
 
+    const { signOut } = useClerk()
+    const isAuthenticated = useAuthStore((state) => !!state.userID)
+    const clearAuthSession = useAuthStore((state) => state.clearAuthSession)
 
     const { subscription } = useResolveSubscriptionPlan()
 
+    async function handleLogout() {
+        clearAuthSession()
+        await signOut({ redirectUrl: "/" })
+    }
+
     return (
-        <div className="flex flex-row items-center justify-between px-2">
-            <SubscriptionBadge plan={subscription} />
-            <CardRowMenuBtn
-                renderType="virtual"
-                menuComponent={({ onClose, ref }) => <SearchWorkspaceOverlay onClose={onClose} ref={ref} />}
-                offset={[0, 0]}>
-                <FolderSearch className="h-5 w-5 text-neutral-400 cursor-pointer hover:text-neutral-200 transition-colors" />
-            </CardRowMenuBtn>
+        <div className="flex flex-col gap-3 px-2">
+            {isAuthenticated && (
+                <button
+                    type="button"
+                    onClick={() => { void handleLogout() }}
+                    className="w-full rounded-md bg-white/8 px-3 py-2 text-left text-sm text-neutral-200 transition-colors hover:bg-white/12"
+                >
+                    Logout
+                </button>
+            )}
+            <div className="flex flex-row items-center justify-between">
+                <SubscriptionBadge plan={subscription} />
+                <CardRowMenuBtn
+                    renderType="virtual"
+                    menuComponent={({ onClose, ref }) => <SearchWorkspaceOverlay onClose={onClose} ref={ref} />}
+                    offset={[0, 0]}>
+                    <FolderSearch className="h-5 w-5 text-neutral-400 cursor-pointer hover:text-neutral-200 transition-colors" />
+                </CardRowMenuBtn>
+            </div>
         </div>
     )
 }
