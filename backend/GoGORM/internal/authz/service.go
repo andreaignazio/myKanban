@@ -6,6 +6,7 @@ import (
 	"GoGORM/internal/authzpolicy"
 	"GoGORM/internal/domainerr"
 	"context"
+	"fmt"
 )
 
 type Service struct {
@@ -52,6 +53,7 @@ func (s *Service) AuthorizeRequest(ctx context.Context, request authzdto.Request
 			return nil, domainerr.ErrNotFound
 		}
 		if err := evaluator.Evaluate(policySpec, fact); err != nil {
+			fmt.Println("Authorization failed for policy:", policySpec, "with fact:", fact, "error:", err)
 			return &authzdto.Response{Authorized: false}, nil
 		}
 	}

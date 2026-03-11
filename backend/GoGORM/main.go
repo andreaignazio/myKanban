@@ -142,7 +142,7 @@ func main() {
 	cardMembersRepo := cardmembers.NewGormCardMembersRepo(db)
 	cardCommentRepo := cardcomments.NewGormCardCommentsRepository(db)
 	checklistRepo := checklists.NewGormChecklistRepo(db)
-	listCardsService := listcards.NewListCardsService(db, wsHub, eventRegistryService, listCardsRepo, cardsRepo, cardCommentRepo,
+	listCardsService := listcards.NewListCardsService(db, authzService, wsHub, eventRegistryService, listCardsRepo, cardsRepo, cardCommentRepo,
 		cardMembersRepo, boardLabelsRepo, checklistRepo, listsRepo, boardListRepo, positionService, membarshipsRepo, capabilitiesRepo, boardsRepo)
 	listCardsHandler := listcards.NewListCardsHandler(listCardsService, eventRegistryService)
 

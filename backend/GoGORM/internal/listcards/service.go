@@ -1,6 +1,9 @@
 package listcards
 
 import (
+	"GoGORM/internal/actions"
+	"GoGORM/internal/authz"
+	"GoGORM/internal/authzdto"
 	"GoGORM/internal/domainerr"
 	"GoGORM/internal/dto"
 	EventRegistry "GoGORM/internal/eventregistry"
@@ -21,6 +24,7 @@ import (
 
 type ListCardsService struct {
 	db               *gorm.DB
+	authz            *authz.Service
 	Hub              *ws.Hub
 	EventRegistry    *EventRegistry.EventRegistryService
 	ListCardsRepo    ListCardsRepo
@@ -38,8 +42,8 @@ type ListCardsService struct {
 	IncludeDeleted   bool
 }
 
-func NewListCardsService(db *gorm.DB, hub *ws.Hub, eventRegistry *EventRegistry.EventRegistryService, listCardsRepo ListCardsRepo, cardsRepo CardsRepo, cardCommentsRepo CardCommentsRepo, cardMembersRepo CardMembersRepo, boardLabelsRepo BoardLabelsRepo, checklistRepo ChecklistRepo, listRepo ListRepo, boardListRepo BoardListRepo, positionHelper PositionHelper, membershipRepo MembershipRepo, capabilitiesRepo CapabilitiesRepo, boardsRepo BoardRepo) *ListCardsService {
-	return &ListCardsService{db: db, Hub: hub, EventRegistry: eventRegistry, ListCardsRepo: listCardsRepo, CardsRepo: cardsRepo, CardCommentsRepo: cardCommentsRepo, CardMembersRepo: cardMembersRepo, BoardLabelsRepo: boardLabelsRepo, ChecklistRepo: checklistRepo, ListRepo: listRepo, BoardListRepo: boardListRepo, PositionHelper: positionHelper, MembershipRepo: membershipRepo, CapabilitiesRepo: capabilitiesRepo, BoardsRepo: boardsRepo, IncludeDeleted: false}
+func NewListCardsService(db *gorm.DB, authzService *authz.Service, hub *ws.Hub, eventRegistry *EventRegistry.EventRegistryService, listCardsRepo ListCardsRepo, cardsRepo CardsRepo, cardCommentsRepo CardCommentsRepo, cardMembersRepo CardMembersRepo, boardLabelsRepo BoardLabelsRepo, checklistRepo ChecklistRepo, listRepo ListRepo, boardListRepo BoardListRepo, positionHelper PositionHelper, membershipRepo MembershipRepo, capabilitiesRepo CapabilitiesRepo, boardsRepo BoardRepo) *ListCardsService {
+	return &ListCardsService{db: db, authz: authzService, Hub: hub, EventRegistry: eventRegistry, ListCardsRepo: listCardsRepo, CardsRepo: cardsRepo, CardCommentsRepo: cardCommentsRepo, CardMembersRepo: cardMembersRepo, BoardLabelsRepo: boardLabelsRepo, ChecklistRepo: checklistRepo, ListRepo: listRepo, BoardListRepo: boardListRepo, PositionHelper: positionHelper, MembershipRepo: membershipRepo, CapabilitiesRepo: capabilitiesRepo, BoardsRepo: boardsRepo, IncludeDeleted: false}
 }
 
 func (s *ListCardsService) HydrateListCardResponseMirrors(ctx context.Context, relations []dto.ListCardResponse) ([]dto.ListCardResponse, error) {
@@ -1329,290 +1333,52 @@ func (s *ListCardsService) buildExternalRootsPayload(ctx context.Context, rootID
 
 func (s *ListCardsService) CopyCardToList(ctx context.Context, userID, workspaceUUID, boardID, cardID uuid.UUID,
 	req CopyCardToListRequest, correlationID uuid.UUID) (*models.Card, *models.ListCard, error) {
-	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Member, s.IncludeDeleted); err != nil {
+	sourceBoardList, err := s.getBoardListForCardInBoard(ctx, cardID, boardID)
+	if err != nil {
+		fmt.Println("CopyCardToList return: source board-list lookup failed", err)
 		return nil, nil, err
 	}
-	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, req.TargetBoardID, rbac.Member, s.IncludeDeleted); err != nil {
+
+	targetBoard, err := s.BoardsRepo.GetBoardByIDTX(ctx, s.db, req.TargetBoardID, s.IncludeDeleted)
+	if err != nil {
+		fmt.Println("CopyCardToList return: target board lookup failed", err)
+		return nil, nil, domainerr.MapRepoErr(err, true)
+	}
+
+	targetBoardList, err := s.BoardListRepo.GetBoardList(ctx, req.TargetBoardID, req.TargetListID, s.IncludeDeleted)
+	if err != nil {
+		fmt.Println("CopyCardToList return: target board-list lookup failed", err)
+		return nil, nil, domainerr.MapRepoErr(err, true)
+	}
+
+	authorization, err := s.authz.AuthorizeRequest(ctx, authzdto.Request{
+		UserID:        userID,
+		CorrelationID: correlationID,
+		Action:        actions.CopyListCard,
+		Payload: authzdto.RequestPayload{
+			CopyListCardPayload: &authzdto.CopyListCardPayload{
+				ReadListCardPayload: authzdto.ReadListCardPayload{
+					WorkspaceID:       workspaceUUID,
+					CardID:            cardID,
+					SourceBoardListID: sourceBoardList.ID,
+				},
+				CreateListCardPayload: authzdto.CreateListCardPayload{
+					TargetWorkspaceID: targetBoard.WorkspaceID,
+					TargetBoardListID: targetBoardList.ID,
+				},
+			},
+		},
+	})
+	if err != nil {
+		fmt.Println("CopyCardToList return: authz failed", err)
 		return nil, nil, err
 	}
-	allowedRoles := rbac.AllowedAtLeast(rbac.Member)
-	if ok, err := s.CapabilitiesRepo.CanAccessListInBoard(ctx, s.db,
-		userID, req.TargetBoardID, req.TargetListID, allowedRoles, rbac.BoardListEditable.String(), s.IncludeDeleted); err != nil {
-		fmt.Println("CopyCardToList return: target list capability check errored", err)
-		return nil, nil, domainerr.MapRepoErr(err, false)
-	} else if !*ok {
-		fmt.Println("CopyCardToList return: target list capability forbidden")
+	if !authorization.Authorized {
+		fmt.Println("CopyCardToList return: forbidden by authz")
 		return nil, nil, domainerr.ErrForbidden
 	}
 
-	var position string
-	var err error
-	if req.BeforeID != nil {
-		listcard, err := s.ListCardsRepo.GetListCardByListAndCardTX(ctx, s.db, req.TargetListID, *req.BeforeID, s.IncludeDeleted)
-		if err != nil {
-			fmt.Println("CopyCardToList return: before-id list-card lookup failed", err)
-			return nil, nil, domainerr.MapRepoErr(err, false)
-		}
-		position, err = s.PositionHelper.CardPosBeforeID(ctx, req.TargetListID, listcard.ID)
-		if err != nil {
-			fmt.Println("CopyCardToList return: position calculation failed", err)
-			return nil, nil, domainerr.MapRepoErr(err, false)
-		}
-	} else if req.InsertAt != nil && *req.InsertAt == "start" {
-		position, err = s.PositionHelper.CardPosAtListStart(ctx, req.TargetListID)
-		if err != nil {
-			fmt.Println("CopyCardToList return: position at-list-start calculation failed", err)
-			return nil, nil, domainerr.MapRepoErr(err, false)
-		}
-	} else {
-		position, err = s.PositionHelper.CardPosAtListEnd(ctx, req.TargetListID)
-		if err != nil {
-			fmt.Println("CopyCardToList return: position at-list-end calculation failed", err)
-			return nil, nil, domainerr.MapRepoErr(err, false)
-		}
-	}
-
-	var newCard *models.Card
-	var newListCard *models.ListCard
-	var comments []models.CardComment
-	var labels []models.CardLabelLink
-	var boardLabels []models.BoardLabel
-	var members []models.CardMember
-	var cardChecklist []models.CardChecklist
-	var checklists []models.Checklist
-	var entries []models.Entry
-	var checklistEntries []models.ChecklistEntry
-
-	err = s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		originalCard, err := s.CardsRepo.GetCardByIDTX(ctx, tx, cardID, s.IncludeDeleted)
-		if err != nil {
-			return domainerr.MapRepoErr(err, true)
-		}
-		newCard = &models.Card{
-			ID:              uuid.New(),
-			Title:           originalCard.Title,
-			Description:     originalCard.Description,
-			StartDate:       originalCard.StartDate,
-			EndDate:         originalCard.EndDate,
-			Done:            originalCard.Done,
-			Props:           originalCard.Props,
-			CreatedByUserID: userID,
-			CreatedInListID: req.TargetListID,
-		}
-		if req.Title != nil {
-			newCard.Title = *req.Title
-		}
-		if err := s.CardsRepo.CreateCardTX(ctx, tx, newCard); err != nil {
-			return domainerr.MapRepoErr(err, false)
-		}
-		newListCard = &models.ListCard{
-			ID:     uuid.New(),
-			CardID: newCard.ID,
-			ListID: req.TargetListID,
-			RootID: uuid.Nil,
-			Pos:    position,
-		}
-		newListCard.RootID = newListCard.ID
-		if err := s.ListCardsRepo.CreateCardListTX(ctx, tx, newListCard); err != nil {
-			return domainerr.MapRepoErr(err, false)
-		}
-
-		if req.KeepComments {
-			comments, err = s.CardCommentsRepo.GetCommentsByCardIDTX(ctx, tx, cardID, s.IncludeDeleted)
-			if err != nil {
-				return domainerr.MapRepoErr(err, false)
-			}
-			newcomments := make([]models.CardComment, 0, len(comments))
-			for _, comment := range comments {
-				newComment := models.CardComment{
-					ID:              uuid.New(),
-					CardID:          newCard.ID,
-					CreatedByUserID: comment.CreatedByUserID,
-					Content:         comment.Content,
-				}
-				newcomments = append(newcomments, newComment)
-			}
-			if err := s.CardCommentsRepo.BulkCreateCommentTX(ctx, tx, newcomments); err != nil {
-				return domainerr.MapRepoErr(err, false)
-			}
-			comments = newcomments
-		}
-
-		if req.KeepLabels {
-			labels, err = s.BoardLabelsRepo.GetLabelsByCardIDTX(ctx, tx, cardID, s.IncludeDeleted)
-			if err != nil {
-				return domainerr.MapRepoErr(err, false)
-			}
-			if req.TargetBoardID != boardID {
-				orginalBoardLabels, err := s.BoardLabelsRepo.GetLabelsByBoardIDTX(ctx, tx, boardID, s.IncludeDeleted)
-				if err != nil {
-					return domainerr.MapRepoErr(err, false)
-				}
-				newboardlabels := make([]models.BoardLabel, 0, len(orginalBoardLabels))
-				newcardlabellinks := make([]models.CardLabelLink, 0, len(labels))
-				for _, lbl := range orginalBoardLabels {
-					newLabel := models.BoardLabel{
-						ID:              uuid.New(),
-						BoardID:         req.TargetBoardID,
-						Title:           lbl.Title,
-						Color:           lbl.Color,
-						CreatedByUserID: lbl.CreatedByUserID,
-					}
-					newboardlabels = append(newboardlabels, newLabel)
-					newcardlabel := models.CardLabelLink{
-						ID:           uuid.New(),
-						CardID:       newCard.ID,
-						BoardID:      req.TargetBoardID,
-						BoardLabelID: newLabel.ID,
-					}
-					newcardlabellinks = append(newcardlabellinks, newcardlabel)
-				}
-				if err := s.BoardLabelsRepo.BulkCreateLabelsTX(ctx, tx, newboardlabels); err != nil {
-					return domainerr.MapRepoErr(err, false)
-				}
-				if err := s.BoardLabelsRepo.BulkCreateLabelLinksTX(ctx, tx, newcardlabellinks); err != nil {
-					return domainerr.MapRepoErr(err, false)
-				}
-				labels = newcardlabellinks
-				boardLabels = newboardlabels
-			} else {
-				newcardlabellinks := make([]models.CardLabelLink, 0, len(labels))
-				for _, labelLink := range labels {
-					newLabelLink := models.CardLabelLink{
-						ID:           uuid.New(),
-						CardID:       newCard.ID,
-						BoardID:      boardID,
-						BoardLabelID: labelLink.BoardLabelID,
-					}
-					newcardlabellinks = append(newcardlabellinks, newLabelLink)
-
-				}
-				if err := s.BoardLabelsRepo.BulkCreateLabelLinksTX(ctx, tx, newcardlabellinks); err != nil {
-					return domainerr.MapRepoErr(err, false)
-				}
-				labels = newcardlabellinks
-				boardLabels = nil
-
-			}
-
-			if req.KeepChecklists {
-				checklists, err = s.ChecklistRepo.GetChecklistsByCardIDTX(ctx, tx, cardID, s.IncludeDeleted)
-				if err != nil {
-					return domainerr.MapRepoErr(err, false)
-				}
-				entries, err = s.ChecklistRepo.GetEntriesByCardIDTX(ctx, tx, cardID, s.IncludeDeleted)
-				if err != nil {
-					return domainerr.MapRepoErr(err, false)
-				}
-				cardChecklist, err = s.ChecklistRepo.GetCardChecklistsByCardIDTX(ctx, tx, cardID, s.IncludeDeleted)
-				if err != nil {
-					return domainerr.MapRepoErr(err, false)
-				}
-				checklistEntries, err = s.ChecklistRepo.GetChecklistEntriesByCardIDTX(ctx, tx, cardID, s.IncludeDeleted)
-				if err != nil {
-					return domainerr.MapRepoErr(err, false)
-				}
-
-				newChecklists := make([]models.Checklist, 0, len(checklists))
-				newEntries := make([]models.Entry, 0, len(entries))
-				newCardChecklists := make([]models.CardChecklist, 0, len(checklists))
-				newChecklistEntries := make([]models.ChecklistEntry, 0, len(entries))
-
-				for _, checklist := range checklists {
-					newChecklist := models.Checklist{
-						ID:              uuid.New(),
-						Title:           checklist.Title,
-						CreatedByUserID: checklist.CreatedByUserID,
-						CreatedInCardID: newCard.ID,
-					}
-					originalCardChecklist := models.CardChecklist{}
-					for _, cc := range cardChecklist {
-						if cc.ChecklistID == checklist.ID {
-							originalCardChecklist = cc
-							break
-						}
-					}
-					newCardChecklist := models.CardChecklist{
-						ID:          uuid.New(),
-						CardID:      newCard.ID,
-						ChecklistID: newChecklist.ID,
-						Pos:         originalCardChecklist.Pos,
-					}
-					newCardChecklists = append(newCardChecklists, newCardChecklist)
-					newChecklists = append(newChecklists, newChecklist)
-					for _, checkListEntry := range checklistEntries {
-						if checkListEntry.ChecklistID == checklist.ID {
-							originalEntry := models.Entry{}
-							for _, entry := range entries {
-								if entry.ID == checkListEntry.EntryID {
-									originalEntry = entry
-									break
-								}
-							}
-							newEntry := models.Entry{
-								ID:    uuid.New(),
-								Title: originalEntry.Title,
-
-								Done:            originalEntry.Done,
-								DueDate:         originalEntry.DueDate,
-								CreatedByUserID: originalEntry.CreatedByUserID,
-							}
-							newEntries = append(newEntries, newEntry)
-
-							newChecklistEntry := models.ChecklistEntry{
-								ID:          uuid.New(),
-								ChecklistID: newChecklist.ID,
-								EntryID:     newEntry.ID,
-								Pos:         checkListEntry.Pos,
-							}
-							newChecklistEntries = append(newChecklistEntries, newChecklistEntry)
-						}
-					}
-				}
-
-				if err := s.ChecklistRepo.BulkCreateChecklistsTX(ctx, tx, newChecklists); err != nil {
-					return domainerr.MapRepoErr(err, false)
-				}
-				if err := s.ChecklistRepo.BulkCreateEntriesTX(ctx, tx, newEntries); err != nil {
-					return domainerr.MapRepoErr(err, false)
-				}
-				if err := s.ChecklistRepo.BulkCreateCardChecklistsTX(ctx, tx, newCardChecklists); err != nil {
-					return domainerr.MapRepoErr(err, false)
-				}
-				if err := s.ChecklistRepo.BulkCreateChecklistEntriesTX(ctx, tx, newChecklistEntries); err != nil {
-					return domainerr.MapRepoErr(err, false)
-				}
-
-				entries = newEntries
-				checklists = newChecklists
-				cardChecklist = newCardChecklists
-				checklistEntries = newChecklistEntries
-			}
-		}
-
-		if req.KeepMembers {
-			members, err = s.CardMembersRepo.GetMembersByCardIDTX(ctx, tx, cardID, s.IncludeDeleted)
-			if err != nil {
-				return domainerr.MapRepoErr(err, false)
-			}
-			newmembers := make([]models.CardMember, 0, len(members))
-			for _, memberLink := range members {
-				newMemberLink := models.CardMember{
-					ID:     uuid.New(),
-					CardID: newCard.ID,
-					UserID: memberLink.UserID,
-				}
-				newmembers = append(newmembers, newMemberLink)
-			}
-			if err := s.CardMembersRepo.BulkCreateCardMembersLinkTX(ctx, tx, newmembers); err != nil {
-				return domainerr.MapRepoErr(err, false)
-			}
-			members = newmembers
-		}
-
-		return nil
-	})
-
+	execResult, err := s.ExecuteCopyCardToList(ctx, userID, boardID, cardID, req)
 	if err != nil {
 		fmt.Println("CopyCardToList return: transaction failed", err)
 		return nil, nil, err
@@ -1621,59 +1387,59 @@ func (s *ListCardsService) CopyCardToList(ctx context.Context, userID, workspace
 	statePayload := dto.BoardDetailResponse{
 		Board: dto.BoardResponse{ID: req.TargetBoardID},
 		Cards: map[uuid.UUID]dto.CardResponse{
-			newCard.ID: dto.CardToResponse(newCard),
+			execResult.NewCard.ID: dto.CardToResponse(execResult.NewCard),
 		},
 		ListCardRelations: []dto.ListCardResponse{
-			dto.ListCardToResponse(newListCard),
+			dto.ListCardToResponse(execResult.NewListCard),
 		},
 	}
 	if req.KeepComments {
-		commentResponses := make([]dto.CardCommentResponse, 0, len(comments))
-		for _, comment := range comments {
+		commentResponses := make([]dto.CardCommentResponse, 0, len(execResult.Comments))
+		for _, comment := range execResult.Comments {
 			commentResponses = append(commentResponses, dto.CardCommentToResponse(&comment))
 		}
 		statePayload.CardComments = commentResponses
 	}
 	if req.KeepLabels {
-		labelLinkResponses := make([]dto.CardLabelLinkResponse, 0, len(labels))
-		for _, labelLink := range labels {
+		labelLinkResponses := make([]dto.CardLabelLinkResponse, 0, len(execResult.Labels))
+		for _, labelLink := range execResult.Labels {
 			labelLinkResponses = append(labelLinkResponses, dto.CardLabelLinkToResponse(&labelLink))
 		}
 		statePayload.CardLabelLinks = labelLinkResponses
 
-		boardLabelResponses := make([]dto.BoardLabelResponse, 0, len(boardLabels))
-		for _, boardLabel := range boardLabels {
+		boardLabelResponses := make([]dto.BoardLabelResponse, 0, len(execResult.BoardLabels))
+		for _, boardLabel := range execResult.BoardLabels {
 			boardLabelResponses = append(boardLabelResponses, dto.BoardLabelToResponse(&boardLabel))
 		}
 		statePayload.BoardLabels = boardLabelResponses
 	}
 	if req.KeepMembers {
-		memberResponses := make([]dto.CardMemberResponse, 0, len(members))
-		for _, memberLink := range members {
+		memberResponses := make([]dto.CardMemberResponse, 0, len(execResult.Members))
+		for _, memberLink := range execResult.Members {
 			memberResponses = append(memberResponses, dto.CardMemberToResponse(&memberLink))
 		}
 		statePayload.CardMembers = memberResponses
 	}
 	if req.KeepChecklists {
-		checklistResponses := make(map[uuid.UUID]dto.ChecklistResponse, len(checklists))
-		for _, checklist := range checklists {
+		checklistResponses := make(map[uuid.UUID]dto.ChecklistResponse, len(execResult.Checklists))
+		for _, checklist := range execResult.Checklists {
 			checklistResponses[checklist.ID] = dto.ChecklistToResponse(&checklist)
 		}
 		statePayload.Checklists = checklistResponses
 
-		entryResponses := make(map[uuid.UUID]dto.EntryResponse, len(entries))
-		for _, entry := range entries {
+		entryResponses := make(map[uuid.UUID]dto.EntryResponse, len(execResult.Entries))
+		for _, entry := range execResult.Entries {
 			entryResponses[entry.ID] = dto.EntryToResponse(&entry)
 		}
 		statePayload.Entries = entryResponses
 
-		cardChecklistResponses := make([]dto.CardChecklistResponse, 0, len(cardChecklist))
-		for _, cc := range cardChecklist {
+		cardChecklistResponses := make([]dto.CardChecklistResponse, 0, len(execResult.CardChecklists))
+		for _, cc := range execResult.CardChecklists {
 			cardChecklistResponses = append(cardChecklistResponses, dto.CardChecklistToResponse(&cc))
 		}
 		statePayload.CardChecklistRelations = cardChecklistResponses
-		checklistEntryResponses := make([]dto.ChecklistEntryResponse, 0, len(checklistEntries))
-		for _, checklistEntry := range checklistEntries {
+		checklistEntryResponses := make([]dto.ChecklistEntryResponse, 0, len(execResult.ChecklistEntries))
+		for _, checklistEntry := range execResult.ChecklistEntries {
 			checklistEntryResponses = append(checklistEntryResponses, dto.ChecklistEntryToResponse(&checklistEntry))
 		}
 		statePayload.ChecklistEntryRelations = checklistEntryResponses
@@ -1682,7 +1448,7 @@ func (s *ListCardsService) CopyCardToList(ctx context.Context, userID, workspace
 	eventTargets := []EventRegistry.TargetRef{
 		{
 			EntityType: "card",
-			EntityID:   newCard.ID,
+			EntityID:   execResult.NewCard.ID,
 			BoardID:    &req.TargetBoardID,
 		},
 		{
@@ -1714,7 +1480,260 @@ func (s *ListCardsService) CopyCardToList(ctx context.Context, userID, workspace
 		return nil, nil, err
 	}
 
-	return newCard, newListCard, nil
+	return execResult.NewCard, execResult.NewListCard, nil
+}
+
+func (s *ListCardsService) ExecuteCopyCardToList(ctx context.Context, userID, boardID, cardID uuid.UUID, req CopyCardToListRequest) (*CopyCardToListExecutionResult, error) {
+	var position string
+	var err error
+	if req.BeforeID != nil {
+		listcard, err := s.ListCardsRepo.GetListCardByListAndCardTX(ctx, s.db, req.TargetListID, *req.BeforeID, s.IncludeDeleted)
+		if err != nil {
+			return nil, domainerr.MapRepoErr(err, false)
+		}
+		position, err = s.PositionHelper.CardPosBeforeID(ctx, req.TargetListID, listcard.ID)
+		if err != nil {
+			return nil, domainerr.MapRepoErr(err, false)
+		}
+	} else if req.InsertAt != nil && *req.InsertAt == "start" {
+		position, err = s.PositionHelper.CardPosAtListStart(ctx, req.TargetListID)
+		if err != nil {
+			return nil, domainerr.MapRepoErr(err, false)
+		}
+	} else {
+		position, err = s.PositionHelper.CardPosAtListEnd(ctx, req.TargetListID)
+		if err != nil {
+			return nil, domainerr.MapRepoErr(err, false)
+		}
+	}
+
+	result := &CopyCardToListExecutionResult{}
+	err = s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		originalCard, err := s.CardsRepo.GetCardByIDTX(ctx, tx, cardID, s.IncludeDeleted)
+		if err != nil {
+			return domainerr.MapRepoErr(err, true)
+		}
+		result.NewCard = &models.Card{
+			ID:              uuid.New(),
+			Title:           originalCard.Title,
+			Description:     originalCard.Description,
+			StartDate:       originalCard.StartDate,
+			EndDate:         originalCard.EndDate,
+			Done:            originalCard.Done,
+			Props:           originalCard.Props,
+			CreatedByUserID: userID,
+			CreatedInListID: req.TargetListID,
+		}
+		if req.Title != nil {
+			result.NewCard.Title = *req.Title
+		}
+		if err := s.CardsRepo.CreateCardTX(ctx, tx, result.NewCard); err != nil {
+			return domainerr.MapRepoErr(err, false)
+		}
+		result.NewListCard = &models.ListCard{
+			ID:     uuid.New(),
+			CardID: result.NewCard.ID,
+			ListID: req.TargetListID,
+			RootID: uuid.Nil,
+			Pos:    position,
+		}
+		result.NewListCard.RootID = result.NewListCard.ID
+		if err := s.ListCardsRepo.CreateCardListTX(ctx, tx, result.NewListCard); err != nil {
+			return domainerr.MapRepoErr(err, false)
+		}
+
+		if req.KeepComments {
+			result.Comments, err = s.CardCommentsRepo.GetCommentsByCardIDTX(ctx, tx, cardID, s.IncludeDeleted)
+			if err != nil {
+				return domainerr.MapRepoErr(err, false)
+			}
+			newComments := make([]models.CardComment, 0, len(result.Comments))
+			for _, comment := range result.Comments {
+				newComment := models.CardComment{
+					ID:              uuid.New(),
+					CardID:          result.NewCard.ID,
+					CreatedByUserID: comment.CreatedByUserID,
+					Content:         comment.Content,
+				}
+				newComments = append(newComments, newComment)
+			}
+			if err := s.CardCommentsRepo.BulkCreateCommentTX(ctx, tx, newComments); err != nil {
+				return domainerr.MapRepoErr(err, false)
+			}
+			result.Comments = newComments
+		}
+
+		if req.KeepLabels {
+			result.Labels, err = s.BoardLabelsRepo.GetLabelsByCardIDTX(ctx, tx, cardID, s.IncludeDeleted)
+			if err != nil {
+				return domainerr.MapRepoErr(err, false)
+			}
+			if req.TargetBoardID != boardID {
+				originalBoardLabels, err := s.BoardLabelsRepo.GetLabelsByBoardIDTX(ctx, tx, boardID, s.IncludeDeleted)
+				if err != nil {
+					return domainerr.MapRepoErr(err, false)
+				}
+				newBoardLabels := make([]models.BoardLabel, 0, len(originalBoardLabels))
+				newCardLabelLinks := make([]models.CardLabelLink, 0, len(result.Labels))
+				for _, lbl := range originalBoardLabels {
+					newLabel := models.BoardLabel{
+						ID:              uuid.New(),
+						BoardID:         req.TargetBoardID,
+						Title:           lbl.Title,
+						Color:           lbl.Color,
+						CreatedByUserID: lbl.CreatedByUserID,
+					}
+					newBoardLabels = append(newBoardLabels, newLabel)
+					newCardLabel := models.CardLabelLink{
+						ID:           uuid.New(),
+						CardID:       result.NewCard.ID,
+						BoardID:      req.TargetBoardID,
+						BoardLabelID: newLabel.ID,
+					}
+					newCardLabelLinks = append(newCardLabelLinks, newCardLabel)
+				}
+				if err := s.BoardLabelsRepo.BulkCreateLabelsTX(ctx, tx, newBoardLabels); err != nil {
+					return domainerr.MapRepoErr(err, false)
+				}
+				if err := s.BoardLabelsRepo.BulkCreateLabelLinksTX(ctx, tx, newCardLabelLinks); err != nil {
+					return domainerr.MapRepoErr(err, false)
+				}
+				result.Labels = newCardLabelLinks
+				result.BoardLabels = newBoardLabels
+			} else {
+				newCardLabelLinks := make([]models.CardLabelLink, 0, len(result.Labels))
+				for _, labelLink := range result.Labels {
+					newLabelLink := models.CardLabelLink{
+						ID:           uuid.New(),
+						CardID:       result.NewCard.ID,
+						BoardID:      boardID,
+						BoardLabelID: labelLink.BoardLabelID,
+					}
+					newCardLabelLinks = append(newCardLabelLinks, newLabelLink)
+				}
+				if err := s.BoardLabelsRepo.BulkCreateLabelLinksTX(ctx, tx, newCardLabelLinks); err != nil {
+					return domainerr.MapRepoErr(err, false)
+				}
+				result.Labels = newCardLabelLinks
+				result.BoardLabels = nil
+			}
+
+			if req.KeepChecklists {
+				result.Checklists, err = s.ChecklistRepo.GetChecklistsByCardIDTX(ctx, tx, cardID, s.IncludeDeleted)
+				if err != nil {
+					return domainerr.MapRepoErr(err, false)
+				}
+				result.Entries, err = s.ChecklistRepo.GetEntriesByCardIDTX(ctx, tx, cardID, s.IncludeDeleted)
+				if err != nil {
+					return domainerr.MapRepoErr(err, false)
+				}
+				result.CardChecklists, err = s.ChecklistRepo.GetCardChecklistsByCardIDTX(ctx, tx, cardID, s.IncludeDeleted)
+				if err != nil {
+					return domainerr.MapRepoErr(err, false)
+				}
+				result.ChecklistEntries, err = s.ChecklistRepo.GetChecklistEntriesByCardIDTX(ctx, tx, cardID, s.IncludeDeleted)
+				if err != nil {
+					return domainerr.MapRepoErr(err, false)
+				}
+
+				newChecklists := make([]models.Checklist, 0, len(result.Checklists))
+				newEntries := make([]models.Entry, 0, len(result.Entries))
+				newCardChecklists := make([]models.CardChecklist, 0, len(result.Checklists))
+				newChecklistEntries := make([]models.ChecklistEntry, 0, len(result.Entries))
+
+				for _, checklist := range result.Checklists {
+					newChecklist := models.Checklist{
+						ID:              uuid.New(),
+						Title:           checklist.Title,
+						CreatedByUserID: checklist.CreatedByUserID,
+						CreatedInCardID: result.NewCard.ID,
+					}
+					originalCardChecklist := models.CardChecklist{}
+					for _, cc := range result.CardChecklists {
+						if cc.ChecklistID == checklist.ID {
+							originalCardChecklist = cc
+							break
+						}
+					}
+					newCardChecklist := models.CardChecklist{
+						ID:          uuid.New(),
+						CardID:      result.NewCard.ID,
+						ChecklistID: newChecklist.ID,
+						Pos:         originalCardChecklist.Pos,
+					}
+					newCardChecklists = append(newCardChecklists, newCardChecklist)
+					newChecklists = append(newChecklists, newChecklist)
+					for _, checklistEntry := range result.ChecklistEntries {
+						if checklistEntry.ChecklistID == checklist.ID {
+							originalEntry := models.Entry{}
+							for _, entry := range result.Entries {
+								if entry.ID == checklistEntry.EntryID {
+									originalEntry = entry
+									break
+								}
+							}
+							newEntry := models.Entry{
+								ID:              uuid.New(),
+								Title:           originalEntry.Title,
+								Done:            originalEntry.Done,
+								DueDate:         originalEntry.DueDate,
+								CreatedByUserID: originalEntry.CreatedByUserID,
+							}
+							newEntries = append(newEntries, newEntry)
+							newChecklistEntry := models.ChecklistEntry{
+								ID:          uuid.New(),
+								ChecklistID: newChecklist.ID,
+								EntryID:     newEntry.ID,
+								Pos:         checklistEntry.Pos,
+							}
+							newChecklistEntries = append(newChecklistEntries, newChecklistEntry)
+						}
+					}
+				}
+
+				if err := s.ChecklistRepo.BulkCreateChecklistsTX(ctx, tx, newChecklists); err != nil {
+					return domainerr.MapRepoErr(err, false)
+				}
+				if err := s.ChecklistRepo.BulkCreateEntriesTX(ctx, tx, newEntries); err != nil {
+					return domainerr.MapRepoErr(err, false)
+				}
+				if err := s.ChecklistRepo.BulkCreateCardChecklistsTX(ctx, tx, newCardChecklists); err != nil {
+					return domainerr.MapRepoErr(err, false)
+				}
+				if err := s.ChecklistRepo.BulkCreateChecklistEntriesTX(ctx, tx, newChecklistEntries); err != nil {
+					return domainerr.MapRepoErr(err, false)
+				}
+
+				result.Entries = newEntries
+				result.Checklists = newChecklists
+				result.CardChecklists = newCardChecklists
+				result.ChecklistEntries = newChecklistEntries
+			}
+		}
+
+		if req.KeepMembers {
+			result.Members, err = s.CardMembersRepo.GetMembersByCardIDTX(ctx, tx, cardID, s.IncludeDeleted)
+			if err != nil {
+				return domainerr.MapRepoErr(err, false)
+			}
+			newMembers := make([]models.CardMember, 0, len(result.Members))
+			for _, memberLink := range result.Members {
+				newMemberLink := models.CardMember{ID: uuid.New(), CardID: result.NewCard.ID, UserID: memberLink.UserID}
+				newMembers = append(newMembers, newMemberLink)
+			}
+			if err := s.CardMembersRepo.BulkCreateCardMembersLinkTX(ctx, tx, newMembers); err != nil {
+				return domainerr.MapRepoErr(err, false)
+			}
+			result.Members = newMembers
+		}
+
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
 }
 
 type CheckListDomain struct {
@@ -1882,6 +1901,26 @@ func (s *ListCardsService) GetRootBoardForListCard(ctx context.Context, boardId 
 	response := dto.BoardToResponse(board)
 
 	return &response, nil
+}
+
+func (s *ListCardsService) getBoardListForCardInBoard(ctx context.Context, cardID, boardID uuid.UUID) (*models.BoardList, error) {
+	listCard, err := s.ListCardsRepo.GetAnyListCardByCardIDTX(ctx, s.db, cardID, s.IncludeDeleted)
+	if err != nil {
+		return nil, domainerr.MapRepoErr(err, true)
+	}
+
+	boardLists, err := s.BoardListRepo.GetBoardListsByListIdTX(ctx, s.db, listCard.ListID, s.IncludeDeleted)
+	if err != nil {
+		return nil, domainerr.MapRepoErr(err, true)
+	}
+
+	for i := range boardLists {
+		if boardLists[i].BoardID == boardID {
+			return &boardLists[i], nil
+		}
+	}
+
+	return nil, domainerr.ErrNotFound
 }
 
 func (s *ListCardsService) DetatchCardFromList(ctx context.Context, userID uuid.UUID, workspaceUUID uuid.UUID, boardID uuid.UUID, listID uuid.UUID, cardID uuid.UUID, correlationID uuid.UUID) ([]uuid.UUID, error) {

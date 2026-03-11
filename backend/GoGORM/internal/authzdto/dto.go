@@ -11,26 +11,56 @@ import (
 
 type Request struct {
 	UserID        uuid.UUID
-	WorkspaceID   *uuid.UUID
 	CorrelationID uuid.UUID
 	Action        actions.Action
-	Resource      ResourceRef
-	AncillaryData map[ResourceType]ResourceRef
+	Payload       RequestPayload
 }
 
-type ResourceRef struct {
-	ResourceType ResourceType
-	ResourceID   uuid.UUID
+type RequestPayload struct {
+	WorkspacePatchPayload       *WorkspacePatchPayload
+	CardInListPatchPayload      *CardInListPatchPayload
+	InboxCardMoveToBoardPayload *InboxCardMoveToBoardPayload
+	InboxCardDetatchPayload     *InboxCardDetatchPayload
+	ReadListCardPayload         *ReadListCardPayload
+	CreateListCardPayload       *CreateListCardPayload
+	CopyListCardPayload         *CopyListCardPayload
 }
 
-type ResourceType string
+type WorkspacePatchPayload struct {
+	WorkspaceID uuid.UUID
+}
 
-const (
-	ResourceTypeCard      ResourceType = "card"
-	ResourceTypeBoardList ResourceType = "board_list"
-	ResourceTypeBoard     ResourceType = "board"
-	ResourceTypeWorkspace ResourceType = "workspace"
-)
+type CardInListPatchPayload struct {
+	CardID      uuid.UUID
+	BoardListID uuid.UUID
+}
+
+type InboxCardMoveToBoardPayload struct {
+	CardID            uuid.UUID
+	TargetWorkspaceID uuid.UUID
+	TargetBoardID     uuid.UUID
+	TargetListID      uuid.UUID
+}
+
+type InboxCardDetatchPayload struct {
+	CardID uuid.UUID
+}
+
+type ReadListCardPayload struct {
+	WorkspaceID       uuid.UUID
+	CardID            uuid.UUID
+	SourceBoardListID uuid.UUID
+	RootListCardID    *uuid.UUID
+}
+
+type CreateListCardPayload struct {
+	TargetWorkspaceID uuid.UUID
+	TargetBoardListID uuid.UUID
+}
+type CopyListCardPayload struct {
+	ReadListCardPayload
+	CreateListCardPayload
+}
 
 type Response struct {
 	Authorized bool
@@ -44,12 +74,19 @@ type AuthzContext struct {
 type FactKind string
 
 const (
-	FactActorWorkspaceRole        FactKind = "actor.workspace_role"
-	FactWorkspaceSubscriptionPlan FactKind = "workspace.subscription_plan"
-	FactBoardRole                 FactKind = "board_role"
-	FactBoardListAccessMode       FactKind = "board_list_access_mode"
-	FactBoardWorkspaceID          FactKind = "board_workspace_id"
-	FactCardEffectiveBoardListID  FactKind = "card.effective_board_list_id"
+	FactActorWorkspaceRole             FactKind = "actor.workspace_role"
+	FactSourceWorkspaceRole            FactKind = "source.workspace_role"
+	FactTargetWorkspaceRole            FactKind = "target.workspace_role"
+	FactWorkspaceSubscriptionPlan      FactKind = "workspace.subscription_plan"
+	FactBoardRole                      FactKind = "board_role"
+	FactSourceBoardRole                FactKind = "source.board_role"
+	FactTargetBoardRole                FactKind = "target.board_role"
+	FactBoardListAccessMode            FactKind = "board_list_access_mode"
+	FactTargetBoardListAccessMode      FactKind = "target.board_list_access_mode"
+	FactBoardWorkspaceID               FactKind = "board_workspace_id"
+	FactCardEffectiveBoardListID       FactKind = "card.effective_board_list_id"
+	FactSourceCardEffectiveBoardListID FactKind = "source.card.effective_board_list_id"
+	FactEffectiveInboxCardUserID       FactKind = "effective_inbox_card_user_id"
 )
 
 type PolicyKind string
@@ -73,6 +110,7 @@ type Fact struct {
 	BoardListAccessMode *rbac.BoardListAccessMode
 	BoardWorkspaceID    *uuid.UUID
 	BoardListID         *uuid.UUID
+	InboxCardUserID     *uuid.UUID
 }
 
 func NewWorkspaceRoleFact(role rbac.Role) Fact {
@@ -81,7 +119,31 @@ func NewWorkspaceRoleFact(role rbac.Role) Fact {
 	}
 }
 
+func NewSourceWorkspaceRoleFact(role rbac.Role) Fact {
+	return Fact{
+		WorkspaceRole: &role,
+	}
+}
+
+func NewTargetWorkspaceRoleFact(role rbac.Role) Fact {
+	return Fact{
+		WorkspaceRole: &role,
+	}
+}
+
 func NewBoardRoleFact(role rbac.Role) Fact {
+	return Fact{
+		BoardRole: &role,
+	}
+}
+
+func NewSourceBoardRoleFact(role rbac.Role) Fact {
+	return Fact{
+		BoardRole: &role,
+	}
+}
+
+func NewTargetBoardRoleFact(role rbac.Role) Fact {
 	return Fact{
 		BoardRole: &role,
 	}
@@ -99,6 +161,12 @@ func NewBoardListAccessModeFact(mode rbac.BoardListAccessMode) Fact {
 	}
 }
 
+func NewTargetBoardListAccessModeFact(mode rbac.BoardListAccessMode) Fact {
+	return Fact{
+		BoardListAccessMode: &mode,
+	}
+}
+
 func NewBoardWorkspaceIDFact(workspaceID uuid.UUID) Fact {
 	return Fact{
 		BoardWorkspaceID: &workspaceID,
@@ -111,10 +179,26 @@ func NewCardEffectiveBoardListIDFact(boardListID uuid.UUID) Fact {
 	}
 }
 
+func NewSourceCardEffectiveBoardListIDFact(boardListID uuid.UUID) Fact {
+	return Fact{
+		BoardListID: &boardListID,
+	}
+}
+
+func NewEffectiveInboxCardUserIDFact(userID uuid.UUID) Fact {
+	return Fact{
+		InboxCardUserID: &userID,
+	}
+}
+
 // SetFact canonicalizes the provided fact so only the field allowed by factKind is stored.
 func SetFact(facts map[FactKind]Fact, factKind FactKind, value Fact) error {
 	switch factKind {
 	case FactActorWorkspaceRole:
+		fallthrough
+	case FactSourceWorkspaceRole:
+		fallthrough
+	case FactTargetWorkspaceRole:
 		if value.WorkspaceRole == nil {
 			return domainerr.ErrInvalidFactValue
 		}
@@ -132,6 +216,10 @@ func SetFact(facts map[FactKind]Fact, factKind FactKind, value Fact) error {
 		}
 		return nil
 	case FactBoardRole:
+		fallthrough
+	case FactSourceBoardRole:
+		fallthrough
+	case FactTargetBoardRole:
 		if value.BoardRole == nil {
 			return domainerr.ErrInvalidFactValue
 		}
@@ -140,6 +228,8 @@ func SetFact(facts map[FactKind]Fact, factKind FactKind, value Fact) error {
 		}
 		return nil
 	case FactBoardListAccessMode:
+		fallthrough
+	case FactTargetBoardListAccessMode:
 		if value.BoardListAccessMode == nil {
 			return domainerr.ErrInvalidFactValue
 		}
@@ -156,6 +246,8 @@ func SetFact(facts map[FactKind]Fact, factKind FactKind, value Fact) error {
 		}
 		return nil
 	case FactCardEffectiveBoardListID:
+		fallthrough
+	case FactSourceCardEffectiveBoardListID:
 		if value.BoardListID == nil {
 			return domainerr.ErrInvalidFactValue
 		}
@@ -163,6 +255,15 @@ func SetFact(facts map[FactKind]Fact, factKind FactKind, value Fact) error {
 			BoardListID: value.BoardListID,
 		}
 		return nil
+	case FactEffectiveInboxCardUserID:
+		if value.InboxCardUserID == nil {
+			return domainerr.ErrInvalidFactValue
+		}
+		facts[factKind] = Fact{
+			InboxCardUserID: value.InboxCardUserID,
+		}
+		return nil
+
 	default:
 		return domainerr.ErrUnsupportedFact
 	}

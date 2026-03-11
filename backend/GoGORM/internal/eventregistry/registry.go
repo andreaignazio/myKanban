@@ -14,6 +14,7 @@ import (
 type EventRegistryService struct {
 	db                *gorm.DB
 	repo              EventRepository
+	mirrorPropagation *MirrorPropagationService
 	auditContextRepo  auditcontext.Reader
 	handlers          map[DomainEventType]EventHandler
 	MembershipRepo    MembershipRepo
@@ -24,6 +25,7 @@ type EventRegistryService struct {
 func NewEventRegistryService(repo EventRepository, hub *ws.Hub, workspaceResolver WorkspaceResolver, membershipRepo MembershipRepo, auditContextRepo auditcontext.Reader) *EventRegistryService {
 	return &EventRegistryService{
 		repo:              repo,
+		mirrorPropagation: NewMirrorPropagationService(repo),
 		Hub:               hub,
 		workspaceResolver: workspaceResolver,
 		MembershipRepo:    membershipRepo,
@@ -93,6 +95,13 @@ func appendUniqueUUID(target []uuid.UUID, values ...uuid.UUID) []uuid.UUID {
 		target = append(target, id)
 	}
 	return target
+}
+
+func (s *EventRegistryService) resolveMirrorPropagation(ctx context.Context, input MirrorPropagationInput) (*MirrorPropagationResult, error) {
+	if s.mirrorPropagation == nil {
+		return nil, nil
+	}
+	return s.mirrorPropagation.Resolve(ctx, input)
 }
 
 func (s *EventRegistryService) resolveRootBoardInvalidationsForBoardEvent(ctx context.Context, event DomainEvent, buildResult EventBuildResult, broadcastBoardID uuid.UUID) ([]string, error) {

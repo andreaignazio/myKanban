@@ -37,14 +37,10 @@ func (s *InboxService) PatchInboxCardDetails(ctx context.Context, userID, cardID
 			UserID:        userID,
 			CorrelationID: correlationID,
 			Action:        actions.CardInListPatch,
-			Resource: authzdto.ResourceRef{
-				ResourceType: authzdto.ResourceTypeCard,
-				ResourceID:   cardID,
-			},
-			AncillaryData: map[authzdto.ResourceType]authzdto.ResourceRef{
-				authzdto.ResourceTypeBoardList: {
-					ResourceType: authzdto.ResourceTypeBoardList,
-					ResourceID:   rootBoardList.ID,
+			Payload: authzdto.RequestPayload{
+				CardInListPatchPayload: &authzdto.CardInListPatchPayload{
+					CardID:      cardID,
+					BoardListID: rootBoardList.ID,
 				},
 			},
 		}
@@ -115,14 +111,10 @@ func (s *InboxService) PatchInboxCardProps(ctx context.Context, userID, cardID, 
 
 			CorrelationID: correlationID,
 			Action:        actions.CardInListPatch,
-			Resource: authzdto.ResourceRef{
-				ResourceType: authzdto.ResourceTypeCard,
-				ResourceID:   cardID,
-			},
-			AncillaryData: map[authzdto.ResourceType]authzdto.ResourceRef{
-				authzdto.ResourceTypeBoardList: {
-					ResourceType: authzdto.ResourceTypeBoardList,
-					ResourceID:   rootBoardList.ID,
+			Payload: authzdto.RequestPayload{
+				CardInListPatchPayload: &authzdto.CardInListPatchPayload{
+					CardID:      cardID,
+					BoardListID: rootBoardList.ID,
 				},
 			},
 		}
@@ -183,40 +175,4 @@ func (s *InboxService) PatchInboxCardProps(ctx context.Context, userID, cardID, 
 
 	return &cardResponse, nil
 
-}
-
-func (s *InboxService) getRootBoardIDForMirrorCard(ctx context.Context, inboxCard models.UserInboxCard) (*uuid.UUID, error) {
-	rootBoardList, err := s.getRootBoardListForMirrorCard(ctx, inboxCard)
-	if err != nil {
-		return nil, err
-	}
-	return &rootBoardList.BoardID, nil
-}
-
-func (s *InboxService) getRootBoardListForMirrorCard(ctx context.Context, inboxCard models.UserInboxCard) (*models.BoardList, error) {
-	rootListCard, err := s.ListCardsRepo.GetListCardByIDTX(ctx, s.db, *inboxCard.RootListCardID, s.includeDeleted)
-	if err != nil {
-		return nil, err
-	}
-	if rootListCard == nil {
-		return nil, domainerr.ErrNotFound
-	}
-	boardLists, err := s.BoardListRepo.GetBoardListsByListIdTX(ctx, s.db, rootListCard.ListID, s.includeDeleted)
-	if err != nil {
-		return nil, err
-	}
-	if len(boardLists) == 0 {
-		return nil, domainerr.ErrNotFound
-	}
-	var rootBoardList *models.BoardList
-	for _, bl := range boardLists {
-		if bl.ID == bl.RootID {
-			rootBoardList = &bl
-			break
-		}
-	}
-	if rootBoardList == nil {
-		return nil, domainerr.ErrNotFound
-	}
-	return rootBoardList, nil
 }

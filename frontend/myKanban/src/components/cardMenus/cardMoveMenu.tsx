@@ -12,13 +12,13 @@ import { useBoardsStore } from "@/stores/boardsStore";
 import { useShallow } from "zustand/shallow";
 import { useBoardDetailStore } from "@/stores/boardDetailStore";
 import { useListsStore } from "@/stores/listsStore";
-import type { CopyCardToListRequest, List, MirrorCardToInboxRequest, MirrorCardToListRequest, MoveInboxToListRequest } from "@/stores/types";
+import type { CopyCardToListRequest, CopyInboxToListRequest, List, MirrorCardToInboxRequest, MirrorCardToListRequest, MoveInboxToListRequest } from "@/stores/types";
 import { useCardsStore } from "@/stores/cardsStore";
 import { CustomInput } from "../menuElements/CustomInput";
 import type { AsyncRequestKey } from "@/stores/asyncRequestTypes";
 import { useUserInboxStore } from "@/stores/userInboxStore";
 
-type cardMoveMenuMode = "move" | "copy" | "mirror" | "moveInboxCard";
+type cardMoveMenuMode = "move" | "copy" | "mirror" | "moveInboxCard" | "copyInboxCard";
 
 type CardMoveMenuProps = {
     onClose: () => void;
@@ -65,7 +65,11 @@ export const CardMoveMenu = forwardRef<HTMLDivElement, CardMoveMenuProps>(({ onC
         return <div className="px-[10px] pt-[10px]">{content}</div>;
     }
 
-    const Title = mode === "move" || mode === "moveInboxCard" ? "Move card to..." : mode === "copy" ? "Copy card to..." : "Mirror card to...";
+    const Title = mode === "move" || mode === "moveInboxCard"
+        ? "Move card to..."
+        : mode === "copy" || mode === "copyInboxCard"
+            ? "Copy card to..."
+            : "Mirror card to...";
 
     const keys: AsyncRequestKey[] = ["card:move", "card:copy", "card:mirror"]
 
@@ -136,7 +140,9 @@ const MoveToBoardTab = ({ onClose, cardId, listId, mode, onMoveSubmitSuccess }: 
     const workspaceId = useParams().workspaceId as string;
     const cardActions = useCardActionRegistry();
     const moveInboxCardToListInBoard = useUserInboxStore((state) => state.moveInboxCardToListInBoard)
+    const copyInboxCardToListInBoard = useUserInboxStore((state) => state.copyInboxCardToListInBoard)
     const isInboxMove = mode === "moveInboxCard"
+    const isInboxCopy = mode === "copyInboxCard"
 
 
     const fetchBoardsForWorkspace = useBoardsStore((state) => state.fetchBoardsForWorkspace)
@@ -183,7 +189,7 @@ const MoveToBoardTab = ({ onClose, cardId, listId, mode, onMoveSubmitSuccess }: 
     }, [activeBoard, boardID]);
 
     useEffect(() => {
-        if (isInboxMove) {
+        if (isInboxMove || isInboxCopy) {
             setSourceLists([])
             return
         }
@@ -438,18 +444,33 @@ const MoveToBoardTab = ({ onClose, cardId, listId, mode, onMoveSubmitSuccess }: 
         if (!activeBoard || !activeList || !cardId || !activePosition) return;
         const insertAtEnd = activePosition === "end";
         const beforeId = insertAtEnd ? null : activePosition;
-        const payload: CopyCardToListRequest = {
-            TargetBoardID: activeBoard,
-            TargetListID: activeList,
-            BeforeID: beforeId,
-            InsertAt: insertAtEnd ? "end" : null,
-            Title: titleInput,
-            KeepComments: keepComments,
-            KeepMembers: keepMembers,
-            KeepLabels: keepLabels,
-            KeepChecklists: keepChecklists,
-        }
         const execCopy = async () => {
+            if (isInboxCopy) {
+                const payload: CopyInboxToListRequest = {
+                    BeforeID: beforeId,
+                    InsertAt: insertAtEnd ? "end" : null,
+                    Title: titleInput,
+                    KeepComments: keepComments,
+                    KeepMembers: keepMembers,
+                    KeepLabels: keepLabels,
+                    KeepChecklists: keepChecklists,
+                }
+                await copyInboxCardToListInBoard(cardId, workspaceId, activeBoard, activeList, payload)
+                onClose();
+                return
+            }
+
+            const payload: CopyCardToListRequest = {
+                TargetBoardID: activeBoard,
+                TargetListID: activeList,
+                BeforeID: beforeId,
+                InsertAt: insertAtEnd ? "end" : null,
+                Title: titleInput,
+                KeepComments: keepComments,
+                KeepMembers: keepMembers,
+                KeepLabels: keepLabels,
+                KeepChecklists: keepChecklists,
+            }
             const result = await cardActions.copyCardToList(boardID, cardId, payload)
             if (result !== null) onClose();
         }
@@ -532,7 +553,7 @@ const MoveToBoardTab = ({ onClose, cardId, listId, mode, onMoveSubmitSuccess }: 
                     isTargetBoardSameAsSource={isTargetBoardSameAsSource}
                 />
             ),
-            hide: () => mode != "copy"
+            hide: () => mode !== "copy" && mode !== "copyInboxCard"
         },
         {
             id: "selectDetination", label: "Select destination", kind: "custom",
@@ -560,7 +581,7 @@ const MoveToBoardTab = ({ onClose, cardId, listId, mode, onMoveSubmitSuccess }: 
         },
         {
             id: "copyButton", label: "Copy", kind: "custom", customElement: () => <Footer onClick={handleCopy} label="Copy" disabled={isSubmitInvalid} />, style: { marginTop: "16px" },
-            hide: () => mode !== "copy"
+            hide: () => mode !== "copy" && mode !== "copyInboxCard"
         },
 
     ]

@@ -15,6 +15,7 @@ type InboxRepo interface {
 	GetMirrorsIds(ctx context.Context, userID, rootListCardID uuid.UUID) ([]uuid.UUID, error)
 	DeleteInboxCardTX(ctx context.Context, db *gorm.DB, userID, cardID uuid.UUID) error
 	GetInboxCardByCardID(ctx context.Context, userID, cardID uuid.UUID, includeDeleted bool) (*models.UserInboxCard, error)
+	GetInboxCardByCardIDTX(ctx context.Context, db *gorm.DB, userID, cardID uuid.UUID, includeDeleted bool) (*models.UserInboxCard, error)
 	PatchInboxCardTX(ctx context.Context, db *gorm.DB, userID, cardID uuid.UUID, updateMap map[string]interface{}) (*models.UserInboxCard, error)
 }
 
@@ -47,10 +48,15 @@ type ListCardsRepo interface {
 type ListCardsService interface {
 	CopyCardChecklistsTX(ctx context.Context, tx *gorm.DB, cardID uuid.UUID, newCard *models.Card,
 		domain *listcards.CheckListDomain) error
+	ExecuteCopyCardToList(ctx context.Context, userID, boardID, cardID uuid.UUID,
+		req listcards.CopyCardToListRequest) (*listcards.CopyCardToListExecutionResult, error)
+	CopyCardToList(ctx context.Context, userID, workspaceUUID, boardID, cardID uuid.UUID,
+		req listcards.CopyCardToListRequest, correlationID uuid.UUID) (*models.Card, *models.ListCard, error)
 }
 
 type BoardListRepo interface {
 	GetBoardListsByListIdTX(ctx context.Context, tx *gorm.DB, listID uuid.UUID, includeDeleted bool) ([]models.BoardList, error)
+	GetBoardList(ctx context.Context, boardID, listID uuid.UUID, includeDeleted bool) (*models.BoardList, error)
 }
 
 type LinksRepo interface {

@@ -2,13 +2,13 @@
 import { useCardMembersStore } from "@/stores/CardMembersStore";
 import { useCardsStore } from "@/stores/cardsStore";
 import { useChecklistStore } from "@/stores/checklistStore";
-import type { CardProps, ChecklistEntryRowResponse, CopyCardToListRequest, CreateCardCommentRequest, CreateChecklistEntryRequest, CreateChecklistRequest, CreateInboxCardRequest, CrossMoveChecklistEntryRequest, MirrorCardToInboxRequest, MirrorCardToListRequest, MoveCardToBoardRequest, MoveChecklistEntryRequest, MoveChecklistRequest, PatchCardDetailsRequest, PatchChecklistEntryRequest } from "@/stores/types";
+import type { CardProps, ChecklistEntryRowResponse, CopyCardToListRequest, CopyInboxToListRequest, CreateCardCommentRequest, CreateChecklistEntryRequest, CreateChecklistRequest, CreateInboxCardRequest, CrossMoveChecklistEntryRequest, MirrorCardToInboxRequest, MirrorCardToListRequest, MoveCardToBoardRequest, MoveChecklistEntryRequest, MoveChecklistRequest, PatchCardDetailsRequest, PatchChecklistEntryRequest } from "@/stores/types";
 import type { AsyncRequestKey } from "@/stores/asyncRequestTypes";
 import { useAsyncKey } from "@/stores/asyncRequestStore";
 import { extractMentionedUserIDs } from "@/hooks/commentMentions";
 import { useUserStore } from "@/stores/userStore";
 import { useBoardDetailStore } from "@/stores/boardDetailStore";
-import type { CardRouteState } from "@/components/CardRow";
+import type { CardContext, CardRouteState } from "@/domain/cardContext";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useUserInboxStore } from "@/stores/userInboxStore";
 export function useCardActionRegistry() {
@@ -313,15 +313,13 @@ export function useCardActionRegistry() {
 
 
     function openCardDetailMenu(openCardRoute: OpenCardRoute) {
-        const { cardID, sourceListID, boardID, workspaceId, openedFrom } = openCardRoute;
-        // const { workspaceId, boardId } = useParams<{ workspaceId: string; boardId: string }>()
+        const { cardContext, boardID, workspaceId } = openCardRoute;
         const nextState: CardRouteState = {
             backgroundLocation: location,
-            sourceListId: sourceListID,
-            openedFrom: openedFrom ?? "card-row"
+            cardContext,
         }
         navigate(
-            `/workspaces/${workspaceId}/boards/${boardID}/cards/${cardID}`,
+            `/workspaces/${workspaceId}/boards/${boardID}/cards/${cardContext.cardId}`,
             { state: nextState } // chiave del pattern
         );
     };
@@ -332,6 +330,10 @@ export function useCardActionRegistry() {
 
     function copyCardToList(boardID: string, cardID: string, payload: CopyCardToListRequest) {
         return cardsStore.copyCardToList(boardID, cardID, payload)
+    }
+
+    function copyInboxCardToList(targetWorkspaceID: string, targetBoardID: string, targetListID: string, cardID: string, payload: CopyInboxToListRequest) {
+        return inboxStore.copyInboxCardToListInBoard(cardID, targetWorkspaceID, targetBoardID, targetListID, payload)
     }
 
     function mirrorCardToInbox(boardID: string, cardID: string, payload: MirrorCardToInboxRequest) {
@@ -376,6 +378,7 @@ export function useCardActionRegistry() {
         openCardDetailMenu,
         mirrorCardToList,
         copyCardToList,
+        copyInboxCardToList,
         mirrorCardToInbox,
         createInboxCard,
         setInboxCardColor,
@@ -388,9 +391,7 @@ export function useCardActionRegistry() {
 }
 
 export type OpenCardRoute = {
-    cardID: string;
-    sourceListID: string;
+    cardContext: CardContext;
     boardID: string;
     workspaceId: string;
-    openedFrom?: "card-row" | "card-edit-menu";
 }

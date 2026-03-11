@@ -1,5 +1,5 @@
 ﻿import { create } from "zustand";
-import type { Card, CardProps, CreateInboxCardRequest, InboxCard, InboxCardResponse, MirrorCardToInboxRequest, MoveInboxToListRequest, PatchCardDetailsRequest, PatchCardPropsRequest, UserEvent, UserInboxCardResponse } from "./types";
+import type { Card, CardProps, CopyInboxToListRequest, CreateInboxCardRequest, InboxCard, InboxCardResponse, MirrorCardToInboxRequest, MoveInboxToListRequest, PatchCardDetailsRequest, PatchCardPropsRequest, UserEvent, UserInboxCardResponse } from "./types";
 import { api } from "@/api/api";
 import { useCardsStore } from "./cardsStore";
 import { useAsyncKey, useAsyncRequestStore } from "./asyncRequestStore";
@@ -17,8 +17,10 @@ type UserInboxStore = {
     getInboxCardByRootCardID: (rootCardID: string) => InboxCard | undefined
     applyInboxEvent: (evt: UserEvent) => void
     replaceInboxCardIds: (newIds: string[]) => void
+    detatchInboxCard: (cardID: string) => Promise<void>
     moveInboxCard: (cardID: string, request: MoveInboxToListRequest, rollbackInboxCardIds?: string[]) => Promise<void>
     moveInboxCardToListInBoard: (cardID: string, targetWorkspaceID: string, targetBoardID: string, targetListID: string, request: MoveInboxToListRequest, optimisticListCardID?: string, rollbackListCardIds?: string[]) => Promise<void>
+    copyInboxCardToListInBoard: (cardID: string, targetWorkspaceID: string, targetBoardID: string, targetListID: string, request: CopyInboxToListRequest) => Promise<void>
     patchInboxCardDetails: (cardID: string, payload: PatchCardDetailsRequest, asyncKey?: AsyncRequestKey) => Promise<Card | null>
     patchInboxCardProps: (cardID: string, props: CardProps) => Promise<Card | null>
     setInboxCardIds: (newIds: string[]) => void
@@ -155,6 +157,14 @@ export const useUserInboxStore = create<UserInboxStore>((set, get) => ({
     },
     applyInboxEvent: (evt: UserEvent) => {
         switch (evt.Type) {
+            case "inbox.cards.invalidated": {
+                const payload = evt.Payload?.InboxCardsInvalidatedPayload
+                if (payload?.InvalidatedListCardIDs?.length) {
+                    useBoardDetailStore.getState().invalidateRootBoardCacheForListCards(payload.InvalidatedListCardIDs)
+                }
+                void get().fetchInboxCards()
+                return
+            }
             case "inbox.rootcard.moved": {
                 return
             }
@@ -164,6 +174,45 @@ export const useUserInboxStore = create<UserInboxStore>((set, get) => ({
         set({
             inboxCardsIds: newIds
         })
+    },
+    detatchInboxCard: async (cardID: string) => {
+        const prevInboxCardsById = get().inboxCardsById
+        const prevInboxCardsIds = get().inboxCardsIds
+        const removedInboxCardIds = Object.values(prevInboxCardsById)
+            .filter((inboxCard) => inboxCard.CardID === cardID)
+            .map((inboxCard) => inboxCard.ID)
+
+        if (removedInboxCardIds.length > 0) {
+            const nextInboxCardsById = { ...prevInboxCardsById }
+            removedInboxCardIds.forEach((inboxEntryId) => {
+                delete nextInboxCardsById[inboxEntryId]
+            })
+            set({
+                inboxCardsById: nextInboxCardsById,
+                inboxCardsIds: prevInboxCardsIds.filter((id) => !removedInboxCardIds.includes(id))
+            })
+        }
+
+        try {
+            await useAsyncRequestStore.getState().execute(
+                "inbox:card:detatch",
+                () => api.delete(`/inbox/cards/${cardID}`),
+                {
+                    successResetDelayMs: 2000,
+                    onError: () => {
+                        set({
+                            inboxCardsById: prevInboxCardsById,
+                            inboxCardsIds: prevInboxCardsIds,
+                        })
+                    }
+                }
+            )
+        } catch (error) {
+            set({
+                inboxCardsById: prevInboxCardsById,
+                inboxCardsIds: prevInboxCardsIds,
+            })
+        }
     },
     moveInboxCard: async (cardID: string, request: MoveInboxToListRequest, rollbackInboxCardIds?: string[]) => {
         const rollbackOptimisticMove = () => {
@@ -260,6 +309,23 @@ export const useUserInboxStore = create<UserInboxStore>((set, get) => ({
         } catch (error) {
             rollbackOptimisticMove()
             // console.error("Failed to move inbox card to list in board:", error);
+        }
+    },
+    copyInboxCardToListInBoard: async (cardID: string,
+        targetWorkspaceID: string,
+        targetBoardID: string,
+        targetListID: string,
+        request: CopyInboxToListRequest) => {
+        try {
+            await useAsyncRequestStore.getState().execute(
+                "inbox:card:copy:board:list",
+                () => api.post(`/inbox/cards/${cardID}/workspaces/${targetWorkspaceID}/boards/${targetBoardID}/lists/${targetListID}/copy`, request),
+                {
+                    successResetDelayMs: 2000,
+                }
+            )
+        } catch (error) {
+            // console.error("Failed to copy inbox card to list in board:", error);
         }
     },
     patchInboxCardProps: async (cardID: string, props: CardProps) => {

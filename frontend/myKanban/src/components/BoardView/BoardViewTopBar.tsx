@@ -20,7 +20,7 @@ import { BoardOfferManager } from "@/components/OffersLists/BoardOfferManager";
 import { useNavigate, useLocation, type Location } from "react-router-dom";
 import { FloatingTabSelector, type TabType } from "@/components/menuElements/floatingTabSelector";
 import { Calendar, Columns3Icon, Inbox, List, TableColumnsSplit, WalletCardsIcon } from "lucide-react";
-import { CardRow, type CardRouteState } from "@/components/CardRow";
+import { CardRow } from "@/components/CardRow";
 import { SwitchBoardsModal } from "@/components/modals/switchBoards";
 import { useUserInboxStore } from "@/stores/userInboxStore";
 import { CardRowInbox } from "@/components/cardRowInbox";

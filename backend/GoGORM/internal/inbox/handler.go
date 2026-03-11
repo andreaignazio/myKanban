@@ -77,6 +77,22 @@ func (h *InboxHandler) UpdateInboxCard(c *gin.Context) {
 }
 
 func (h *InboxHandler) DetatchInboxCard(c *gin.Context) {
+	ctx := c.Request.Context()
+	userID := c.MustGet("userID").(uuid.UUID)
+	cardIDStr := c.Param("cardID")
+	cardID, err := uuid.Parse(cardIDStr)
+	if err != nil {
+		httperr.WriteParamsError(c, err, "inbox.handler.DetatchInboxCard")
+		return
+	}
+	correlationID := c.MustGet("correlationID").(uuid.UUID)
+
+	response, err := h.inboxService.DetatchInboxCard(ctx, userID, cardID, correlationID)
+	if err != nil {
+		httperr.WriteOp(c, err, "inbox.handler.DetatchInboxCard")
+		return
+	}
+	c.JSON(http.StatusOK, response)
 
 }
 
@@ -172,6 +188,49 @@ func (h *InboxHandler) MoveInboxCardToBoard(c *gin.Context) {
 	response, err := h.inboxService.MoveInboxCardToListInBoard(ctx, userID, cardID, targetWorkspaceID, targetBoardID, targetListID, correlationID, req)
 	if err != nil {
 		httperr.WriteOp(c, err, "inbox.handler.MoveInboxCardToBoard")
+		return
+	}
+	c.JSON(http.StatusOK, response)
+}
+
+func (h *InboxHandler) CopyInboxCardToBoard(c *gin.Context) {
+	ctx := c.Request.Context()
+	userID := c.MustGet("userID").(uuid.UUID)
+	cardIDStr := c.Param("cardID")
+	cardID, err := uuid.Parse(cardIDStr)
+	if err != nil {
+		httperr.WriteParamsError(c, err, "inbox.handler.CopyInboxCardToBoard")
+		return
+	}
+	targetBoardIDStr := c.Param("targetBoardID")
+	targetBoardID, err := uuid.Parse(targetBoardIDStr)
+	if err != nil {
+		httperr.WriteParamsError(c, err, "inbox.handler.CopyInboxCardToBoard")
+		return
+	}
+	targetListIDStr := c.Param("targetListID")
+	targetListID, err := uuid.Parse(targetListIDStr)
+	if err != nil {
+		httperr.WriteParamsError(c, err, "inbox.handler.CopyInboxCardToBoard")
+		return
+	}
+	targetWorkspaceIDStr := c.Param("targetWorkspaceID")
+	targetWorkspaceID, err := uuid.Parse(targetWorkspaceIDStr)
+	if err != nil {
+		httperr.WriteParamsError(c, err, "inbox.handler.CopyInboxCardToBoard")
+		return
+	}
+	correlationID := c.MustGet("correlationID").(uuid.UUID)
+
+	var req CopyInboxCardToBoardRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		httperr.WriteOp(c, err, "inbox.handler.CopyInboxCardToBoard")
+		return
+	}
+
+	response, err := h.inboxService.CopyInboxCardToListInBoard(ctx, userID, cardID, targetWorkspaceID, targetBoardID, targetListID, correlationID, req)
+	if err != nil {
+		httperr.WriteOp(c, err, "inbox.handler.CopyInboxCardToBoard")
 		return
 	}
 	c.JSON(http.StatusOK, response)

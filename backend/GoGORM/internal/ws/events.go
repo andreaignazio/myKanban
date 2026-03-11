@@ -53,6 +53,7 @@ const (
 	EventUserNotificationCreated                   UserEventType = "user.notification.created"
 	EventUserNotificationRead                      UserEventType = "user.notification.read"
 	EventUserNotificationReadAll                   UserEventType = "user.notification.read_all"
+	EventInboxCardsInvalidated                     UserEventType = "inbox.cards.invalidated"
 	EventInboxRootCardMoved                        UserEventType = "inbox.rootcard.moved"
 	EventCardsUserMemberAdded                      UserEventType = "cards.user.member.added"
 	EventCardsUserMemberRemoved                    UserEventType = "cards.user.member.removed"
@@ -97,6 +98,7 @@ type UserEventPayload struct {
 	UserNotificationCreatedPayload           *UserNotificationCreatedPayload           `json:"UserNotificationCreatedPayload,omitempty"`
 	UserNotificationReadPayload              *UserNotificationReadPayload              `json:"UserNotificationReadPayload,omitempty"`
 	UserNotificationReadAllPayload           *UserNotificationReadAllPayload           `json:"UserNotificationReadAllPayload,omitempty"`
+	InboxCardsInvalidatedPayload             *InboxCardsInvalidatedPayload             `json:"InboxCardsInvalidatedPayload,omitempty"`
 	InboxRootCardMovedPayload                *InboxRootCardMovedPayload                `json:"InboxRootCardMovedPayload,omitempty"`
 	CardsUserMemberAddedPayload              *CardsUserMemberAddedPayload              `json:"CardsUserMemberAddedPayload,omitempty"`
 	CardsUserMemberRemovedPayload            *CardsUserMemberRemovedPayload            `json:"CardsUserMemberRemovedPayload,omitempty"`
@@ -220,6 +222,11 @@ type InboxRootCardMovedPayload struct {
 	TargetListID         uuid.UUID                                 `json:"TargetListID"`
 	AffectedInboxCardIDs []uuid.UUID                               `json:"AffectedInboxCardIDs"`
 	ExternalRootsByID    map[uuid.UUID]dto.ExternalRootRefResponse `json:"ExternalRootsByID"`
+}
+
+type InboxCardsInvalidatedPayload struct {
+	AffectedInboxCardIDs   []uuid.UUID `json:"AffectedInboxCardIDs"`
+	InvalidatedListCardIDs []uuid.UUID `json:"InvalidatedListCardIDs"`
 }
 
 type UserNotificationCreatedPayload struct {

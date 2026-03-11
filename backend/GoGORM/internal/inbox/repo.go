@@ -72,8 +72,12 @@ func (r *GormInboxRepo) DeleteInboxCardTX(ctx context.Context, db *gorm.DB, user
 }
 
 func (r *GormInboxRepo) GetInboxCardByCardID(ctx context.Context, userID, cardID uuid.UUID, includeDeleted bool) (*models.UserInboxCard, error) {
+	return r.GetInboxCardByCardIDTX(ctx, r.db, userID, cardID, includeDeleted)
+}
+
+func (r *GormInboxRepo) GetInboxCardByCardIDTX(ctx context.Context, db *gorm.DB, userID, cardID uuid.UUID, includeDeleted bool) (*models.UserInboxCard, error) {
 	var inboxCard models.UserInboxCard
-	query := r.db.WithContext(ctx).Table("user_inbox_cards").
+	query := db.WithContext(ctx).Table("user_inbox_cards").
 		Where("user_id = ? AND card_id = ?", userID, cardID)
 	if includeDeleted {
 		query = query.Unscoped()

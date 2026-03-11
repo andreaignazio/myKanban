@@ -30,6 +30,7 @@ type EventRepository interface {
 	GetBoardsByIDs(ctx context.Context, boardIDs []uuid.UUID) ([]models.Board, error)
 	ResolveInboxUserConsumersForRootListCard(ctx context.Context, rootListCardID uuid.UUID) ([]uuid.UUID, error)
 	ResolveInboxCardIDsForUserAndRootListCard(ctx context.Context, userID, rootListCardID uuid.UUID) ([]uuid.UUID, error)
+	ResolveRootListCardIDsByBoardID(ctx context.Context, boardID uuid.UUID) ([]uuid.UUID, error)
 	ResolveListCardIDsByBoardID(ctx context.Context, boardID uuid.UUID) ([]uuid.UUID, error)
 	ResolveListCardIDsByRootID(ctx context.Context, rootListCardID uuid.UUID) ([]uuid.UUID, error)
 	GetExternalRootRefsByIDs(ctx context.Context, rootIDs []uuid.UUID) ([]models.ExternalRootRefRow, error)
@@ -39,6 +40,7 @@ type EventRepository interface {
 	GetUserUnreadNotificationCount(ctx context.Context, userID uuid.UUID) (int, error)
 	GetWorkspaceCardActivityPaginated(ctx context.Context,
 		workspaceID, cardID uuid.UUID, limit int, cursor *dto.AuditCursor) (*dto.AuditPage, error)
+	GetBoardListsByListIds(ctx context.Context, listIDs []uuid.UUID) ([]models.BoardList, error)
 }
 
 type MembershipRepo interface {

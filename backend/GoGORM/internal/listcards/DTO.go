@@ -2,6 +2,7 @@ package listcards
 
 import (
 	"GoGORM/internal/dto"
+	"GoGORM/models"
 	"time"
 
 	"github.com/google/uuid"
@@ -152,6 +153,19 @@ type CopyCardRequest struct {
 	KeepMembers    bool `json:"KeepMembers"`
 	KeepLabels     bool `json:"KeepLabels"`
 	KeepChecklists bool `json:"KeepChecklists"`
+}
+
+type CopyCardToListExecutionResult struct {
+	NewCard          *models.Card
+	NewListCard      *models.ListCard
+	Comments         []models.CardComment
+	Labels           []models.CardLabelLink
+	BoardLabels      []models.BoardLabel
+	Members          []models.CardMember
+	CardChecklists   []models.CardChecklist
+	Checklists       []models.Checklist
+	Entries          []models.Entry
+	ChecklistEntries []models.ChecklistEntry
 }
 
 type MirrorCardsResponse struct {

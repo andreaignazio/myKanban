@@ -38,11 +38,17 @@ func (e *ExactValueEvaluator) Evaluate(spec authzdto.PolicySpec, fact authzdto.F
 func getExactFactValueComparator(factKind authzdto.FactKind) (ExactFactComparator, error) {
 	switch factKind {
 	case authzdto.FactBoardListAccessMode:
+		fallthrough
+	case authzdto.FactTargetBoardListAccessMode:
 		return &ExactBoardListAccessModeComparator{}, nil
 	case authzdto.FactBoardWorkspaceID:
 		return &ExactBoardWorkspaceIDComparator{}, nil
 	case authzdto.FactCardEffectiveBoardListID:
+		fallthrough
+	case authzdto.FactSourceCardEffectiveBoardListID:
 		return &ExactCardEffectiveBoardListIDComparator{}, nil
+	case authzdto.FactEffectiveInboxCardUserID:
+		return &ExactEffectiveInboxCardUserIDComparator{}, nil
 	default:
 		return nil, domainerr.ErrUnsupportedFact
 	}
@@ -88,4 +94,13 @@ func (c *ExactCardEffectiveBoardListIDComparator) Compare(factValue authzdto.Fac
 	}
 
 	return *factValue.BoardListID == *requiredValue.BoardListID, nil
+}
+
+type ExactEffectiveInboxCardUserIDComparator struct{}
+
+func (c *ExactEffectiveInboxCardUserIDComparator) Compare(factValue authzdto.Fact, requiredValue authzdto.Fact) (bool, error) {
+	if factValue.InboxCardUserID == nil || requiredValue.InboxCardUserID == nil {
+		return false, domainerr.ErrInvalidFactValue
+	}
+	return *factValue.InboxCardUserID == *requiredValue.InboxCardUserID, nil
 }

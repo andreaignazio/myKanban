@@ -20,7 +20,8 @@ import { BoardOfferManager } from "@/components/OffersLists/BoardOfferManager";
 import { useNavigate, useLocation, type Location } from "react-router-dom";
 import { FloatingTabSelector, type TabType } from "@/components/menuElements/floatingTabSelector";
 import { Calendar, Columns3Icon, Inbox, List, TableColumnsSplit, WalletCardsIcon } from "lucide-react";
-import { CardRow, type CardRouteState } from "@/components/CardRow";
+import { CardRow } from "@/components/CardRow";
+import type { CardContext, CardRouteState } from "@/domain/cardContext";
 import { SwitchBoardsModal } from "@/components/modals/switchBoards";
 import { useUserInboxStore } from "@/stores/userInboxStore";
 import { CardRowInbox } from "@/components/cardRowInbox";
@@ -136,7 +137,7 @@ export default function BoardView() {
     const cardMenuId = "cardDetailMenu";
     const boardRoute = `/workspaces/${workspaceId}/boards/${boardId}`
     const routeState = location.state as CardRouteState | null
-    const sourceListId = routeState?.sourceListId
+    const routeCardContext = routeState?.cardContext
 
     function navigateToBoardOrBack() {
         const backgroundLocation = routeState?.backgroundLocation
@@ -163,12 +164,19 @@ export default function BoardView() {
 
     const cardDetailMenuRef = useRef<HTMLDivElement>(null)
     function handleOpenCardDetailMenu(activeCardId: string) {
-        // console.log("Opening card detail menu for cardId", activeCardId);
+        const cardContext: CardContext = routeCardContext?.cardId === activeCardId
+            ? routeCardContext
+            : {
+                cardId: activeCardId,
+                sourceListId: "",
+                source: "board",
+                openedFrom: "direct-url",
+            }
 
         const descriptor: OverlayDescriptor = {
             id: cardMenuId,
             render: () => <CardDetailMenu ref={cardDetailMenuRef}
-                cardId={activeCardId} listId={sourceListId}
+                cardContext={cardContext}
                 onClose={() => requestCloseCardDetailMenu()}
             />,
             panelRef: cardDetailMenuRef,

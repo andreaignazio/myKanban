@@ -85,7 +85,9 @@ export const ASYNC_REQUEST_BASE_KEYS = [
     "subscription:suspension:boards:save",
     "subscription:suspension:members:save",
     "workspace:boards:fetch:all",
-    "inbox:card:move:board:list"
+    "inbox:card:move:board:list",
+    "inbox:card:copy:board:list",
+    "inbox:card:detatch"
 ] as const;
 
 export type AsyncRequestBaseKey = typeof ASYNC_REQUEST_BASE_KEYS[number];

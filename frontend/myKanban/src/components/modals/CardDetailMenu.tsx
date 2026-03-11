@@ -44,18 +44,41 @@ import { MenuStateIndicator } from "../menuElements/menuWrapper";
 import type { RequestGroup } from "./ActionMenuWrapper";
 import { motion } from "motion/react";
 import { menuMotionProps } from "./menuMotion";
+import type { CardContext } from "@/domain/cardContext";
+import { ImageColorRenderer } from "../menuElements/ImageColorRenderer";
+import { useCardRootBoardContext } from "@/hooks/useCardRootBoardContext";
 
 type CardDetailMenuProps = {
-    listId?: string;
-    cardId?: string;
+    cardContext?: CardContext;
     onClose: () => void;
 }
 
-export const CardDetailMenu = forwardRef<HTMLDivElement, CardDetailMenuProps>(({ cardId, listId, onClose }, ref) => {
+export const CardDetailMenu = forwardRef<HTMLDivElement, CardDetailMenuProps>(({ cardContext, onClose }, ref) => {
     const ACTIVITY_COLUMN_COLLAPSE_WIDTH = LAYOUT_BREAKPOINTS.cardDetailAsideCollapse;
+    const cardId = cardContext?.cardId;
+    const listId = cardContext?.sourceListId;
+    const listCardId = cardContext?.listCardId;
     const card = useCardsStore((state) => cardId ? state.cardsById[cardId] : null);
     const boardId = useParams().boardId as string;
     const workspaceId = useParams().workspaceId as string;
+    const listCard = useBoardDetailStore((state) => listCardId ? state.listCardById[listCardId] : undefined);
+
+    const {
+        effectiveRootBoard,
+        isInboxMirror,
+        isMirrorCard,
+        effectiveListCardID,
+        rootBoardBackgroundType,
+        rootBoardBgImage,
+        rootBoardBgColorClass,
+        showMirrorBackdrop,
+    } = useCardRootBoardContext({
+        boardId,
+        source: cardContext?.source,
+        listCard,
+        listCardID: listCardId,
+        rootListCardId: cardContext?.rootListCardId,
+    });
 
     // console.log("Card data for cardId", cardId, ":", card);
     const coverSize = card?.Props?.Props?.Display?.Size || "small";
@@ -195,6 +218,10 @@ export const CardDetailMenu = forwardRef<HTMLDivElement, CardDetailMenuProps>(({
     return (
         <>
             <CardMenuWrapper
+                showBackdrop={showMirrorBackdrop}
+                backdropBackgroundType={rootBoardBackgroundType}
+                backdropBgImage={rootBoardBgImage}
+                backdropBgColorClass={rootBoardBgColorClass}
                 requestGroups={requestGroups}
                 Title="Card Actions"
                 width={resolvedWidth}
@@ -310,13 +337,19 @@ type CardMenuWrapperProps = {
     Title: string
     onClose: () => void
     width?: number | string
+    showBackdrop?: boolean
+    backdropBackgroundType?: "color" | "image" | null
+    backdropBgImage?: string
+    backdropBgColorClass?: string
     isAsideCollapsed?: boolean
     onTransitionEnd?: (event: TransitionEvent<HTMLDivElement>) => void
     requestGroups?: RequestGroup[];
 }
 
-export const CardMenuWrapper = forwardRef<HTMLDivElement, CardMenuWrapperProps>(({ children, Title, onClose, width, onTransitionEnd, requestGroups }, ref) => {
+export const CardMenuWrapper = forwardRef<HTMLDivElement, CardMenuWrapperProps>(({ children, Title, onClose, width, showBackdrop = false, backdropBackgroundType, backdropBgImage, backdropBgColorClass, onTransitionEnd, requestGroups }, ref) => {
 
+    const backdropOffset = 12;
+    const radius = 12;
 
     const indicators = requestGroups && requestGroups.length > 0
         ? requestGroups.map((g, i) => (
@@ -333,6 +366,24 @@ export const CardMenuWrapper = forwardRef<HTMLDivElement, CardMenuWrapperProps>(
     return (
         <motion.div className="relative w-fit h-fit overflow-visible" {...menuMotionProps}>
             {indicators}
+            {showBackdrop && (
+                <div
+                    style={{
+                        top: -backdropOffset, left: -backdropOffset,
+                        width: `calc(100% + ${backdropOffset * 2}px)`,
+                        height: `calc(100% + ${backdropOffset * 2}px)`,
+                        borderRadius: radius + backdropOffset
+                    }}
+                    className="absolute overflow-hidden">
+                    <ImageColorRenderer
+                        overrideClassName
+                        className="h-full w-full"
+                        bgImage={backdropBgImage}
+                        bgColor={backdropBgColorClass}
+                        backgroundType={backdropBackgroundType ?? null}
+                    />
+                </div>
+            )}
             <div ref={ref}
                 style={{ width: width }}
                 onTransitionEnd={onTransitionEnd}

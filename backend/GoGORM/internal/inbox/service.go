@@ -1,7 +1,9 @@
 package inbox
 
 import (
+	"GoGORM/internal/actions"
 	"GoGORM/internal/authz"
+	"GoGORM/internal/authzdto"
 	"GoGORM/internal/domainerr"
 	"GoGORM/internal/dto"
 	EventRegistry "GoGORM/internal/eventregistry"
@@ -311,9 +313,16 @@ func (s *InboxService) MoveInboxCardToListInBoard(ctx context.Context, userID, c
 
 	/*authzRequest := authzdto.Request{
 		UserID:        userID,
-		WorkspaceID:   targetWorkspaceID,
 		CorrelationID: correlationID,
 		Action:        actions.InboxCardMoveToListInBoard,
+		Payload: authzdto.RequestPayload{
+			InboxCardMoveToBoardPayload: &authzdto.InboxCardMoveToBoardPayload{
+				CardID:            cardID,
+				TargetWorkspaceID: targetWorkspaceID,
+				TargetBoardID:     targetBoardID,
+				TargetListID:      targetListID,
+			},
+		},
 	}
 
 	authzResponse, err := s.authz.AuthorizeRequest(ctx, authzRequest)
@@ -400,6 +409,25 @@ func (s *InboxService) MoveInboxCardToListInBoard(ctx context.Context, userID, c
 
 }
 
+func (s *InboxService) resolveBoardCardPosition(ctx context.Context, targetListID uuid.UUID, req MoveInboxCardRequest) (string, error) {
+	if req.BeforeID != nil {
+		beforeListcard, err := s.ListCardsRepo.GetListCardByListAndCardTX(ctx, s.db, targetListID, *req.BeforeID, s.includeDeleted)
+		if err != nil {
+			return "", err
+		}
+		return s.CardPositionHelper.CardPosBeforeID(ctx, targetListID, beforeListcard.ID)
+	}
+
+	if req.InsertAt != nil {
+		if *req.InsertAt == PositionStart {
+			return s.CardPositionHelper.CardPosAtListStart(ctx, targetListID)
+		}
+		return s.CardPositionHelper.CardPosAtListEnd(ctx, targetListID)
+	}
+
+	return s.CardPositionHelper.CardPosAtListEnd(ctx, targetListID)
+}
+
 func (s *InboxService) MoveInboxCard(ctx context.Context, userID, cardID uuid.UUID, correlationID uuid.UUID, req MoveInboxCardRequest) (*dto.InboxCardResponse, error) {
 
 	var newPos string
@@ -439,5 +467,211 @@ func (s *InboxService) MoveInboxCard(ctx context.Context, userID, cardID uuid.UU
 		return nil, err
 	}
 	response := dto.InboxCardToResponse(updatedCard)
+	return &response, nil
+}
+
+func (s *InboxService) CopyInboxCardToListInBoard(ctx context.Context, userID, cardID, targetWorkspaceID, targetBoardID, targetListID, correlationID uuid.UUID, req CopyInboxCardToBoardRequest) (*dto.ListCardResponse, error) {
+
+	inboxCard, err := s.repo.GetInboxCardByCardID(ctx, userID, cardID, s.includeDeleted)
+	if err != nil {
+		return nil, err
+	}
+
+	isMirror, _, err := s.isMirrorCard(ctx, cardID)
+	if err != nil {
+		return nil, err
+	}
+	if isMirror {
+		sourceBoard, rootBoardList, err := s.getRootBoardAndBoardListForMirrorCard(ctx, *inboxCard)
+		if err != nil {
+			return nil, err
+		}
+		targetBoardList, err := s.BoardListRepo.GetBoardList(ctx, targetBoardID, targetListID, s.includeDeleted)
+		if err != nil {
+			return nil, err
+		}
+
+		authz, err := s.authz.AuthorizeRequest(ctx, authzdto.Request{
+			UserID:        userID,
+			CorrelationID: correlationID,
+			Action:        actions.CopyListCard,
+			Payload: authzdto.RequestPayload{
+				CopyListCardPayload: &authzdto.CopyListCardPayload{
+					ReadListCardPayload: authzdto.ReadListCardPayload{
+						WorkspaceID:       sourceBoard.WorkspaceID,
+						CardID:            cardID,
+						SourceBoardListID: rootBoardList.ID,
+						RootListCardID:    inboxCard.RootListCardID,
+					},
+					CreateListCardPayload: authzdto.CreateListCardPayload{
+						TargetWorkspaceID: targetWorkspaceID,
+						TargetBoardListID: targetBoardList.ID,
+					},
+				},
+			},
+		})
+		if err != nil {
+			return nil, err
+		}
+		if !authz.Authorized {
+			fmt.Println("Error: user is not authorized to copy the card to the target board, error:", err)
+			return nil, domainerr.ErrForbidden
+		}
+
+		execResult, err := s.ListCardsService.ExecuteCopyCardToList(ctx, userID, sourceBoard.ID, cardID, listcards.CopyCardToListRequest{
+			MirrorCardToListRequest: listcards.MirrorCardToListRequest{
+				TargetBoardID: targetBoardID,
+				TargetListID:  targetListID,
+				BeforeID:      req.BeforeID,
+				InsertAt:      req.InsertAt,
+			},
+			Title: req.Title,
+			CopyCardRequest: listcards.CopyCardRequest{
+				KeepComments:   req.KeepComments,
+				KeepMembers:    req.KeepMembers,
+				KeepLabels:     req.KeepLabels,
+				KeepChecklists: req.KeepChecklists,
+			},
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		response := dto.ListCardToResponse(execResult.NewListCard)
+		return &response, nil
+	} else {
+		targetBoardList, err := s.BoardListRepo.GetBoardList(ctx, targetBoardID, targetListID, s.includeDeleted)
+		if err != nil {
+			return nil, err
+		}
+		authz, err := s.authz.AuthorizeRequest(ctx, authzdto.Request{
+			UserID:        userID,
+			CorrelationID: correlationID,
+			Action:        actions.CreateListCard,
+			Payload: authzdto.RequestPayload{
+				CreateListCardPayload: &authzdto.CreateListCardPayload{
+					TargetWorkspaceID: targetWorkspaceID,
+					TargetBoardListID: targetBoardList.ID,
+				},
+			},
+		})
+		if err != nil {
+			return nil, err
+		}
+		if !authz.Authorized {
+			return nil, domainerr.ErrForbidden
+		}
+
+		position, err := s.resolveBoardCardPosition(ctx, targetListID, req.MoveInboxCardRequest)
+		if err != nil {
+			return nil, err
+		}
+
+		var newCard models.Card
+		var newListCard models.ListCard
+		err = s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+			originalCard, err := s.CardsRepo.GetCardByIDTX(ctx, tx, cardID, s.includeDeleted)
+			if err != nil {
+				return err
+			}
+
+			newCard = models.Card{
+				ID:              uuid.New(),
+				Title:           originalCard.Title,
+				Description:     originalCard.Description,
+				StartDate:       originalCard.StartDate,
+				EndDate:         originalCard.EndDate,
+				Done:            originalCard.Done,
+				Props:           originalCard.Props,
+				CreatedByUserID: userID,
+				CreatedInListID: targetListID,
+			}
+			if req.Title != nil {
+				newCard.Title = *req.Title
+			}
+
+			if err := s.CardsRepo.CreateCardTX(ctx, tx, &newCard); err != nil {
+				return err
+			}
+
+			newListCard = models.ListCard{
+				ID:     uuid.New(),
+				CardID: newCard.ID,
+				ListID: targetListID,
+				Pos:    position,
+			}
+			newListCard.RootID = newListCard.ID
+
+			if err := s.ListCardsRepo.CreateCardListTX(ctx, tx, &newListCard); err != nil {
+				return err
+			}
+
+			if req.KeepChecklists {
+				checklistDomain := listcards.NewCheckListDomain()
+				if err := s.ListCardsService.CopyCardChecklistsTX(ctx, tx, cardID, &newCard, checklistDomain); err != nil {
+					return err
+				}
+			}
+
+			return nil
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		response := dto.ListCardToResponse(&newListCard)
+		return &response, nil
+	}
+
+}
+
+func (s *InboxService) DetatchInboxCard(ctx context.Context,
+	userID, cardID uuid.UUID, correlationID uuid.UUID) (*dto.InboxCardResponse, error) {
+
+	authorization, err := s.authz.AuthorizeRequest(ctx, authzdto.Request{
+		UserID:        userID,
+		CorrelationID: correlationID,
+		Action:        actions.InboxCardDetatch,
+		Payload: authzdto.RequestPayload{
+			InboxCardDetatchPayload: &authzdto.InboxCardDetatchPayload{
+				CardID: cardID,
+			},
+		},
+	})
+	if err != nil {
+		fmt.Println("Error authorizing detatch inbox card request:", err)
+		return nil, err
+	}
+	if !authorization.Authorized {
+		fmt.Println("User is not authorized to detatch the inbox card")
+		return nil, domainerr.ErrForbidden
+	}
+	var deletedCard *models.UserInboxCard
+	err = s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var err error
+		deletedCard, err = s.repo.GetInboxCardByCardIDTX(ctx, tx, userID, cardID, s.includeDeleted)
+		if err != nil {
+			fmt.Println("Error fetching inbox card for detatch:", err)
+			return err
+		}
+		if deletedCard == nil {
+			fmt.Println("Inbox card not found for detatch")
+			return domainerr.ErrNotFound
+		}
+		if err := s.repo.DeleteInboxCardTX(ctx, tx, userID, cardID); err != nil {
+			fmt.Println("Error deleting inbox card for detatch:", err)
+
+			return err
+		}
+		return nil
+	})
+
+	if err != nil {
+		fmt.Println("Error in transaction for detatching inbox card:", err)
+		return nil, err
+	}
+
+	response := dto.InboxCardToResponse(deletedCard)
+
 	return &response, nil
 }

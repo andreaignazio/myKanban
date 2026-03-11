@@ -16,14 +16,13 @@ import { useCardsStore } from "@/stores/cardsStore";
 import { ConfirmDeletionPopover } from "./ConfirmDeletion";
 import { useUiStore, type DomainModalData } from "@/stores/uiStore";
 import { useBoardDetailStore } from "@/stores/boardDetailStore";
+import { useUserInboxStore } from "@/stores/userInboxStore";
+import type { CardContext } from "@/domain/cardContext";
 
 type CardEditMenuProps = {
-    listId: string;
-    cardID: string;
+    cardContext: CardContext;
     onClose: () => void;
     menuId?: string;
-    source?: "board" | "inbox" | "inbox-mirror";
-    // Define the props for the CardEditMenu component here
 }
 
 
@@ -39,7 +38,8 @@ type MenuItem = {
 type MenuItemAndID = MenuItem & { menuId?: string }
 
 export const CardEditMenu = forwardRef<HTMLDivElement, CardEditMenuProps>((props, ref) => {
-    const { listId, cardID, onClose, source = "board" } = props;
+    const { cardContext, onClose } = props;
+    const { cardId: cardID, sourceListId: listId, source = "board" } = cardContext;
     const iconClass = "w-4 h-4 text-neutral-400"
     const isInboxSource = source === "inbox" || source === "inbox-mirror"
     const navigate = useNavigate()
@@ -47,6 +47,7 @@ export const CardEditMenu = forwardRef<HTMLDivElement, CardEditMenuProps>((props
     const { workspaceId, boardId } = useParams<{ workspaceId: string; boardId: string }>()
     const cardActions = useCardActionRegistry();
     const cardsStore = useCardsStore();
+    const detatchInboxCard = useUserInboxStore((state) => state.detatchInboxCard)
     const getRootListIdForCardId = useBoardDetailStore((state) => state.getRootListIdForCardId);
     const resolvedListId = listId || getRootListIdForCardId(cardID) || "";
 
@@ -56,11 +57,12 @@ export const CardEditMenu = forwardRef<HTMLDivElement, CardEditMenuProps>((props
     const handleOpenCardDetailMenu = () => {
         onClose();
         cardActions.openCardDetailMenu({
-            cardID: cardID,
-            sourceListID: listId,
+            cardContext: {
+                ...cardContext,
+                openedFrom: "card-edit-menu",
+            },
             boardID: boardId!,
             workspaceId: workspaceId!,
-            openedFrom: "card-edit-menu"
         })
     };
 
@@ -82,6 +84,12 @@ export const CardEditMenu = forwardRef<HTMLDivElement, CardEditMenuProps>((props
         }
     }
 
+    const detatchFromInbox = async () => {
+        if (!isInboxSource || !cardID) return;
+        await detatchInboxCard(cardID)
+        handleCloseAllMenu(props.menuId ?? "card-edit-menu")
+    }
+
     const archiveCardWithConfirmation = () => {
         const data: DomainModalData = {
             componentent: (onCloseModal) => (
@@ -94,6 +102,26 @@ export const CardEditMenu = forwardRef<HTMLDivElement, CardEditMenuProps>((props
                     title="Archive card?"
                     body="Are you sure you want to archive this card?"
                     submitLabel="Archive"
+                />
+            ),
+            anchorRef: null,
+        }
+
+        useUiStore.getState().setDomainModalOpen(true, data)
+    }
+
+    const detatchInboxCardWithConfirmation = () => {
+        const data: DomainModalData = {
+            componentent: (onCloseModal) => (
+                <ConfirmDeletionPopover
+                    onClose={onCloseModal}
+                    onSubmit={() => {
+                        void detatchFromInbox();
+                        onCloseModal();
+                    }}
+                    title="Detatch from inbox?"
+                    body="Are you sure you want to detatch this card from the inbox?"
+                    submitLabel="Detatch"
                 />
             ),
             anchorRef: null,
@@ -136,7 +164,7 @@ export const CardEditMenu = forwardRef<HTMLDivElement, CardEditMenuProps>((props
         {
             id: "copy", label: "Copy", icon: <CopyIcon className={iconClass} />,
             menuToOpen: ({ onClose, ref }) => <CardMoveMenu onClose={onClose} ref={ref} cardId={cardID} listId={listId} mode="copy" />,
-            menuId: "card-edit-menu-copy"
+            menuId: "card-edit-menu-copy", shouldShow: !isInboxSource
         },
         {
             id: "copyLink", label: "Copy Link", icon: <Link2Icon className={iconClass} />,
@@ -148,9 +176,9 @@ export const CardEditMenu = forwardRef<HTMLDivElement, CardEditMenuProps>((props
             menuId: "card-edit-menu-mirror", shouldShow: !isInboxSource
         },
         {
-            id: "insertIntoBoard", label: "Insert into Board", icon: <ArrowBigRight className={iconClass} />,
-            menuToOpen: ({ onClose, ref }) => <CardMoveMenu onClose={onClose} ref={ref} cardId={cardID} listId={listId} mode="mirror" />,
-            menuId: "card-edit-menu-insert-into-board", shouldShow: source === "inbox"
+            id: "copyToBoard", label: "Copy to Board", icon: <ArrowBigRight className={iconClass} />,
+            menuToOpen: ({ onClose, ref }) => <CardMoveMenu onClose={onClose} ref={ref} cardId={cardID} listId={listId} mode="copyInboxCard" />,
+            menuId: "card-edit-menu-insert-into-board", shouldShow: isInboxSource
         },
 
 
@@ -159,14 +187,14 @@ export const CardEditMenu = forwardRef<HTMLDivElement, CardEditMenuProps>((props
             label: "Archive",
             icon: <ArchiveIcon className={iconClass} />,
             actionToPerform: () => archiveCardWithConfirmation(),
-            shouldShow: source !== "inbox-mirror",
+            shouldShow: !isInboxSource,
         },
         {
-            id: "removeFromInbox",
-            label: "Remove from Inbox",
+            id: "detatchFromInbox",
+            label: "Detatch from Inbox",
             icon: <ArchiveIcon className={iconClass} />,
-            actionToPerform: () => archiveCardWithConfirmation(),
-            shouldShow: source === "inbox-mirror",
+            actionToPerform: () => detatchInboxCardWithConfirmation(),
+            shouldShow: isInboxSource,
         }
 
     ]

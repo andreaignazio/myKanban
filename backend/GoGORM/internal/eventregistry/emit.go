@@ -54,6 +54,18 @@ func (s *EventRegistryService) Emit(ctx context.Context, tx *gorm.DB, event Doma
 		return err
 	}
 
+	var mirrorPropagationResult *MirrorPropagationResult
+	if shouldAttachRootBoardInvalidations(event.Type) || shouldResolveAdditionalFanoutBoards(event.Type) {
+		mirrorPropagationResult, err = s.resolveMirrorPropagation(ctx, MirrorPropagationInput{
+			Event:       event,
+			BuildResult: buildResult,
+		})
+		if err != nil {
+			fmt.Println("Error-5b: failed to resolve mirror propagation in EventRegistryService.Emit for event type:", event.Type, "error:", err)
+			return err
+		}
+	}
+
 	payloadByte, err := json.Marshal(buildResult.FeedPayload)
 	if err != nil {
 		fmt.Println("Error-6: failed to marshal event payload in EventRegistryService.Emit for event type:", event.Type, "error:", err)
@@ -157,6 +169,18 @@ func (s *EventRegistryService) Emit(ctx context.Context, tx *gorm.DB, event Doma
 			affectedBoardIDs = append(affectedBoardIDs, *event.BoardID)
 		}
 	}
+	if mirrorPropagationResult != nil {
+		for _, boardID := range mirrorPropagationResult.AffectedBoardIDs {
+			if boardID == uuid.Nil {
+				continue
+			}
+			if _, exists := affectedBoardSet[boardID]; exists {
+				continue
+			}
+			affectedBoardSet[boardID] = struct{}{}
+			affectedBoardIDs = append(affectedBoardIDs, boardID)
+		}
+	}
 
 	additionalFanoutBoardIDs, err := s.resolveAdditionalFanoutBoardIDs(ctx, event, buildResult)
 	if err != nil {
@@ -174,22 +198,50 @@ func (s *EventRegistryService) Emit(ctx context.Context, tx *gorm.DB, event Doma
 		affectedBoardIDs = append(affectedBoardIDs, boardID)
 	}
 
-	if (event.Type == EventCardMirrored || event.Type == EventCardMirroredTarget || event.Type == EventCardMirroredSource) && event.BoardID != nil {
-		affectedBoardIDs = []uuid.UUID{*event.BoardID}
+	if event.Type == EventCardMirrored || event.Type == EventCardMirroredTarget || event.Type == EventCardMirroredSource {
+		fmt.Printf("[eventregistry][card-mirrored.pre-reset] event=%s board=%v targets=%+v targetIDsByEntity=%+v resolvedBoardIDs=%v additionalFanoutBoardIDs=%v affectedBoardIDs=%v\n", event.Type, event.BoardID, targets, targetIDsByEntity, resolvedBoardIDs, additionalFanoutBoardIDs, affectedBoardIDs)
 	}
 
-	fmt.Println("Before Emitted event:", event.Type, "for BoardID:", event.BoardID, "with targets:", targets)
+	// Disabled on purpose: forcing card mirrored events to a single board drops already
+	// resolved fan-out targets and can desynchronize affectedBoardIDs from affectedBoardSet.
+	// if (event.Type == EventCardMirrored || event.Type == EventCardMirroredTarget || event.Type == EventCardMirroredSource) && event.BoardID != nil {
+	// 	affectedBoardIDs = []uuid.UUID{*event.BoardID}
+	// 	affectedBoardSet = map[uuid.UUID]struct{}{*event.BoardID: {}}
+	// 	fmt.Printf("[eventregistry][card-mirrored.post-reset] event=%s board=%v affectedBoardIDs=%v affectedBoardSet=%+v\n", event.Type, event.BoardID, affectedBoardIDs, affectedBoardSet)
+	// }
+
+	boardIdsForMirroredListsTargets, err := s.resolveBoardIDsForMirroredListsTargets(ctx, targetIDsByEntity)
+	fmt.Println("Resolved board IDs for mirrored lists targets for event:", event.Type, "boardIdsForMirroredListsTargets:", boardIdsForMirroredListsTargets)
+	if err != nil {
+		fmt.Println("Error-11d: failed to resolve board IDs for mirrored lists targets for event:", event.Type, "error:", err)
+		return err
+	}
+
+	for _, boardID := range boardIdsForMirroredListsTargets {
+		if boardID == uuid.Nil {
+			continue
+		}
+		if _, exists := affectedBoardSet[boardID]; exists {
+			continue
+		}
+		affectedBoardSet[boardID] = struct{}{}
+		affectedBoardIDs = append(affectedBoardIDs, boardID)
+	}
+	if event.Type == EventCardMirrored || event.Type == EventCardMirroredTarget || event.Type == EventCardMirroredSource {
+		fmt.Printf("[eventregistry][card-mirrored.pre-broadcast] event=%s board=%v mirroredListTargetBoardIDs=%v affectedBoardIDs=%v affectedBoardSet=%+v\n", event.Type, event.BoardID, boardIdsForMirroredListsTargets, affectedBoardIDs, affectedBoardSet)
+	}
+
+	fmt.Println("Before Emitted event:", event.Type, "for BoardID:", event.BoardID)
 	if event.Type.IsBoardCoreToastEvent() {
 		if len(affectedBoardIDs) == 0 && event.BoardID != nil {
 			affectedBoardIDs = append(affectedBoardIDs, *event.BoardID)
 		}
+		invalidatedListCardIDs := []string{}
+		if mirrorPropagationResult != nil {
+			invalidatedListCardIDs = uuidListToStrings(mirrorPropagationResult.InvalidatedListCardIDs)
+		}
 		for _, boardID := range affectedBoardIDs {
-			fmt.Println("Emitting board event to WebSocket for event type:", event.Type, "BoardID:", boardID)
-			invalidatedListCardIDs, err := s.resolveRootBoardInvalidationsForBoardEvent(ctx, event, buildResult, boardID)
-			if err != nil {
-				fmt.Println("Error-14: failed to resolve root board invalidations for event type:", event.Type, "BoardID:", boardID, "error:", err)
-				return err
-			}
+			fmt.Println("Emitting board event to WebSocket for event type:", event.Type, "BoardID:", boardID, "affectedBoardIDs:", affectedBoardIDs)
 			wsPayload := EventPayloadEnvelope{
 				StatePayload:    buildResult.StatePayload,
 				RealtimePayload: buildResult.RealtimePayload,
@@ -222,10 +274,9 @@ func (s *EventRegistryService) Emit(ctx context.Context, tx *gorm.DB, event Doma
 			resolvedBoardID = *event.BoardID
 		}
 
-		invalidatedListCardIDs, err := s.resolveRootBoardInvalidationsForBoardEvent(ctx, event, buildResult, resolvedBoardID)
-		if err != nil {
-			fmt.Println("Error-15: failed to resolve workspace invalidations for event type:", event.Type, "error:", err)
-			return err
+		invalidatedListCardIDs := []string{}
+		if mirrorPropagationResult != nil {
+			invalidatedListCardIDs = uuidListToStrings(mirrorPropagationResult.InvalidatedListCardIDs)
 		}
 
 		workspacePayload := EventPayloadEnvelope{
@@ -260,10 +311,9 @@ func (s *EventRegistryService) Emit(ctx context.Context, tx *gorm.DB, event Doma
 			resolvedBoardID = *event.BoardID
 		}
 
-		invalidatedListCardIDs, err := s.resolveRootBoardInvalidationsForBoardEvent(ctx, event, buildResult, resolvedBoardID)
-		if err != nil {
-			fmt.Println("Error-16: failed to resolve workspace core invalidations for event type:", event.Type, "error:", err)
-			return err
+		invalidatedListCardIDs := []string{}
+		if mirrorPropagationResult != nil {
+			invalidatedListCardIDs = uuidListToStrings(mirrorPropagationResult.InvalidatedListCardIDs)
 		}
 
 		workspacePayload := EventPayloadEnvelope{
@@ -285,37 +335,99 @@ func (s *EventRegistryService) Emit(ctx context.Context, tx *gorm.DB, event Doma
 		}
 		s.Hub.BroadCastToWorkspace(wsEvent)
 	}
+	if err := s.emitMirrorPropagationUserEvents(event, mirrorPropagationResult); err != nil {
+		return err
+	}
 	if event.Type.IsUserFanOutEvent() {
-		fmt.Printf("[eventregistry][fanout.start] event=%s workspace=%v recipients=%d correlation=%v\n", event.Type, event.WorkspaceID, len(buildResult.UserPayload), event.CorrelationID)
-		for userID, payload := range buildResult.UserPayload {
-			userEventType := event.UserEventType
-			if buildResult.UserEventType != nil {
-				userEventType = buildResult.UserEventType
-			}
-			if buildResult.UserEventTypeByUserID != nil {
-				if byUserType, ok := buildResult.UserEventTypeByUserID[userID]; ok {
-					userEventType = &byUserType
-				}
-			}
-			if userEventType == nil {
-				return fmt.Errorf("event registry emit: missing user event type for fan-out event type %s and user %s", event.Type, userID)
-			}
-
-			fmt.Printf("[eventregistry][fanout.emit] event=%s userEventType=%s recipient=%s correlation=%v payloadKeys=%+v\n", event.Type, *userEventType, userID.String(), event.CorrelationID, payload)
-			wsEvent := ws.UserEvent{
-				Type:            string(*userEventType),
-				RecipientUserID: userID,
-				WorkspaceID:     event.WorkspaceID,
-				Payload:         payload,
-				TS:              event.OccurredAt,
-				ID:              uuid.New(),
-				ActorUserID:     event.ActorUserID,
-				CorrelationID:   event.CorrelationID,
-			}
-			s.Hub.BroadCastToUser(wsEvent)
+		if err := s.emitHandlerUserFanOutEvents(event, buildResult); err != nil {
+			return err
 		}
 	}
 
+	return nil
+}
+
+func (s *EventRegistryService) emitUserEvent(userEvent ws.UserEvent) {
+	if userEvent.RecipientUserID == uuid.Nil {
+		return
+	}
+	if userEvent.ID == uuid.Nil {
+		userEvent.ID = uuid.New()
+	}
+	s.Hub.BroadCastToUser(userEvent)
+}
+
+func (s *EventRegistryService) emitUserEvents(userEvents []ws.UserEvent) {
+	for _, userEvent := range userEvents {
+		s.emitUserEvent(userEvent)
+	}
+}
+
+func (s *EventRegistryService) emitMirrorPropagationUserEvents(event DomainEvent, mirrorPropagationResult *MirrorPropagationResult) error {
+	if mirrorPropagationResult == nil || len(mirrorPropagationResult.UserTargets) == 0 {
+		return nil
+	}
+
+	userEvents := make([]ws.UserEvent, 0, len(mirrorPropagationResult.UserTargets))
+	for _, userTarget := range mirrorPropagationResult.UserTargets {
+		if userTarget.UserID == uuid.Nil {
+			continue
+		}
+		if len(userTarget.AffectedInboxCardIDs) == 0 && len(userTarget.InvalidatedListCardIDs) == 0 {
+			continue
+		}
+
+		userEvents = append(userEvents, ws.UserEvent{
+			Type:            string(ws.EventInboxCardsInvalidated),
+			RecipientUserID: userTarget.UserID,
+			WorkspaceID:     event.WorkspaceID,
+			Payload: ws.UserEventPayload{
+				InboxCardsInvalidatedPayload: &ws.InboxCardsInvalidatedPayload{
+					AffectedInboxCardIDs:   userTarget.AffectedInboxCardIDs,
+					InvalidatedListCardIDs: userTarget.InvalidatedListCardIDs,
+				},
+			},
+			TS:            event.OccurredAt,
+			ActorUserID:   event.ActorUserID,
+			CorrelationID: event.CorrelationID,
+		})
+	}
+
+	s.emitUserEvents(userEvents)
+	return nil
+}
+
+func (s *EventRegistryService) emitHandlerUserFanOutEvents(event DomainEvent, buildResult EventBuildResult) error {
+	fmt.Printf("[eventregistry][fanout.start] event=%s workspace=%v recipients=%d correlation=%v\n", event.Type, event.WorkspaceID, len(buildResult.UserPayload), event.CorrelationID)
+
+	userEvents := make([]ws.UserEvent, 0, len(buildResult.UserPayload))
+	for userID, payload := range buildResult.UserPayload {
+		userEventType := event.UserEventType
+		if buildResult.UserEventType != nil {
+			userEventType = buildResult.UserEventType
+		}
+		if buildResult.UserEventTypeByUserID != nil {
+			if byUserType, ok := buildResult.UserEventTypeByUserID[userID]; ok {
+				userEventType = &byUserType
+			}
+		}
+		if userEventType == nil {
+			return fmt.Errorf("event registry emit: missing user event type for fan-out event type %s and user %s", event.Type, userID)
+		}
+
+		fmt.Printf("[eventregistry][fanout.emit] event=%s userEventType=%s recipient=%s correlation=%v payloadKeys=%+v\n", event.Type, *userEventType, userID.String(), event.CorrelationID, payload)
+		userEvents = append(userEvents, ws.UserEvent{
+			Type:            string(*userEventType),
+			RecipientUserID: userID,
+			WorkspaceID:     event.WorkspaceID,
+			Payload:         payload,
+			TS:              event.OccurredAt,
+			ActorUserID:     event.ActorUserID,
+			CorrelationID:   event.CorrelationID,
+		})
+	}
+
+	s.emitUserEvents(userEvents)
 	return nil
 }
 
@@ -381,4 +493,17 @@ func (s *EventRegistryService) EmitNotificationHandler(ctx context.Context, even
 		}
 	}
 	return nil
+}
+
+func (s *EventRegistryService) resolveBoardIDsForMirroredListsTargets(ctx context.Context, targetIDsByEntity map[string][]uuid.UUID) ([]uuid.UUID, error) {
+
+	listIds := targetIDsByEntity["list"]
+	if len(listIds) == 0 {
+		return nil, nil
+	}
+	boardIds, err := s.ResolveBoardIDsForMirroredLists(ctx, listIds)
+	if err != nil {
+		return nil, err
+	}
+	return boardIds, nil
 }

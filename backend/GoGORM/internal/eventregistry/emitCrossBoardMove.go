@@ -38,12 +38,21 @@ func (s *EventRegistryService) EmitCrossBoardMove(ctx context.Context, req Cross
 		req.WorkspaceID = &workspaceID
 	}
 
-	boardConsumers, err := s.repo.ResolveBoardConsumersForRootListCard(ctx, effectiveRootListCardID, req.SourceBoardID, req.TargetBoardID)
+	propagationResult, err := s.resolveMirrorPropagation(ctx, MirrorPropagationInput{
+		Event:           DomainEvent{Type: EventListCardCrossBoardMoved},
+		RootListCardID:  effectiveRootListCardID,
+		MovedListCardID: req.MovedListCardID,
+		SourceBoardID:   req.SourceBoardID,
+		TargetBoardID:   req.TargetBoardID,
+	})
 	if err != nil {
 		return err
 	}
+	if propagationResult == nil {
+		return fmt.Errorf("event registry cross-board move: missing mirror propagation result")
+	}
 
-	externalRootRows, err := s.repo.GetExternalRootRefsByIDs(ctx, []uuid.UUID{effectiveRootListCardID})
+	externalRootRows, err := s.repo.GetExternalRootRefsByIDs(ctx, propagationResult.RootListCardIDs)
 	if err != nil {
 		return err
 	}
@@ -66,28 +75,9 @@ func (s *EventRegistryService) EmitCrossBoardMove(ctx context.Context, req Cross
 		return ids
 	}
 
-	var Invalidations EventInvalidations
-
-	if req.MovedListCardID == req.RootListCardID {
-		listCardIds, err := s.repo.ResolveListCardIDsByRootID(ctx, req.RootListCardID)
-		if err != nil {
-			return err
-		}
-		Invalidations.RootBoardListCardIds = make([]string, 0, len(listCardIds))
-		for _, id := range listCardIds {
-			if id == uuid.Nil {
-				continue
-			}
-			Invalidations.RootBoardListCardIds = append(Invalidations.RootBoardListCardIds, id.String())
-		}
-	}
+	invalidations := &EventInvalidations{RootBoardListCardIds: uuidListToStrings(propagationResult.InvalidatedListCardIDs)}
 
 	buildBoardPayload := func(boardID uuid.UUID) CrossBoardMoveBoardPayload {
-		invalidatedListCardIDs := []string{}
-		if req.MovedListCardID != uuid.Nil {
-			invalidatedListCardIDs = append(invalidatedListCardIDs, req.MovedListCardID.String())
-		}
-
 		cards := map[uuid.UUID]dto.CardResponse{}
 		if req.CardPatch.ID != uuid.Nil {
 			cards[req.CardID] = req.CardPatch
@@ -108,7 +98,7 @@ func (s *EventRegistryService) EmitCrossBoardMove(ctx context.Context, req Cross
 			ToListCards:         []dto.ListCardResponse{},
 			ListCardIdsByListID: map[string][]string{},
 
-			Invalidations: &Invalidations,
+			Invalidations: invalidations,
 		}
 
 		if boardID == req.SourceBoardID {
@@ -119,11 +109,39 @@ func (s *EventRegistryService) EmitCrossBoardMove(ctx context.Context, req Cross
 			payload.ToListCards = req.ToListCards
 			payload.ListCardIdsByListID[req.TargetListID.String()] = mapIDs(req.ToListCards)
 		}
+		payload.FromListCards = req.FromListCards
+		payload.ToListCards = req.ToListCards
+		payload.ListCardIdsByListID[req.TargetListID.String()] = mapIDs(req.ToListCards)
+		payload.ListCardIdsByListID[req.SourceListID.String()] = mapIDs(req.FromListCards)
 
 		return payload
 	}
 
-	for _, boardID := range boardConsumers {
+	mirrorListsBoardIds, err := s.ResolveBoardIDsForMirroredLists(ctx, []uuid.UUID{req.TargetListID})
+	if err != nil {
+		return err
+	}
+
+	targetBoardIdsMap := make(map[uuid.UUID]struct{})
+	for _, boardID := range mirrorListsBoardIds {
+		if boardID == uuid.Nil {
+			continue
+		}
+		targetBoardIdsMap[boardID] = struct{}{}
+	}
+	for _, boardID := range propagationResult.AffectedBoardIDs {
+		if boardID == uuid.Nil {
+			continue
+		}
+		targetBoardIdsMap[boardID] = struct{}{}
+	}
+
+	targetBoardIDs := make([]uuid.UUID, 0, len(targetBoardIdsMap))
+	for boardID := range targetBoardIdsMap {
+		targetBoardIDs = append(targetBoardIDs, boardID)
+	}
+
+	for _, boardID := range targetBoardIDs {
 		if boardID == uuid.Nil {
 			continue
 		}
@@ -149,25 +167,40 @@ func (s *EventRegistryService) EmitCrossBoardMove(ctx context.Context, req Cross
 		externalRootsByID[row.RootListCardID] = dto.ExternalRootRefToResponse(&row)
 	}
 
-	s.ResolveCrossBoardMoveInboxFanout(ctx, effectiveRootListCardID, externalRootsByID, req)
+	if err := s.emitCrossBoardMoveUserEvents(propagationResult.UserTargets, externalRootsByID, req); err != nil {
+		return err
+	}
 
 	return nil
 }
 
-func (s *EventRegistryService) ResolveCrossBoardMoveInboxFanout(ctx context.Context, effectiveRootListCardID uuid.UUID,
+func (s *EventRegistryService) emitCrossBoardMoveUserEvents(userTargets []MirrorUserTarget,
 	externalRootsByID map[uuid.UUID]dto.ExternalRootRefResponse, req CrossBoardMoveEmitRequest) error {
-	inboxUsers, err := s.repo.ResolveInboxUserConsumersForRootListCard(ctx, effectiveRootListCardID)
-	if err != nil {
-		return err
+	effectiveRootListCardID := req.RootListCardID
+	if effectiveRootListCardID == uuid.Nil {
+		effectiveRootListCardID = req.MovedListCardID
 	}
 
-	for _, userID := range inboxUsers {
-		if userID == uuid.Nil {
+	userEvents := make([]ws.UserEvent, 0, len(userTargets)*2)
+	for _, userTarget := range userTargets {
+		if userTarget.UserID == uuid.Nil {
 			continue
 		}
-		affectedInboxCardIDs, err := s.repo.ResolveInboxCardIDsForUserAndRootListCard(ctx, userID, effectiveRootListCardID)
-		if err != nil {
-			return err
+		if len(userTarget.AffectedInboxCardIDs) > 0 || len(userTarget.InvalidatedListCardIDs) > 0 {
+			userEvents = append(userEvents, ws.UserEvent{
+				Type:            string(ws.EventInboxCardsInvalidated),
+				RecipientUserID: userTarget.UserID,
+				WorkspaceID:     req.WorkspaceID,
+				Payload: ws.UserEventPayload{
+					InboxCardsInvalidatedPayload: &ws.InboxCardsInvalidatedPayload{
+						AffectedInboxCardIDs:   userTarget.AffectedInboxCardIDs,
+						InvalidatedListCardIDs: userTarget.InvalidatedListCardIDs,
+					},
+				},
+				TS:            req.OccurredAt,
+				ActorUserID:   req.ActorUserID,
+				CorrelationID: req.CorrelationID,
+			})
 		}
 
 		payload := ws.InboxRootCardMovedPayload{
@@ -177,13 +210,13 @@ func (s *EventRegistryService) ResolveCrossBoardMoveInboxFanout(ctx context.Cont
 			TargetBoardID:        req.TargetBoardID,
 			SourceListID:         req.SourceListID,
 			TargetListID:         req.TargetListID,
-			AffectedInboxCardIDs: affectedInboxCardIDs,
+			AffectedInboxCardIDs: userTarget.AffectedInboxCardIDs,
 			ExternalRootsByID:    externalRootsByID,
 		}
 
-		s.Hub.BroadCastToUser(ws.UserEvent{
+		userEvents = append(userEvents, ws.UserEvent{
 			Type:            string(ws.EventInboxRootCardMoved),
-			RecipientUserID: userID,
+			RecipientUserID: userTarget.UserID,
 			WorkspaceID:     req.WorkspaceID,
 			Payload: ws.UserEventPayload{
 				InboxRootCardMovedPayload: &payload,
@@ -193,6 +226,29 @@ func (s *EventRegistryService) ResolveCrossBoardMoveInboxFanout(ctx context.Cont
 			CorrelationID: req.CorrelationID,
 		})
 	}
+	s.emitUserEvents(userEvents)
 	return nil
 
+}
+
+func (s *EventRegistryService) ResolveBoardIDsForMirroredLists(ctx context.Context, listIDs []uuid.UUID) ([]uuid.UUID, error) {
+
+	boardLists, err := s.repo.GetBoardListsByListIds(ctx, listIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	boardIDs := make(map[uuid.UUID]struct{})
+
+	for _, boardList := range boardLists {
+		if boardList.BoardID != uuid.Nil {
+			boardIDs[boardList.BoardID] = struct{}{}
+		}
+	}
+
+	result := make([]uuid.UUID, 0, len(boardIDs))
+	for boardID := range boardIDs {
+		result = append(result, boardID)
+	}
+	return result, nil
 }

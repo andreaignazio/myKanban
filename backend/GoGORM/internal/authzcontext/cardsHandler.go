@@ -5,6 +5,7 @@ import (
 	"GoGORM/internal/domainerr"
 	"GoGORM/internal/rbac"
 	"context"
+	"fmt"
 )
 
 type AuthzCardsHandler struct {
@@ -26,12 +27,23 @@ func NewAuthzCardsHandlerPatchCardInList(authzRepo authzRepo) *AuthzCardsHandler
 }
 
 func (h *AuthzCardsHandler) BuildAuthzContext(ctx context.Context, authzRequest authzdto.Request) (*authzdto.AuthzContext, error) {
+	payload := authzRequest.Payload.CardInListPatchPayload
+	if payload == nil {
+		return nil, domainerr.ErrValidation
+	}
 
-	cardID := authzRequest.Resource.ResourceID
+	cardID := payload.CardID
+	boardListID := payload.BoardListID
 
-	boardListID := authzRequest.AncillaryData[authzdto.ResourceTypeBoardList].ResourceID
+	boardList, err := h.authzRepo.GetBoardListByID(boardListID)
+	if err != nil {
+		return nil, err
+	}
+	if boardList == nil {
+		return nil, domainerr.ErrNotFound
+	}
 
-	effectiveBoardList, err := h.authzRepo.GetBoardListByCardIDAndBoardID(cardID, boardListID)
+	effectiveBoardList, err := h.authzRepo.GetBoardListByCardIDAndBoardID(cardID, boardList.BoardID)
 	if err != nil {
 		return nil, domainerr.ErrForbidden
 	}
@@ -62,13 +74,6 @@ func (h *AuthzCardsHandler) BuildAuthzContext(ctx context.Context, authzRequest 
 
 	policies := []authzdto.PolicySpec{boardMinRoleSpec, workspaceMinRoleSpec, boardListEditableSpec, cardEffectiveListSpec}
 
-	boardList, err := h.authzRepo.GetBoardListByID(boardListID)
-	if err != nil {
-		return nil, err
-	}
-	if boardList == nil {
-		return nil, domainerr.ErrNotFound
-	}
 	userBoard, err := h.authzRepo.GetUserBoard(authzRequest.UserID, boardList.BoardID)
 	if err != nil {
 		return nil, err
@@ -117,5 +122,6 @@ func (h *AuthzCardsHandler) BuildAuthzContext(ctx context.Context, authzRequest 
 		Facts:       facts,
 		PolicySpecs: policies,
 	}
+	fmt.Println("Built authz context for PatchCardInList:", context)
 	return context, nil
 }

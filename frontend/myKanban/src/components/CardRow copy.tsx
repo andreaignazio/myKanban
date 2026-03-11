@@ -3,6 +3,7 @@
 import { useBoardDetailStore, type ListCard } from "@/stores/boardDetailStore"
 import { useCardsStore } from "@/stores/cardsStore"
 import { useNavigate, useLocation, useParams } from "react-router-dom"
+import type { CardContext } from "@/domain/cardContext"
 
 import { TrashIcon } from "@heroicons/react/24/outline"
 import { useEffect, useRef, useState } from "react"
@@ -114,11 +115,17 @@ export const CardRow = ({ boardID, listId, listCardID: listCardID, cardId, index
 
     const editMenutID = "card-action-menu"
     function handleOpenCardActionModal() {
+        const cardContext: CardContext = {
+            cardId: cardID,
+            sourceListId: listID,
+            source: "board",
+            listCardId: listCardID,
+        }
         // console.log("Opening respond modal for share offer");
         const id = editMenutID;
         const descriptor: OverlayDescriptor = {
             id: id,
-            render: () => <CardEditMenu ref={ActionsMenuRef} cardID={cardID} listId={listID} onClose={() => onMenuClose(id)} />,
+            render: () => <CardEditMenu ref={ActionsMenuRef} cardContext={cardContext} onClose={() => onMenuClose(id)} />,
             anchorRef: cardRowRef,
             panelRef: ActionsMenuRef,
             type: "modal",

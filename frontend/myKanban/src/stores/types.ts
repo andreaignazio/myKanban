@@ -432,6 +432,7 @@ export type UserEventPayload = {
     UserNotificationCreatedPayload?: UserNotificationCreatedPayload;
     UserNotificationReadPayload?: UserNotificationReadPayload;
     UserNotificationReadAllPayload?: UserNotificationReadAllPayload;
+    InboxCardsInvalidatedPayload?: InboxCardsInvalidatedPayload;
     InboxRootCardMovedPayload?: InboxRootCardMovedPayload;
     CardsUserMemberAddedPayload?: CardsUserMemberAddedPayload;
     CardsUserMemberRemovedPayload?: CardsUserMemberRemovedPayload;
@@ -896,6 +897,11 @@ export type InboxRootCardMovedPayload = {
     AffectedInboxCardIDs: string[]
 }
 
+export type InboxCardsInvalidatedPayload = {
+    AffectedInboxCardIDs: string[]
+    InvalidatedListCardIDs: string[]
+}
+
 export type CreateBoardRequest = {
     Name: string;
     Visibility: "private" | "public" | "workspace";
@@ -1028,4 +1034,12 @@ export type UserWorkspacesBoardsResponse = UserWorkspaceData & {
 export type MoveInboxToListRequest = {
     InsertAt?: "start" | "end" | null;
     BeforeID?: string | null;
+}
+
+export type CopyInboxToListRequest = MoveInboxToListRequest & {
+    Title?: string | null;
+    KeepComments: boolean;
+    KeepMembers: boolean;
+    KeepLabels: boolean;
+    KeepChecklists: boolean;
 }

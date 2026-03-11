@@ -607,6 +607,27 @@ func (r *GormEventRepository) ResolveListCardIDsByBoardID(ctx context.Context, b
 	return result, nil
 }
 
+func (r *GormEventRepository) ResolveRootListCardIDsByBoardID(ctx context.Context, boardID uuid.UUID) ([]uuid.UUID, error) {
+	if boardID == uuid.Nil {
+		return []uuid.UUID{}, nil
+	}
+
+	result := make([]uuid.UUID, 0)
+	if err := r.db.WithContext(ctx).
+		Table("board_lists bl").
+		Distinct("lc.root_id").
+		Joins("JOIN list_cards lc ON lc.list_id = bl.list_id").
+		Where("bl.board_id = ?", boardID).
+		Where("bl.deleted_at IS NULL").
+		Where("lc.deleted_at IS NULL").
+		Where("lc.root_id IS NOT NULL").
+		Find(&result).Error; err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
 func (r *GormEventRepository) ResolveListCardIDsByRootID(ctx context.Context, rootListCardID uuid.UUID) ([]uuid.UUID, error) {
 	if rootListCardID == uuid.Nil {
 		return []uuid.UUID{}, nil
@@ -871,4 +892,16 @@ func (s *GormEventRepository) GetUserUnreadNotificationCount(ctx context.Context
 		return 0, err
 	}
 	return int(count), nil
+}
+
+func (s *GormEventRepository) GetBoardListsByListIds(ctx context.Context, listIDs []uuid.UUID) ([]models.BoardList, error) {
+	var boardLists []models.BoardList
+	err := s.db.WithContext(ctx).
+		Table("board_lists").
+		Where("list_id IN ? AND deleted_at IS NULL", listIDs).
+		Find(&boardLists).Error
+	if err != nil {
+		return nil, err
+	}
+	return boardLists, nil
 }

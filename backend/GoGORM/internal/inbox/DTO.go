@@ -30,6 +30,15 @@ type CopyCardToInboxRequest struct {
 	KeepChecklists bool    `json:"KeepChecklists"`
 }
 
+type CopyInboxCardToBoardRequest struct {
+	MoveInboxCardRequest
+	Title          *string `json:"Title,omitempty"`
+	KeepComments   bool    `json:"KeepComments"`
+	KeepMembers    bool    `json:"KeepMembers"`
+	KeepLabels     bool    `json:"KeepLabels"`
+	KeepChecklists bool    `json:"KeepChecklists"`
+}
+
 type CreateInboxCardRequest struct {
 	MirrorCardToInboxRequest
 	Title string `json:"Title" binding:"required"`

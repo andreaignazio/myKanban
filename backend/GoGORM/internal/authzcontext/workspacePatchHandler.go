@@ -17,6 +17,10 @@ func NewWorkspacePatchHandler(authzRepo authzRepo) *WorkspacePatchHandler {
 }
 
 func (h *WorkspacePatchHandler) BuildAuthzContext(ctx context.Context, request authzdto.Request) (*authzdto.AuthzContext, error) {
+	payload := request.Payload.WorkspacePatchPayload
+	if payload == nil {
+		return nil, domainerr.ErrValidation
+	}
 
 	specs := []authzdto.PolicySpec{
 		{
@@ -33,15 +37,11 @@ func (h *WorkspacePatchHandler) BuildAuthzContext(ctx context.Context, request a
 
 	facts := make(map[authzdto.FactKind]authzdto.Fact)
 
-	if request.WorkspaceID == nil {
-		return nil, domainerr.ErrForbidden
-	}
-
-	userWorkspace, err := h.authzRepo.GetWorkspaceUserRole(*request.WorkspaceID, request.UserID)
+	userWorkspace, err := h.authzRepo.GetWorkspaceUserRole(payload.WorkspaceID, request.UserID)
 	if err != nil {
 		return nil, err
 	}
-	subscription, err := h.authzRepo.GetWorkspaceSubscriptionPlan(*request.WorkspaceID)
+	subscription, err := h.authzRepo.GetWorkspaceSubscriptionPlan(payload.WorkspaceID)
 	if err != nil {
 		return nil, err
 	}

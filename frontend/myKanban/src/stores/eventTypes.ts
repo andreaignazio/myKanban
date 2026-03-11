@@ -77,7 +77,7 @@ export type CardsUserEventTypes =
     | "cards.user.member.added"
     | "cards.user.member.removed";
 
-export type InboxEventTypes = "inbox.rootcard.moved";
+export type InboxEventTypes = "inbox.rootcard.moved" | "inbox.cards.invalidated";
 
 export type DomainEventTypes =
     | CardEventTypes
@@ -96,6 +96,7 @@ export type UserEventTypes =
     | "user.notification.created"
     | "user.notification.read"
     | "user.notification.read_all"
+    | "inbox.cards.invalidated"
     | "inbox.rootcard.moved"
     | "cards.user.member.added"
     | "cards.user.member.removed"

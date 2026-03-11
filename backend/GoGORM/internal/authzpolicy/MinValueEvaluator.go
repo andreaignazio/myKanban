@@ -39,10 +39,18 @@ func (e *RequireMinimumFactValueEvaluator) Evaluate(spec authzdto.PolicySpec, fa
 func getMinimumFactValueComparator(factKind authzdto.FactKind) (MinimumFactComparator, error) {
 	switch factKind {
 	case authzdto.FactActorWorkspaceRole:
+		fallthrough
+	case authzdto.FactSourceWorkspaceRole:
+		fallthrough
+	case authzdto.FactTargetWorkspaceRole:
 		return &MinimumWorkspaceRoleComparator{}, nil
 	case authzdto.FactWorkspaceSubscriptionPlan:
 		return &MinimumSubscriptionPlanComparator{}, nil
 	case authzdto.FactBoardRole:
+		fallthrough
+	case authzdto.FactSourceBoardRole:
+		fallthrough
+	case authzdto.FactTargetBoardRole:
 		return &MinimumBoardRoleComparator{}, nil
 	default:
 		return nil, domainerr.ErrUnsupportedFact
@@ -60,11 +68,11 @@ type MinimumSubscriptionPlanComparator struct{}
 type MinimumBoardRoleComparator struct{}
 
 func (c *MinimumWorkspaceRoleComparator) Compare(factValue authzdto.Fact, requiredValue authzdto.Fact) (bool, error) {
-	role, err := parseRoleValue(factValue)
+	role, err := parseWorkspaceRoleValue(factValue)
 	if err != nil {
 		return false, err
 	}
-	requiredRole, err := parseRoleValue(requiredValue)
+	requiredRole, err := parseWorkspaceRoleValue(requiredValue)
 	if err != nil {
 		return false, err
 	}
@@ -88,22 +96,29 @@ func (c *MinimumSubscriptionPlanComparator) Compare(factValue authzdto.Fact, req
 }
 
 func (c *MinimumBoardRoleComparator) Compare(factValue authzdto.Fact, requiredValue authzdto.Fact) (bool, error) {
-	role, err := parseRoleValue(factValue)
+	role, err := parseBoardRoleValue(factValue)
 	if err != nil {
 		return false, err
 	}
-	requiredRole, err := parseRoleValue(requiredValue)
+	requiredRole, err := parseBoardRoleValue(requiredValue)
 	if err != nil {
 		return false, err
 	}
 	return role >= requiredRole, nil
 }
 
-func parseRoleValue(value authzdto.Fact) (rbac.Role, error) {
+func parseWorkspaceRoleValue(value authzdto.Fact) (rbac.Role, error) {
 	if value.WorkspaceRole == nil {
 		return 0, domainerr.ErrInvalidFactValue
 	}
 	return *value.WorkspaceRole, nil
+}
+
+func parseBoardRoleValue(value authzdto.Fact) (rbac.Role, error) {
+	if value.BoardRole == nil {
+		return 0, domainerr.ErrInvalidFactValue
+	}
+	return *value.BoardRole, nil
 }
 
 func parsePlanValue(value authzdto.Fact) (subscriptionplan.Plan, error) {

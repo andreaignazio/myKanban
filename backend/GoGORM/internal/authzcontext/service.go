@@ -27,6 +27,14 @@ func (s *Service) getHandlerForAction(action actions.Action) (AuthzContextHandle
 		return NewMoveInboxCardToListInBoardHandler(s.authzRepo), nil
 	case actions.CardInListPatch:
 		return NewAuthzCardsHandlerPatchCardInList(s.authzRepo), nil
+	case actions.ReadListCard:
+		return NewReadListCardHandler(s.authzRepo), nil
+	case actions.CreateListCard:
+		return NewCreateListCardHandler(s.authzRepo), nil
+	case actions.CopyListCard:
+		return NewCopyListCardHandler(s.authzRepo), nil
+	case actions.InboxCardDetatch:
+		return NewInboxCardDetatchHandler(s.authzRepo), nil
 	default:
 		return nil, domainerr.ErrUnsupportedAction
 	}
