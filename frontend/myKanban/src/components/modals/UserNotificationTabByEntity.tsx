@@ -59,7 +59,7 @@ export const NotificationItemByEntity = ({ id, notification }: NotificationItemB
     // console.log("Rendering notification item for ID:", id, "Notification:", notification)
     const isRead = notification.NotificationRead ?? false
     const card = notification?.MainEntityID && notification.MainEntityType === "card" ? useCardsStore((state) => state.cardsById[notification.MainEntityID]) : undefined
-    const board = notification?.RelatedEntitiesRef.BoardID ? useBoardsStore((state) => state.boardsById[notification.RelatedEntitiesRef.BoardID]) : undefined
+    const board = notification?.RelatedEntitiesRef.BoardID ? useBoardsStore((state) => state.boardsById[notification.RelatedEntitiesRef.BoardID ?? ""]) : undefined
     const list = notification?.RelatedEntitiesRef.ListID ? useListsStore((state) => state.listsById[notification.RelatedEntitiesRef.ListID ?? ""]) : undefined
 
     //const actor = notification?.Payload?.Actor

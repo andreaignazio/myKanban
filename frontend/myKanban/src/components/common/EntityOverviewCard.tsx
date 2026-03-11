@@ -4,7 +4,7 @@ import { useShareOffersStore } from "@/stores/shareOffersStore";
 import { useWorkspaceStore } from "@/stores/workspaceStore";
 import { useCacheStore } from "@/stores/cacheStore";
 import { useWorkspaceDerivedProps } from "@/hooks/useWorkspaceDerivedProps";
-import { CatalogIcon } from "@/icons/iconCatalog"
+import { CatalogIcon, type IconId } from "@/icons/iconCatalog"
 import { ChevronRight, Grid2X2Plus, XCircle } from "lucide-react";
 import { SubscriptionBadge } from "../badges/subscriptionBadge";
 import { ImageColorRenderer } from "../menuElements/ImageColorRenderer";
@@ -27,7 +27,7 @@ type WorkspaceOverviewPanelProps = {
     onClose: () => void;
     onClick: () => void;
     wrapperRef?: React.Ref<HTMLDivElement>;
-    iconId?: "members" | "boards" | "settings" | "profile" | "activities" | "cards" | "watched" | "subscriptions";
+    iconId?: IconId;
     coverType?: "color" | "image";
     coverImage?: string;
     coverColor?: string;

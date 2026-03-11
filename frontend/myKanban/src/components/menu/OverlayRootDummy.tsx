@@ -8,7 +8,7 @@ type OverlayRootDummyProps = {
     label: string
     overlayIdProp?: string
     children?: React.ReactNode
-    panelRef?: React.RefObject<HTMLDivElement | null>
+    panelRef: React.RefObject<HTMLDivElement | null>
 }
 
 export function OverlayRootDummy({ label, overlayIdProp, children, panelRef }: OverlayRootDummyProps) {

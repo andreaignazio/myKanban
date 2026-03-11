@@ -6,7 +6,7 @@ export type HeaderCardType = "user" | "workspace";
 
 type EntityHeaderCardProps = {
     type: HeaderCardType;
-    coverType?: string;
+    coverType?: "color" | "image" | null;
     coverImage?: string;
     coverColor?: string;
     footerBackgroundColorOverride?: string;

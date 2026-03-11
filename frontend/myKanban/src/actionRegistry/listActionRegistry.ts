@@ -71,11 +71,11 @@ export function useListActionRegistry() {
         return listStore.patchListAccessMode(listId, boardId, { AccessMode: accessMode })
     }
 
-    function copyBulkListsRaw(boardId: string, payload: BulkCopyListsRequest): Promise<BulkCopyListsResponse> {
+    function copyBulkListsRaw(boardId: string, payload: BulkCopyListsRequest): Promise<BulkCopyListsResponse | null> {
         return listStore.copyBulkListsRaw(boardId, payload)
     }
 
-    function copySingleListAfterSelf(boardId: string, listId: string, input?: CopySingleListInput): Promise<BulkCopyListsResponse> {
+    function copySingleListAfterSelf(boardId: string, listId: string, input?: CopySingleListInput): Promise<BulkCopyListsResponse | null> {
         const payload: BulkCopyListsRequest = {
             AfterID: listId,
             Lists: [{
@@ -89,11 +89,11 @@ export function useListActionRegistry() {
         return listStore.copyBulkListsRaw(boardId, payload)
     }
 
-    function moveBoardList(sourceBoardId: string, listId: string, payload: MoveBoardListRequest): Promise<MoveBoardListResponse> {
+    function moveBoardList(sourceBoardId: string, listId: string, payload: MoveBoardListRequest): Promise<MoveBoardListResponse | null> {
         return listStore.moveBoardList(sourceBoardId, listId, payload)
     }
 
-    function mirrorBoardList(sourceBoardId: string, listId: string, payload: MirrorBoardListRequest): Promise<MirrorBoardListResponse> {
+    function mirrorBoardList(sourceBoardId: string, listId: string, payload: MirrorBoardListRequest): Promise<MirrorBoardListResponse | null> {
         return listStore.mirrorBoardList(sourceBoardId, listId, payload)
     }
 

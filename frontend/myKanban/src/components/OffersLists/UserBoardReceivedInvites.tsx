@@ -51,7 +51,7 @@ export const UserBoardReceivedInvites = forwardRef<HTMLDivElement, OutgoingReque
         return null;
     }
 
-    const columns = [
+    const columns: ColumnDefinition[] = [
         { name: "Board", key: "board", width: "2fr", align: "start", getValue: (offer: ShareOffer) => getBoardIdFromOffer(offer) },
         { name: "Workspace", key: "workspace", width: "1.5fr", align: "center", getValue: (offer: ShareOffer) => getWorkspaceIdFromOffer(offer) },
         { name: "Stato", key: "status", width: "0.5fr", align: "center", getValue: (offer: ShareOffer) => offer.Status },

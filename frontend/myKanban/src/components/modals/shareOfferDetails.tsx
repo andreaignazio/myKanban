@@ -19,6 +19,7 @@ import { useBoardsStore } from "@/stores/boardsStore";
 import { useBoardBackground } from "@/hooks/useBoardBackground";
 import { useBoardDescription } from "@/hooks/useBoardDescription";
 import { useAuthStore } from "@/stores/auth";
+import type { IconId } from "@/icons/iconCatalog";
 
 type ShareOfferDetailsProps = {
     onClose: () => void;
@@ -31,7 +32,7 @@ type WorkspaceOverviewPanelProps = {
     onClose: () => void;
     onClick: () => void;
     wrapperRef: React.Ref<HTMLDivElement>;
-    iconId?: "members" | "boards" | "settings" | "profile" | "activities" | "cards" | "watched" | "subscriptions";
+    iconId?: IconId;
     coverType?: "color" | "image";
     coverImage?: string;
     coverColor?: string;

@@ -3,7 +3,7 @@ import type { List } from "@/stores/types"
 
 import type { MenuItemExtended } from "@/types/uiTypes"
 import { forwardRef, useEffect, useRef, useState } from "react"
-import { CustomInput } from "../menuElements/CustomInput"
+import { CustomInput, type CustomInputHandle } from "../menuElements/CustomInput"
 import { useUserStore } from "@/stores/userStore"
 import { DropDown } from "../menuElements/DropDown"
 import { CommonMenuWrapper } from "../menuElements/menuWrapper"
@@ -45,7 +45,7 @@ export const CardMoveToListMenu = forwardRef<HTMLDivElement, CardMoveToListMenuP
         kind: "standard"
     }))
 
-    const searchInputRef = useRef<HTMLInputElement>(null);
+    const searchInputRef = useRef<CustomInputHandle>(null);
     useEffect(() => {
 
         const handleSearch = () => {

@@ -18,6 +18,13 @@ export type MainEntityTypeStrict =
     | "board"
     | "workspace";
 
+type ResolvedMainEntityType =
+    | MainEntityTypeStrict
+    | "label"
+    | "board_label"
+    | "checklist"
+    | "entry";
+
 export type RenderFeed = {
     Actor: AuditRenderPayload["Actor"];
     BoardID: string;
@@ -214,6 +221,22 @@ function resolveWorkspaceName(payload: AuditRenderPayload): string {
     return paramString(payload, "workspaceName", "workspace");
 }
 
+function toResolvedMainEntityType(entityType?: string): ResolvedMainEntityType | undefined {
+    switch (entityType) {
+        case "card":
+        case "list":
+        case "board":
+        case "workspace":
+        case "label":
+        case "board_label":
+        case "checklist":
+        case "entry":
+            return entityType;
+        default:
+            return undefined;
+    }
+}
+
 function toMainEntityTypeStrict(entityType?: string): MainEntityTypeStrict | undefined {
     switch (entityType) {
         case "card":
@@ -226,22 +249,22 @@ function toMainEntityTypeStrict(entityType?: string): MainEntityTypeStrict | und
     }
 }
 
-function resolveMainEntity(audit: AuditLike): { entityType?: MainEntityTypeStrict; entityID?: string } {
+function resolveMainEntity(audit: AuditLike): { entityType?: ResolvedMainEntityType; entityID?: string } {
     const event = audit as ApiAuditLogEvent;
-    const strictEventType = toMainEntityTypeStrict(event?.MainEntityType);
-    if (strictEventType && typeof event?.MainEntityID === "string" && event.MainEntityID.length > 0) {
+    const resolvedEventType = toResolvedMainEntityType(event?.MainEntityType);
+    if (resolvedEventType && typeof event?.MainEntityID === "string" && event.MainEntityID.length > 0) {
         return {
-            entityType: strictEventType,
+            entityType: resolvedEventType,
             entityID: event.MainEntityID,
         };
     }
 
     const payload = toPayload(audit);
     const fallbackLink = payload?.Links?.card ?? payload?.Links?.list ?? payload?.Links?.board ?? payload?.Links?.workspace;
-    const strictLinkType = toMainEntityTypeStrict(fallbackLink?.EntityType);
-    if (strictLinkType && fallbackLink?.EntityID) {
+    const resolvedLinkType = toResolvedMainEntityType(fallbackLink?.EntityType);
+    if (resolvedLinkType && fallbackLink?.EntityID) {
         return {
-            entityType: strictLinkType,
+            entityType: resolvedLinkType,
             entityID: fallbackLink.EntityID,
         };
     }
@@ -602,7 +625,7 @@ export function buildFeedFromAudit(audit: AuditLike): RenderFeed {
         Actor: actor,
         BoardID: toBoardID(audit),
         MainEntityRef: {
-            EntityType: mainEntityRef.entityType ?? "board",
+            EntityType: (mainEntityRef.entityType ? toMainEntityTypeStrict(mainEntityRef.entityType) : undefined) ?? "board",
             EntityID: mainEntityRef.entityID ?? toBoardID(audit),
         },
         Body: body,

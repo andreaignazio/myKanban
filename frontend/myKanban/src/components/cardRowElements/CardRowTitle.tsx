@@ -9,6 +9,7 @@ type CardRowTitleProps = {
     done: boolean
     setDone?: () => void
     minHeight?: number
+    canEdit?: boolean
 }
 
 export const CardRowTitle = ({ title, editMode, done, setDone, minHeight = 36, canEdit }: CardRowTitleProps) => {

@@ -2,11 +2,12 @@ import { forwardRef, useState } from "react";
 import { EntityOverviewPanel } from "../common/EntityOverviewCard";
 import { CommonMenuWrapper } from "../menuElements/menuWrapper";
 import { ShowMoreArrow } from "../common/ShowMoreArrow";
+import type { IconId } from "@/icons/iconCatalog";
 
 type EntityHoverCardProps = {
     onClose?: () => void;
     entityCreatedAt?: string;
-    iconId?: "members" | "boards" | "settings" | "profile" | "activities" | "cards" | "watched" | "subscriptions";
+    iconId?: IconId;
     entityName?: string;
     description?: string;
     plan?: string;

@@ -17,6 +17,7 @@ import { CustomInput } from "../menuElements/CustomInput";
 import { useShallow } from "zustand/shallow";
 import { useChecklistStore } from "@/stores/checklistStore";
 import type { AsyncRequestKey } from "@/stores/asyncRequestTypes";
+import type { User } from "@/stores/types";
 
 
 type CardMembersMenuProps = {
@@ -87,9 +88,9 @@ export const CardMembersMenu = forwardRef<HTMLDivElement, CardMembersMenuProps>(
     if (searchInput.trim() !== "") {
         const lowerSearchInput = searchInput.toLowerCase();
         resolvedBoardMembersIds = resolvedBoardMembersIds.filter(userID => {
-            const user = useUserStore.getState().usersById[userID];
+            const user: User | undefined = useUserStore.getState().usersById[userID] as User | undefined;
             if (!user) return false;
-            return user.Name.toLowerCase().includes(lowerSearchInput) || user.Email.toLowerCase().includes(lowerSearchInput);
+            return user.Name.toLowerCase().includes(lowerSearchInput) || user?.Email?.toLowerCase().includes(lowerSearchInput);
         });
     }
 
@@ -235,7 +236,7 @@ export const UserRowRenderer = ({ userID, onClick, className, disabled }: UserRo
     )
 }
 export const UserRowRendererAdv = ({ userID, onClick, className, showXMark, onRemoveClick, cardId, disabled, disabledTooltipText }: UserRowRendererProps & { cardId?: string }) => {
-    const user = useUserStore((state) => state.usersById[userID]);
+    const user: User | undefined = useUserStore((state) => state.usersById[userID]) as User | undefined;
     if (!user) return null;
     const removeMember = useCardMembersStore((state) => state.removeMemberFromCard);
     const boardID = useParams().boardId as string;
@@ -263,7 +264,7 @@ export const UserRowRendererAdv = ({ userID, onClick, className, showXMark, onRe
                     <UserAvatar user={user} />
                     <div className="flex flex-col">
                         <span className="text-sm text-gray-300">{user.Name}</span>
-                        <span className="text-xs text-gray-500">{user.Email}</span>
+                        <span className="text-xs text-gray-500">{user?.Email}</span>
                     </div>
                 </div>
                 {showXMark && <XMarkIcon className={` flex justify-end 

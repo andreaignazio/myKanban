@@ -104,7 +104,7 @@ function UserHeader({ context }: { context: string | null }) {
                 <p className="font-semibold text-text">{user?.Name}</p>
                 {context !== "board" && (<p className="text-xs text-text-text/70">@{user?.Username === "" ? "username" : user?.Username}</p>)}
             </div>
-            <UserAvatar user={user} />
+            <UserAvatar user={user ?? undefined} />
 
 
         </div>

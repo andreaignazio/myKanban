@@ -23,19 +23,21 @@ import { BoardHoverCard } from "../hoverCards/BoardHoverCard";
 type OutgoingRequestsProps = {
     panelRef?: React.RefObject<HTMLDivElement | null>;
 }
-export type ColumnDefinition = {
+type TabularData = ShareOffer | PublicShareLink;
+
+export type ColumnDefinition<Row extends TabularData = ShareOffer> = {
     name: string;
     key: string;
     width?: string;
     align?: "start" | "center" | "end";
-    getValue: (offer: ShareOffer) => string | null;
+    getValue: (row: Row) => string | null;
     style?: React.CSSProperties;
     labelStyle?: React.CSSProperties;
     renderCell?: (args: {
         value: string | null;
         shareId: string;
         style?: React.CSSProperties;
-        row?: ShareOffer | PublicShareLink;
+        row?: Row;
     }) => JSX.Element;
 }
 
@@ -102,14 +104,14 @@ export const UserBoardOutgoingRequests = forwardRef<HTMLDivElement, OutgoingRequ
     )
 })
 
-type GridBuilderProps = {
-    columns: ColumnDefinition[];
+type GridBuilderProps<Row extends TabularData = ShareOffer> = {
+    columns: ColumnDefinition<Row>[];
     data: string[];
-    CustomLookup?: (id: string) => TabularData | undefined;
+    CustomLookup?: (id: string) => Row | undefined;
     emptyMessage?: string;
 }
 
-export function GridBuilder({ columns, data, CustomLookup, emptyMessage }: GridBuilderProps) {
+export function GridBuilder<Row extends TabularData = ShareOffer>({ columns, data, CustomLookup, emptyMessage }: GridBuilderProps<Row>) {
 
     const [layout, setLayout] = useState("");
 
@@ -148,7 +150,7 @@ export function GridBuilder({ columns, data, CustomLookup, emptyMessage }: GridB
 
                     {data.map((ID) => (
                         <div key={ID} className="grid w-full gap-3 items-center rounded-xl border border-border/40 min-h-24 px-4" style={rowStyle}>
-                            <ShareOfferCustomRow offerId={ID} items={columns} CustomLookup={CustomLookup} />
+                            <ShareOfferCustomRow<Row> offerId={ID} items={columns} CustomLookup={CustomLookup} />
                         </div>
                     ))}
                 </div>
@@ -160,23 +162,21 @@ export function GridBuilder({ columns, data, CustomLookup, emptyMessage }: GridB
 
 
 
-type ShareOfferRowProps = {
+type ShareOfferRowProps<Row extends TabularData = ShareOffer> = {
     offerId: string;
-    items: ColumnDefinition[];
-    CustomLookup?: (id: string) => TabularData | undefined;
+    items: ColumnDefinition<Row>[];
+    CustomLookup?: (id: string) => Row | undefined;
 
 }
 
-type TabularData = ShareOffer | PublicShareLink;
-
 type ComponentRegistry = Record<string, { render: (value: string | null, shareId: string, style?: React.CSSProperties) => JSX.Element }>;
 
-export function ShareOfferCustomRow({ offerId, items, CustomLookup }: ShareOfferRowProps) {
-    let data = undefined;
+export function ShareOfferCustomRow<Row extends TabularData = ShareOffer>({ offerId, items, CustomLookup }: ShareOfferRowProps<Row>) {
+    let data: Row | undefined = undefined;
     if (CustomLookup) {
         data = CustomLookup(offerId);
     } else {
-        data = useCacheStore((state) => state.offerById[offerId]);
+        data = useCacheStore((state) => state.offerById[offerId]) as Row | undefined;
     }
 
 
@@ -225,10 +225,10 @@ export function ShareOfferCustomRow({ offerId, items, CustomLookup }: ShareOffer
     return (
         <>
             {items.map((item) => {
-                const value = data ? item.getValue(data as ShareOffer) : null;
+                const value = data ? item.getValue(data) : null;
                 const justifyClass = item.align === "start" ? "justify-start" : item.align === "center" ? "justify-center" : "justify-end";
                 const justifyTextClass = item.align === "start" ? "text-left" : item.align === "center" ? "text-center" : "text-right";
-                const customCell = item.renderCell?.({ value, shareId: offerId, style: item.style, row: data as TabularData });
+                const customCell = item.renderCell?.({ value, shareId: offerId, style: item.style, row: data });
                 return (
                     <div key={item.key}
                         style={{ justifyContent: justifyClass }}

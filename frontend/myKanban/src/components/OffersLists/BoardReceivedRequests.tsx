@@ -1,5 +1,5 @@
 import type { ShareOffer } from "@/stores/shareOfferTypes"
-import { GridBuilder } from "./UserBoardOutgoingRequests"
+import { GridBuilder, type ColumnDefinition } from "./UserBoardOutgoingRequests"
 import { forwardRef, useEffect, useState } from "react"
 import { useShareOffersStore } from "@/stores/shareOffersStore"
 import { useCacheStore } from "@/stores/cacheStore"
@@ -61,7 +61,7 @@ export const BoardReceivedRequests = forwardRef<HTMLDivElement, {}>((props, ref)
 
 
 
-    const columns = [
+    const columns: ColumnDefinition[] = [
         // { name: "Board", key: "board", width: "2fr", align: "start", getValue: (offer: ShareOffer) => getBoardIdFromOffer(offer) },
         //{ name: "Workspace", key: "workspace", width: "1.5fr", align: "center", getValue: (offer: ShareOffer) => getWorkspaceIdFromOffer(offer) },
         { name: "Mittente", key: "sender", width: "2fr", getValue: (offer: ShareOffer) => offer.FromUserID },

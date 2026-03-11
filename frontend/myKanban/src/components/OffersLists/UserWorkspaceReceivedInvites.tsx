@@ -5,17 +5,10 @@ import { useShareOffersStore, type ShareOffer } from "@/stores/shareOffersStore"
 
 import { forwardRef, useEffect, } from "react";
 import { useShallow } from "zustand/shallow";
-import { GridBuilder } from "@/components/OffersLists/UserBoardOutgoingRequests";
+import { GridBuilder, type ColumnDefinition } from "@/components/OffersLists/UserBoardOutgoingRequests";
 
 type OutgoingRequestsProps = {
     panelRef?: React.RefObject<HTMLDivElement | null>;
-}
-export type ColumnDefinition = {
-    name: string;
-    key: string;
-    width?: string;
-    align?: "start" | "center" | "end";
-    getValue: (offer: ShareOffer) => string | null;
 }
 
 export const UserWorkspaceReceivedInvites = forwardRef<HTMLDivElement, OutgoingRequestsProps>(({ panelRef }: OutgoingRequestsProps, ref) => {
@@ -48,7 +41,7 @@ export const UserWorkspaceReceivedInvites = forwardRef<HTMLDivElement, OutgoingR
         return null;
     }
 
-    const columns = [
+    const columns: ColumnDefinition[] = [
         //{ name: "Board", key: "board", width: "2fr", align: "start", getValue: (offer: ShareOffer) => getBoardIdFromOffer(offer) },
         { name: "Workspace", key: "workspace", width: "1.5fr", align: "center", getValue: (offer: ShareOffer) => getWorkspaceIdFromOffer(offer) },
         { name: "Stato", key: "status", width: "1fr", align: "center", getValue: (offer: ShareOffer) => offer.Status, style: { textTransform: "capitalize", transform: "translateX(8px)" } },

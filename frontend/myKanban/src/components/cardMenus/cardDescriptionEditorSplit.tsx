@@ -25,13 +25,13 @@ export default function CardDescriptionEditorSplit({ boardID, cardID, value, onC
     const [remoteChanged, setRemoteChanged] = useState<boolean>(false);
     const dirty = draft !== baseValue;
     const cardActionRegistry = useCardActionRegistry();
-    const { taRef, applyFormat } = useMarkdownFormatter(draft, setDraft);
+    const { taRef, applyFormat } = useMarkdownFormatter(draft ?? "", setDraft);
     const save = async () => {
-        if (!dirty || saving || draft.length > 10000) return;
+        if (!dirty || saving || (draft?.length ?? 0) > MAX_LEN) return;
         setSaving(true);
         setError(null);
         try {
-            await cardActionRegistry.setCardDescription(boardID, cardID, draft);
+            await cardActionRegistry.setCardDescription(boardID, cardID, draft ?? "");
             setBaseValue(draft);
             //setMode("preview");
             setRemoteChanged(false);

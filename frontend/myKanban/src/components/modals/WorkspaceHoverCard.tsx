@@ -52,7 +52,7 @@ export const WorkspaceHoverCard = forwardRef<HTMLDivElement, WorkspaceHoverCardP
                                 </div>
                                 <div className="flex flex-col items-start">
                                     <p className="text-sm ">{member.User.Name}</p>
-                                    <p className="text-sm ">{member.User.Email}</p>
+                                    <p className="text-sm ">{(member.User as { Email: string }).Email}</p>
                                 </div>
                             </div>
                         ))}

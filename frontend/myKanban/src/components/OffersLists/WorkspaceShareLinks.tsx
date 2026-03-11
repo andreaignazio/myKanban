@@ -1,5 +1,5 @@
 
-import { GridBuilder } from "./UserBoardOutgoingRequests"
+import { GridBuilder, type ColumnDefinition } from "./UserBoardOutgoingRequests"
 import { forwardRef, useEffect, useState } from "react"
 
 import { useShallow } from "zustand/shallow"
@@ -42,7 +42,7 @@ export const WorkspaceShareLinks = forwardRef<HTMLDivElement, {}>((props, ref) =
 
 
 
-    const columns = [
+    const columns: ColumnDefinition<PublicShareLink>[] = [
         { name: "Link", key: "link", width: "1fr", align: "start", getValue: (link: PublicShareLink) => link.Token },
         //{ name: "Workspace", key: "workspace", width: "1.5fr", align: "center", getValue: (offer: ShareOffer) => getWorkspaceIdFromOffer(offer) },
         { name: "Creator", key: "sender", width: "2fr", getValue: (link: PublicShareLink) => link.CreatedByUserID },

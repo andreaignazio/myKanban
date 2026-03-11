@@ -23,7 +23,7 @@ export const SearchModal = forwardRef<HTMLDivElement, {}>((props, ref) => {
     const inputRef = useRef<HTMLInputElement | null>(null);
     const msgInputRef = useRef<HTMLTextAreaElement | null>(null);
     const [searchResults, setSearchResults] = useState<User[]>([]);
-    const timeOutRef = useRef<NodeJS.Timeout | null>(null);
+    const timeOutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const [selectedUsers, setSelectedUsers] = useState<User[]>([]);
     const [isFocused, setIsFocused] = useState(false);
     const [isFocusedMsg, setIsFocusedMsg] = useState(false);
@@ -98,7 +98,7 @@ export const SearchModal = forwardRef<HTMLDivElement, {}>((props, ref) => {
     const createWorkspaceShareOffer = useShareOffersStore((state) => state.createWorkspaceShareOffer);
 
     const workspaceID = useParams().workspaceId ?? "";
-    const requestTimerRef = useRef<NodeJS.Timeout | null>(null);
+    const requestTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
 
     async function handleSendWorkspaceShareOffer() {

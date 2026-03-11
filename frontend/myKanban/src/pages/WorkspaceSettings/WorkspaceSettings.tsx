@@ -82,7 +82,7 @@ export const WorkspaceSettings = () => {
             <div className="flex flex-col gap-2 min-h-0 pb-8 pr-1">
                 <EntityHeaderCard
                     type="workspace"
-                    coverType={coverType}
+                    coverType={coverType as "color" | "image" | undefined}
                     coverImage={coverImage}
                     coverColor={coverColor}
                     footerBackgroundColorOverride={footerBackgroundColorOverride}
