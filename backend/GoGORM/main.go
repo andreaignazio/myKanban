@@ -10,6 +10,7 @@ import (
 	"time"
 
 	auditcontext "GoGORM/internal/auditcontext"
+	"GoGORM/internal/authn"
 	"GoGORM/internal/authz"
 	"GoGORM/internal/authzcontext"
 	BoardLabels "GoGORM/internal/boardlabels"
@@ -282,6 +283,10 @@ func main() {
 	boardLabelsHandler := BoardLabels.NewBoardLabelsHandler(boardLabelsService)
 
 	membersHandler := memberships.NewMembershipHandler(membershipService)
+	authnService, err := authn.NewService(authn.ConfigFromEnv(), membarshipsRepo)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	wsService := ws.NewWsService(membarshipsRepo, workspacesRepo)
 	wsHandler := ws.NewWsHandler(wsHub, wsService)
@@ -326,6 +331,7 @@ func main() {
 
 	r := server.NewRouter(
 		db,
+		authnService,
 		healthHandler,
 		boardsHandler,
 		listsHandler,

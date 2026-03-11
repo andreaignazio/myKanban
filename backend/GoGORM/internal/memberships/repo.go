@@ -6,10 +6,12 @@ import (
 	"GoGORM/models"
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
+	"gorm.io/gorm/logger"
 )
 
 type GormRepo struct {
@@ -263,6 +265,34 @@ func (r *GormRepo) GetUser(ctx context.Context, userID uuid.UUID) (*models.User,
 		Where("id = ?", userID).
 		First(&user).Error; err != nil {
 		return nil, dbx.WrapDBErr(err, "error fetching user")
+	}
+	return &user, nil
+}
+
+func (r *GormRepo) GetUserByClerkUserID(ctx context.Context, clerkUserID string) (*models.User, error) {
+	var user models.User
+	db := r.db.WithContext(ctx).Session(&gorm.Session{
+		Logger: r.db.Logger.LogMode(logger.Warn),
+	})
+	if err := db.
+		Table("users").
+		Where("clerk_user_id = ?", clerkUserID).
+		First(&user).Error; err != nil {
+		return nil, dbx.WrapDBErr(err, "error fetching user by Clerk user ID")
+	}
+	return &user, nil
+}
+
+func (r *GormRepo) GetUserByEmail(ctx context.Context, email string) (*models.User, error) {
+	var user models.User
+	db := r.db.WithContext(ctx).Session(&gorm.Session{
+		Logger: r.db.Logger.LogMode(logger.Warn),
+	})
+	if err := db.
+		Table("users").
+		Where("LOWER(email) = ?", strings.ToLower(email)).
+		First(&user).Error; err != nil {
+		return nil, dbx.WrapDBErr(err, "error fetching user by email")
 	}
 	return &user, nil
 }

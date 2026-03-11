@@ -1,9 +1,12 @@
+import type { ReactElement } from "react";
 import { Navigate, createBrowserRouter, useParams } from "react-router-dom";
 
 
 import Home from "@/pages/Home"
 import AppLayout from "@/layouts/AppLayout"
 import Login from "@/pages/Login";
+import SignInPage from "@/pages/SignInPage";
+import SignUpPage from "@/pages/SignUpPage";
 import BoardView from "@/pages/BoardView"
 import { WorkspaceView } from "@/pages/WorkspaceView";
 import { WorkspaceMembers } from "@/pages/WorkspaceMembers";
@@ -26,11 +29,16 @@ import { WorkspacesLanding } from "@/pages/WorkspacesLanding";
 import { JoinPageMain } from "@/pages/Join/joinPageMain";
 import { WorkspaceSubscriptionMain } from "@/pages/WorkspaceSettings/WorkspaceSubscriptionMain";
 import { WorkspaceSubscriptionManage } from "@/pages/WorkspaceSettings/WorkspaceSubscriptionManage";
+import { RequireAuth } from "@/router/RequireAuth";
 
 
 function WorkspaceIndexRedirect() {
     const { workspaceId } = useParams();
     return <Navigate to={`/workspaces/${workspaceId}/boards`} replace />;
+}
+
+function withAuth(element: ReactElement) {
+    return <RequireAuth>{element}</RequireAuth>;
 }
 
 
@@ -43,59 +51,61 @@ export const router = createBrowserRouter([
             { path: "/", element: <Home /> },
 
             { path: "/login", element: <Login /> },
+            { path: "/sign-in/*", element: <SignInPage /> },
+            { path: "/sign-up/*", element: <SignUpPage /> },
             {
-                path: "/workspaces/:workspaceId/boards/:boardId", element: <BoardView />, children: [
+                path: "/workspaces/:workspaceId/boards/:boardId", element: withAuth(<BoardView />), children: [
                     { path: "cards/:cardId", element: null }
                 ]
             },
 
             {
-                path: "/workspaces/:workspaceId/boards", element: <WorkspaceView />, children: [
+                path: "/workspaces/:workspaceId/boards", element: withAuth(<WorkspaceView />), children: [
 
                 ]
             },
-            { path: "/workspaces/:workspaceId", element: <WorkspaceIndexRedirect /> },
-            { path: "/workspaces", element: <WorkspacesLanding /> },
+            { path: "/workspaces/:workspaceId", element: withAuth(<WorkspaceIndexRedirect />) },
+            { path: "/workspaces", element: withAuth(<WorkspacesLanding />) },
             {
-                path: "/workspaces/:workspaceId/settings", element: <WorkspaceSettingsMain />, children: [
-                    { path: "", element: <WorkspaceSettings /> },
+                path: "/workspaces/:workspaceId/settings", element: withAuth(<WorkspaceSettingsMain />), children: [
+                    { path: "", element: withAuth(<WorkspaceSettings />) },
                     {
-                        path: "subscription", element: <WorkspaceSubscriptionMain />, children: [
-                            { path: "upgrade", element: <WorkspaceSubscriptions /> },
-                            { path: "", element: <WorkspaceSubscriptionManage /> }
+                        path: "subscription", element: withAuth(<WorkspaceSubscriptionMain />), children: [
+                            { path: "upgrade", element: withAuth(<WorkspaceSubscriptions />) },
+                            { path: "", element: withAuth(<WorkspaceSubscriptionManage />) }
                         ]
                     },
-                    { path: "subscription/failed", element: <SubscriptionFailedPage /> },
-                    { path: "subscription/success", element: <SubscriptionSuccessPage /> },
+                    { path: "subscription/failed", element: withAuth(<SubscriptionFailedPage />) },
+                    { path: "subscription/success", element: withAuth(<SubscriptionSuccessPage />) },
                 ]
             },
             {
-                path: "/workspaces/:workspaceId/members", element: <WorkspaceMembers />, children: [
-                    { path: "", element: <WorkspaceMembersMain /> },
-                    { path: "outbox", element: <WorkspaceOutbox /> },
-                    { path: "inbox", element: <WorkspaceInbox /> },
-                    { path: "guests", element: <WorkspaceMembersMain /> },
-                    { path: "links", element: <WorkspaceLinks /> },
+                path: "/workspaces/:workspaceId/members", element: withAuth(<WorkspaceMembers />), children: [
+                    { path: "", element: withAuth(<WorkspaceMembersMain />) },
+                    { path: "outbox", element: withAuth(<WorkspaceOutbox />) },
+                    { path: "inbox", element: withAuth(<WorkspaceInbox />) },
+                    { path: "guests", element: withAuth(<WorkspaceMembersMain />) },
+                    { path: "links", element: withAuth(<WorkspaceLinks />) },
 
                 ]
             },
             { path: "/workspaces/:workspaceId/users/:userID/activities", element: null },
             {
-                path: "/users/me", element: <UserMainPage />, children: [
+                path: "/users/me", element: withAuth(<UserMainPage />), children: [
                     { index: true, element: <Navigate to="activities" replace /> },
-                    { path: "profile", element: <UserProfilePage /> },
-                    { path: "activities", element: <UserActivity /> },
-                    { path: "cards", element: <UserCardsPage /> },
-                    { path: "watched", element: <UserWatchedPage /> },
+                    { path: "profile", element: withAuth(<UserProfilePage />) },
+                    { path: "activities", element: withAuth(<UserActivity />) },
+                    { path: "cards", element: withAuth(<UserCardsPage />) },
+                    { path: "watched", element: withAuth(<UserWatchedPage />) },
                 ]
             },
-            { path: "/users/:userID/*", element: <Navigate to="/users/me/activities" replace /> },
-            { path: "/user", element: <Navigate to="/users/me/activities" replace /> },
-            { path: "/user/profile", element: <Navigate to="/users/me/profile" replace /> },
-            { path: "/user/activities", element: <Navigate to="/users/me/activities" replace /> },
-            { path: "/user/cards", element: <Navigate to="/users/me/cards" replace /> },
-            { path: "/user/watched", element: <Navigate to="/users/me/watched" replace /> },
-            { path: "/users", element: <Navigate to="/users/me/activities" replace /> },
+            { path: "/users/:userID/*", element: withAuth(<Navigate to="/users/me/activities" replace />) },
+            { path: "/user", element: withAuth(<Navigate to="/users/me/activities" replace />) },
+            { path: "/user/profile", element: withAuth(<Navigate to="/users/me/profile" replace />) },
+            { path: "/user/activities", element: withAuth(<Navigate to="/users/me/activities" replace />) },
+            { path: "/user/cards", element: withAuth(<Navigate to="/users/me/cards" replace />) },
+            { path: "/user/watched", element: withAuth(<Navigate to="/users/me/watched" replace />) },
+            { path: "/users", element: withAuth(<Navigate to="/users/me/activities" replace />) },
 
 
 

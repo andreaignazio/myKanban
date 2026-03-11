@@ -43,7 +43,7 @@ export default function Sidebar({ isSingleMode }: SidebarProps) {
                     <NavLink to="/boards" className="block text-sm ">
                         Boards
                     </NavLink>
-                    <NavLink to="/login" className="block text-sm ">
+                    <NavLink to="/sign-in" className="block text-sm ">
                         Login
                     </NavLink>
                 </nav>}

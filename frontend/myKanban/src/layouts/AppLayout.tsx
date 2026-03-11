@@ -26,10 +26,8 @@ export default function AppLayout() {
 
     const navigate = useNavigate()
 
-    const setUserId = useAuthStore((state) => state.setUserID)
     const userId = useAuthStore((state) => state.userID)
 
-    const hydrateAuth = useAuthStore((state) => state.hydrate)
     const hydrateWorkspaces = useWorkspaceStore((state) => state.hydrateWorkspaces)
     const hasHydratedWorkspaces = useWorkspaceStore((state) => state.hasHydratedWorkspaces)
     const getWorkspaceStatus = useWorkspaceStore((state) => state.getWorkspaceStatus)
@@ -63,20 +61,12 @@ export default function AppLayout() {
     }, [isOverlayLocked, overlayStack])
 
     useEffect(() => {
+        if (!userId) {
+            return
+        }
         fetchUserWatches()
         hydrateWorkspaces()
-        hydrateAuth()
-    }, [userId, hydrateAuth, hydrateWorkspaces])
-
-
-
-    useEffect(() => {
-        const saved = localStorage.getItem("userID")
-        if (saved && saved !== userId) {
-            setUserId(saved)
-        }
-
-    }, [setUserId, userId])
+    }, [userId, fetchUserWatches, hydrateWorkspaces])
 
     useEffect(() => {
         if (isBoardView) {

@@ -1,13 +1,10 @@
-import { api } from "@/api/api"
-import { useAuthStore } from "@/stores/auth"
+import { useNavigate } from "react-router-dom"
 
 export function useLogin() {
-    const setUserId = useAuthStore((state) => state.setUserID)
+    const navigate = useNavigate()
 
-    function handleLogin(userID: string) {
-        setUserId(userID)
-        localStorage.setItem("userID", userID)
-        api.defaults.headers.common["x-userID"] = userID
+    function handleLogin(_hint?: string) {
+        navigate("/sign-in")
     }
 
     return {

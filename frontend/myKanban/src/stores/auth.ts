@@ -10,10 +10,10 @@ type UserResponse = {
 type AuthStore = {
     userID: string | null
     user: User | null
-    setUserID: (user: string) => void
-    setUserData: (user: User) => void
+    setUserID: (userID: string | null) => void
+    setUserData: (user: User | null) => void
     hydrate: () => Promise<void>
-    fetchUser: () => Promise<void>
+    fetchUser: () => Promise<User | null>
     clearAuthSession: () => void
 }
 
@@ -22,12 +22,8 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     userID: null,
     user: null,
     setUserID: (user) => set(() => ({ userID: user })),
-    setUserData: (user) => set(() => ({ user })),
+    setUserData: (user) => set(() => ({ user, userID: user?.ID ?? null })),
     clearAuthSession: () => {
-        window.localStorage.removeItem("userID");
-        window.localStorage.removeItem("token");
-        delete api.defaults.headers.common["x-userID"];
-
         set(() => ({
             userID: null,
             user: null,
@@ -35,14 +31,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     },
 
     async hydrate() {
-        const userToken = window.localStorage.getItem("userID")
-        const userID = get().userID
         await get().fetchUser();
-        if (!userID || userID != userToken) {
-            set(() => ({
-                userID: userToken
-            }))
-        }
     },
     async fetchUser() {
         try {
@@ -51,10 +40,16 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
             console.log("Fetched user data:", data);
             useUserStore.getState().mergeUsers([data.User])
             set(() => ({
+                userID: data.User.ID,
                 user: data.User,
             }));
+            return data.User;
         } catch (error) {
-            // console.error("Failed to fetch user:", error);
+            set(() => ({
+                userID: null,
+                user: null,
+            }));
+            return null;
         }
     },
 

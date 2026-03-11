@@ -1,6 +1,7 @@
 package server
 
 import (
+	"GoGORM/internal/authn"
 	BoardLabels "GoGORM/internal/boardlabels"
 	"GoGORM/internal/cardcomments"
 	"GoGORM/internal/cardmembers"
@@ -30,6 +31,7 @@ import (
 )
 
 func NewRouter(db *gorm.DB,
+	authenticator *authn.Service,
 	healthHandler *health.Handler,
 	boardsHandler *boards.BoardsHandler,
 	listsHandler *lists.ListsHandler, linksHandler *links.LinksHandler,
@@ -63,7 +65,7 @@ func NewRouter(db *gorm.DB,
 		AllowOriginFunc: func(origin string) bool {
 			return true
 		},
-		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization", "x-userID"},
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
@@ -80,7 +82,7 @@ func NewRouter(db *gorm.DB,
 
 	r.POST("/webhooks/stripe", subscriptionHandler.HandleStripeBillingWebhook)
 
-	api := r.Group("/api", middleware.AuthFromHeader(), middleware.CorrelationID())
+	api := r.Group("/api", middleware.AuthFromHeader(authenticator), middleware.CorrelationID())
 	api.Use(middleware.ResolveWorkspaceFromBoardID(db))
 	{
 		api.GET("/ws", wsHandler.ServeWs)
@@ -113,6 +115,8 @@ func NewRouter(db *gorm.DB,
 
 		boards := api.Group("/boards")
 		{
+			boards.GET("", workspacesHandler.GetWorkspacesBoardsForUserID)
+			boards.POST("", boardsHandler.CreateBoard)
 			boards.GET("/", workspacesHandler.GetWorkspacesBoardsForUserID)
 			boards.POST("/", boardsHandler.CreateBoard)
 
@@ -245,6 +249,7 @@ func NewRouter(db *gorm.DB,
 
 			watches := api.Group("/watches")
 			{
+				watches.GET("", userWatchHandler.GetAllWatches)
 				watches.GET("/", userWatchHandler.GetAllWatches)
 				watches.GET("/boards", userWatchHandler.GetBoardWatch)
 				watches.GET("/lists", userWatchHandler.GetListWatch)
@@ -271,6 +276,7 @@ func NewRouter(db *gorm.DB,
 			}
 			lists := api.Group("/lists")
 			{
+				lists.GET("", listsHandler.GetUserLists)
 				lists.GET("/", listsHandler.GetUserLists)
 				//lists.POST("/", listsHandler.CreateList )
 				lists.GET("/:listID", listsHandler.GetListMeta)
@@ -280,6 +286,7 @@ func NewRouter(db *gorm.DB,
 			}
 			cards := api.Group("/cards")
 			{
+				cards.GET("", cardsHandler.GetUserCards)
 				cards.GET("/", cardsHandler.GetUserCards)
 				cards.GET("/user/:userID/membercards", cardsHandler.GetCardsWhereUserIsMember)
 				cards.GET("/user/me/membercards", cardsHandler.GetCardsWhereIAmMember)
@@ -288,7 +295,9 @@ func NewRouter(db *gorm.DB,
 			}
 			workspaces := api.Group("/workspaces")
 			{
+				workspaces.POST("", workspacesHandler.CreateUserWorkspace)
 				workspaces.POST("/", workspacesHandler.CreateUserWorkspace)
+				workspaces.GET("", workspacesHandler.GetUserWorkspaces)
 				workspaces.GET("/", workspacesHandler.GetUserWorkspaces)
 				workspaces.GET("/search", workspacesHandler.SearchPublicWorkspaces)
 				workspaces.GET("/pending-offers/targets", workspacesHandler.GetPendingOfferTargetWorkspacesForUser)
@@ -355,6 +364,7 @@ func NewRouter(db *gorm.DB,
 			}
 			sharelinks := api.Group("/sharelinks")
 			{
+				sharelinks.POST("", shareLinksHandler.CreateShareLink)
 				sharelinks.POST("/", shareLinksHandler.CreateShareLink)
 				sharelinks.POST("/:token/claim", shareLinksHandler.ClaimShareLink)
 				sharelinks.POST("/:token/revoke", shareLinksHandler.RevokeShareLink)
@@ -362,10 +372,7 @@ func NewRouter(db *gorm.DB,
 				sharelinks.GET("/token/:token", shareLinksHandler.GetAuthenticatedShareLinkByToken)
 				sharelinks.GET("/:targetID", shareLinksHandler.GetShareLinksByTargetID)
 			}
-
 		}
-
 		return r
-
 	}
 }

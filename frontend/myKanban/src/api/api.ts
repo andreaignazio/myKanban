@@ -1,5 +1,5 @@
 import axios from "axios";
-import { useAuthStore } from "@/stores/auth";
+import { getSessionToken } from "@/auth/session";
 import { getApiBaseURL } from "@/config/runtime";
 
 export const api = axios.create({
@@ -9,14 +9,16 @@ export const api = axios.create({
 
 api.defaults.headers.common['Content-Type'] = "application/json"
 
-api.interceptors.request.use((config) => {
-    const { userID } = useAuthStore.getState()
-    const storedUserId = localStorage.getItem("userID")
-    const resolvedUserId = userID ?? storedUserId
+api.interceptors.request.use(async (config) => {
+    const token = await getSessionToken()
 
-    if (resolvedUserId) {
-        config.headers = config.headers ?? {}
-        config.headers["x-userID"] = resolvedUserId
+    config.headers = config.headers ?? {}
+    delete config.headers["x-userID"]
+
+    if (token) {
+        config.headers.Authorization = `Bearer ${token}`
+    } else {
+        delete config.headers.Authorization
     }
 
     return config

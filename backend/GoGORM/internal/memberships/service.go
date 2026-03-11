@@ -39,6 +39,8 @@ type MembershipRepo interface {
 	SearchUsers(ctx context.Context, query string) ([]models.User, error)
 	GetUsersByIDs(ctx context.Context, userIDs []uuid.UUID) ([]models.User, error)
 	GetUser(ctx context.Context, userID uuid.UUID) (*models.User, error)
+	GetUserByClerkUserID(ctx context.Context, clerkUserID string) (*models.User, error)
+	GetUserByEmail(ctx context.Context, email string) (*models.User, error)
 	CreateUser(ctx context.Context, user *models.User) error
 	PatchUserByID(ctx context.Context, userID uuid.UUID, updates map[string]any) (*models.User, error)
 	GetUserWorkspaceIDs(ctx context.Context, userID uuid.UUID) ([]uuid.UUID, error)

@@ -222,8 +222,9 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     },
     createWorkspace: async (Name: string) => {
         try {
-            await api.post("/workspaces", { Name });
-            //const data: UserWorkspaceData = response.data;
+            const response = await api.post("/workspaces", { Name });
+            const data = response.data as UserWorkspaceData;
+            get().mergeWorkspaceData(data)
         } catch (error) {
             // console.log("Error creating workspace")
             throw error

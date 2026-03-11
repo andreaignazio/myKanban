@@ -1,3 +1,4 @@
+import { useClerk } from "@clerk/react";
 import { useAuthStore } from "@/stores/auth";
 import { useUserStore } from "@/stores/userStore";
 import { UserAvatarDummy } from "./badges/UserAvatarDummy";
@@ -7,11 +8,17 @@ type TopbarLiteProps = {
 }
 
 export function TopbarLite({ isAuthenticated }: TopbarLiteProps) {
+    const { signOut } = useClerk();
     const userID = useAuthStore((state) => state.userID);
     const authUser = useAuthStore((state) => state.user);
     const clearAuthSession = useAuthStore((state) => state.clearAuthSession);
     const userFromStore = useUserStore((state) => (userID ? state.usersById[userID] : undefined));
     const currentUser = authUser ?? userFromStore;
+
+    async function handleLogout() {
+        clearAuthSession()
+        await signOut({ redirectUrl: "/" })
+    }
 
     return (
         <header className="w-full h-14 px-4 md:px-6 flex items-center justify-between bg-main border-b border-white/10">
@@ -26,7 +33,7 @@ export function TopbarLite({ isAuthenticated }: TopbarLiteProps) {
                 <div className="flex items-center gap-3">
                     <button
                         type="button"
-                        onClick={clearAuthSession}
+                        onClick={() => { void handleLogout() }}
                         className="text-xs px-2 py-1 rounded-md bg-white/10 text-white hover:bg-white/20 transition-colors"
                     >
                         Logout

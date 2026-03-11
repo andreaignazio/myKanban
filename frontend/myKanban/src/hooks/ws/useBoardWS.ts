@@ -1,5 +1,6 @@
 ﻿
 import { useBoardDetailStore } from "@/stores/boardDetailStore"
+import { getSessionToken } from "@/auth/session"
 import { useAuthStore } from "@/stores/auth"
 import { useRef, useEffect, useState } from "react"
 import type { BoardEvent, UserEvent, WorkspaceEvent } from "@/stores/types"
@@ -37,20 +38,29 @@ const sharedWsState: SharedWsState = {
     isOpen: false
 }
 
-function buildWebSocketURL(workspaceID: string, boardID?: string): string {
-    const userID = useAuthStore.getState().userID
-    if (!userID) {
-        console.warn("[ws] missing userID while building WebSocket URL", {
+async function buildWebSocketURL(workspaceID: string, boardID?: string): Promise<string | null> {
+    const token = await getSessionToken()
+    if (!token) {
+        console.warn("[ws] missing Clerk session token while building WebSocket URL", {
             workspaceID,
             boardID: boardID ?? null
         })
+        return null
     }
-    const base = `${getWebSocketOrigin()}/api/ws?workspaceID=${workspaceID}&userID=${userID}`
-    const url = boardID ? `${base}&boardID=${boardID}` : base
+
+    const params = new URLSearchParams({
+        workspaceID,
+        token,
+    })
+    if (boardID) {
+        params.set("boardID", boardID)
+    }
+
+    const url = `${getWebSocketOrigin()}/api/ws?${params.toString()}`
     console.debug("[ws] build url", {
         workspaceID,
         boardID: boardID ?? null,
-        hasUserID: Boolean(userID),
+        hasToken: true,
         url
     })
     return url
@@ -59,6 +69,7 @@ function buildWebSocketURL(workspaceID: string, boardID?: string): string {
 export function useBoardWebSocket(workspaceID: string, boardID: string | null) {
 
     const [events, setEvents] = useState<any[]>([])
+    const currentUserId = useAuthStore((state) => state.userID)
     const applyStateEvent = useBoardDetailStore((state) => state.applyEvent)
     const applyPresenceEvent = usePresenceStore((state) => state.applyEvent)
     const applyAuditEvent = useAuditStore((state) => state.applyAuditEvent)
@@ -239,7 +250,7 @@ export function useBoardWebSocket(workspaceID: string, boardID: string | null) {
         if (!workspaceID) return
         let disposed = false
 
-        const connect = () => {
+        const connect = async () => {
             if (disposed) return
             if (sharedWsState.ws && sharedWsState.boardID === boardID) {
                 const rs = sharedWsState.ws.readyState
@@ -252,7 +263,23 @@ export function useBoardWebSocket(workspaceID: string, boardID: string | null) {
 
             connectRef.current.seq += 1
             const seq = connectRef.current.seq
-            const wsUrl = buildWebSocketURL(workspaceID, boardID ?? undefined)
+            const wsUrl = await buildWebSocketURL(workspaceID, boardID ?? undefined)
+            if (!wsUrl) {
+                if (!disposed) {
+                    const delay = 500
+                    console.info("[ws] token not ready yet, retrying", {
+                        seq,
+                        workspaceID,
+                        boardID: boardID ?? null,
+                        currentUserId,
+                        retryDelayMs: delay,
+                    })
+                    retryRef.current.timer = window.setTimeout(() => {
+                        void connect()
+                    }, delay)
+                }
+                return
+            }
             console.info("[ws] connecting", {
                 seq,
                 workspaceID,
@@ -347,7 +374,7 @@ export function useBoardWebSocket(workspaceID: string, boardID: string | null) {
             }
 
         }
-        connect()
+        void connect()
         return () => {
             disposed = true
             console.info("[ws] cleanup start", {
@@ -375,5 +402,5 @@ export function useBoardWebSocket(workspaceID: string, boardID: string | null) {
                 boardID: boardID ?? null
             })
         }
-    }, [workspaceID, boardID, applyStateEvent])
+    }, [workspaceID, boardID, currentUserId, applyStateEvent])
 }
