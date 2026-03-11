@@ -1,40 +1,22 @@
-﻿import { forwardRef, useRef, useEffect, useMemo, useState } from "react";
-import { ListRow } from "../components/ListRow";
+﻿import { useRef, useEffect, useMemo, useState } from "react";
 import { useBoardDetailStore } from "@/stores/boardDetailStore";
 import { Outlet, useParams } from "react-router-dom";
 import { useShallow } from "zustand/shallow"
-import { useBoardWebSocket } from "@/hooks/ws/useBoardWS";
 import { useBoardsStore } from "@/stores/boardsStore";
-import { ListAdd } from "@/components/ListAdd";
 
-import type { Board, Card, InboxCard, MoveInboxToListRequest, UserLite } from "@/stores/types";
-import { ChartBarIcon, FunnelIcon, UsersIcon, } from "@heroicons/react/24/solid";
-import { ChevronDownIcon, EnvelopeIcon, StarIcon } from "@heroicons/react/24/outline";
-import { usePresenceStore } from "@/stores/presenceStore";
-import { BoardActionMenuBtn } from "@/components/modals/BoardActionMenu";
-import { BoardShareMenu } from "@/components/modals/BoardShareMenu";
+import type { InboxCard, MoveInboxToListRequest } from "@/stores/types";
 import { useOverlayStore, type OverlayDescriptor } from "@/overlays/overlayStore";
 import { CardDetailMenu } from "@/components/modals/CardDetailMenu";
-import { BoardOfferManager } from "@/components/OffersLists/BoardOfferManager";
 
-import { useNavigate, useLocation, type Location } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { FloatingTabSelector, type TabType } from "@/components/menuElements/floatingTabSelector";
-import { Calendar, Columns3Icon, Inbox, List, TableColumnsSplit, WalletCardsIcon } from "lucide-react";
-import { CardRow } from "@/components/CardRow";
+import { Calendar, Columns3Icon, TableColumnsSplit, WalletCardsIcon } from "lucide-react";
 import type { CardContext, CardRouteState } from "@/domain/cardContext";
 import { SwitchBoardsModal } from "@/components/modals/switchBoards";
 import { useUserInboxStore } from "@/stores/userInboxStore";
-import { CardRowInbox } from "@/components/cardRowInbox";
-import { useCardActionRegistry } from "@/actionRegistry/cardActionRegistry";
-import { useBoardActionRegistry } from "@/actionRegistry/boardActionRegistry";
-import { CustomInput, type CustomInputHandle } from "@/components/menuElements/CustomInput";
-import { LabeledButtonPresetBSubmit } from "@/components/buttons/labeledButton/LabeledButtonPresetBSubmit";
-import { LabeledButtonPresetB } from "@/components/buttons/labeledButton";
-import { useBoardMembersStore } from "@/stores/boardMembersStore";
-import { DragDropContext, Droppable, type DragStart, type DropResult } from "@hello-pangea/dnd"
+import { DragDropContext, type DragStart, type DropResult } from "@hello-pangea/dnd"
 import { ListContainer } from "./BoardView/ListContainer";
 import { useBoardBackground } from "@/hooks/useBoardBackground";
-import { useIsOverlayActive } from "@/hooks/useIsOverlayActive";
 import { InboxView } from "./Inbox/InboxView";
 import { useSmoothBoardBackground, type BoardBackgroundSpec } from "@/hooks/useSmoothBoardBackground";
 import { BoardViewTopBar } from "@/components/BoardView/BoardViewTopBar";
@@ -46,8 +28,6 @@ export { BaseBtn }
 
 
 const EMPTY_LIST_IDS: string[] = []
-
-const PADDING_X = 8
 
 function BoardBackgroundLayer({ spec }: { spec: BoardBackgroundSpec }) {
     if (spec.kind === "color") {
@@ -271,7 +251,6 @@ export default function BoardView() {
     const boardListIds = useBoardDetailStore(useShallow((state) => (
         boardId ? state.boardListIdsByBoardId[boardId] ?? EMPTY_LIST_IDS : EMPTY_LIST_IDS
     )))
-    const uniqueBoardListIds = Array.from(new Set(boardListIds))
     const setBoardListIds = useBoardDetailStore((state) => state.setBoardListIdsByBoardId)
     const setListCardIds = useBoardDetailStore((state) => state.setListCardIdsByListId)
     const getListCardIds = useBoardDetailStore((state) => state.getListCardIds)

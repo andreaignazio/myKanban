@@ -3,7 +3,6 @@ import { create } from 'zustand'
 import { useAsyncRequestStore, useAsyncKey } from '@/stores/asyncRequestStore'
 import type { AsyncRequestKey } from '@/stores/asyncRequestTypes'
 
-import type { ListCard } from './boardDetailStore'
 import type { BulkDetatchListCardsResponse, BulkMoveListCardsInBoardRequest, BulkMoveListCardsInBoardResponse, Card, CardProps, CopyCardToListRequest, MirrorCardToListRequest, MoveCardToBoardRequest, PatchCardDetailsRequest, PatchCardPropsRequest } from './types'
 
 type cardsById = Record<string, Card>

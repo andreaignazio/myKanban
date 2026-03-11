@@ -3,7 +3,7 @@ import { forwardRef, useState } from "react"
 import { ActionMenuWrapper } from "../modals/ListActionsMenu";
 import { baseImages, gradientColorTokens, type ColorToken } from "@/domain/colorTokens";
 import { ButtonHoverInset } from "../menuElements/buttonHoverInset";
-import { LabeledButtonPresetA, LabeledButtonPresetB } from "../buttons/labeledButton";
+import { LabeledButtonPresetA } from "../buttons/labeledButton";
 import { ImageSearchMenu } from "../cardMenus/imageSearchMenu";
 import { BoardColorsSection } from "./BoardColorsSection";
 

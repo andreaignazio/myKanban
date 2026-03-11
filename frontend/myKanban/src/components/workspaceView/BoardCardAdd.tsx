@@ -1,11 +1,8 @@
-
 type BoardRowProps = {
     workspaceId: string
 
 
 }
-
-import { useBoardsStore } from "@/stores/boardsStore";
 import { BoardCardWrapper } from "./BoardCardWrapper";
 import { useOverlayStore, type OverlayDescriptor } from "@/overlays/overlayStore";
 import { useRef } from "react";

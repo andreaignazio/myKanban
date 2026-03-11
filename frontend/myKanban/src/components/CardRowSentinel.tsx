@@ -9,10 +9,7 @@ type CardRowSentinelProps = {
 
 export function CardRowSentinel({ children, className }: CardRowSentinelProps) {
     const [isOver, setIsOver] = useState(false)
-    const isCardDragging = useUiStore((state) => state.isCardDragging)
-    const setListDragging = useUiStore((state) => state.setListDragging)
     const isListDragging = useUiStore((state) => state.isListDragging)
-    const setCardDragging = useUiStore((state) => state.setCardDragging)
 
     function handleDragEnter(e: React.DragEvent<HTMLDivElement>) {
         if (isListDragging) { return }

@@ -1,6 +1,6 @@
-import { forwardRef, useRef } from "react";
+import { useRef } from "react";
 import { LabeledButtonCustom } from "./LabeledButtonCustom";
-import type { LabeledButtonPresetProps, LabeledButtonProps } from "./types";
+import type { LabeledButtonPresetProps } from "./types";
 
 
 

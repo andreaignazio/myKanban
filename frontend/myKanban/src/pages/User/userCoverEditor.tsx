@@ -1,10 +1,8 @@
-import { UserAvatar } from "@/components/badges/UserAvatar"
 import { ImageColorSelector } from "@/components/menuElements/ImageColorSelector"
 import { CommonMenuWrapper } from "@/components/menuElements/menuWrapper"
-import { forwardRef, use, useEffect, useState, type RefObject } from "react";
+import { forwardRef, useEffect } from "react";
 import { gradientColorTokens, type ColorToken } from "@/domain/colorTokens";
 import { useAuthStore } from "@/stores/auth";
-import { CustomInput } from "@/components/menuElements/CustomInput";
 import { SubmitFooter } from "@/components/menuElements/submitFooter";
 import { useUserActionRegistry } from "@/actionRegistry/userActionRegistry";
 import type { UserProps } from "@/stores/usertypes";

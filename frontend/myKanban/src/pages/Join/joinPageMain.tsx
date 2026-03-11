@@ -64,9 +64,9 @@ const JoinTab = ({ User, shareLink, token }: JoinTabProps) => {
     const [isClaiming, setIsClaiming] = useState(false);
     const [claimError, setClaimError] = useState<string | null>(null);
     const [isClaimed, setIsClaimed] = useState(false);
-    const [isRequestingAccess, setIsRequestingAccess] = useState(false);
-    const [requestError, setRequestError] = useState<string | null>(null);
-    const [isRequestSent, setIsRequestSent] = useState(false);
+    const [isRequestingAccess] = useState(false);
+    const [requestError] = useState<string | null>(null);
+    const [isRequestSent] = useState(false);
 
     const mode = shareLink?.Mode;
     const entityType = shareLink?.TargetType;
@@ -100,27 +100,6 @@ const JoinTab = ({ User, shareLink, token }: JoinTabProps) => {
     }
 
     const asycHandlerRef = useRef<AsyncRequestHandle>(null);
-
-    const handleRequestAccessOLD = async () => {
-        if (!shareLink?.TargetID || !shareLink?.TargetType) return;
-
-        setIsRequestingAccess(true);
-        setRequestError(null);
-
-        try {
-            if (shareLink.TargetType === "board") {
-                await createBoardAccessRequest(shareLink.TargetID, "", "viewer");
-            } else if (shareLink.TargetType === "workspace") {
-                await createWorkspaceAccessRequest(shareLink.TargetID, "", "viewer");
-            }
-            setIsRequestSent(true);
-        } catch {
-            setRequestError("Unable to send request. Please try again.");
-        } finally {
-            setIsRequestingAccess(false);
-            navigate(`/workspaces/`);
-        }
-    }
 
     const createRequest = async () => {
         if (!shareLink?.TargetID || !shareLink?.TargetType) return;
@@ -362,12 +341,7 @@ export const LoginForm = ({ onLoginSuccess }: LoginFormProps) => {
 
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
-    const [username, setUsername] = useState("");
-
-    const isPosswordSet = password.length > 0;
     const isEmailSet = email.length > 0;
-    const isEmailValid = email.includes("@") && email.includes(".");
-    const isUsernameSet = username.length > 0;
 
     const inputClassName = "!rounded-lg shadow-md shadow-black/20 "
 

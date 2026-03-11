@@ -1,27 +1,8 @@
-import { forwardRef, useEffect, useRef, useState } from "react";
 import { CommonMenuWrapper } from "../menuElements/menuWrapper"
-import { useShareOffersStore } from "@/stores/shareOffersStore";
-import { useWorkspaceStore } from "@/stores/workspaceStore";
-import { useCacheStore } from "@/stores/cacheStore";
-import { useWorkspaceDerivedProps } from "@/hooks/useWorkspaceDerivedProps";
 import { CatalogIcon, type IconId } from "@/icons/iconCatalog"
-import { ChevronRight, Grid2X2Plus, XCircle } from "lucide-react";
+import { Grid2X2Plus } from "lucide-react";
 import { SubscriptionBadge } from "../badges/subscriptionBadge";
 import { ImageColorRenderer } from "../menuElements/ImageColorRenderer";
-import type { User, UserWorkspace } from "@/stores/types";
-import { useUserStore } from "@/stores/userStore";
-import { UserRoleBadge, type Role } from "../badges/UserRoleBadge";
-import { UserAvatarDummy } from "../badges/UserAvatarDummy";
-import { useDateTimeParser } from "@/hooks/useDateTimeParser";
-import { useUiStore, type DomainModalData } from "@/stores/uiStore";
-
-import { MemberRow } from "../common/MemberRow";
-
-type ShareOfferDetailsProps = {
-    onClose: () => void;
-    workspaceId?: string;
-
-}
 
 type WorkspaceOverviewPanelProps = {
     onClose: () => void;

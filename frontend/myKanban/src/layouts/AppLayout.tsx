@@ -3,7 +3,7 @@ import { useLocation } from "react-router-dom";
 import Topbar from "@/components/Topbar"
 import Sidebar from "@/components/sidebar/Sidebar"
 import { useAuthStore } from "@/stores/auth";
-import { use, useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useBoardsStore } from "@/stores/boardsStore";
 import { useWorkspaceStore } from "@/stores/workspaceStore";
 import { useWsMembersStore } from "@/stores/wsMembersStore";
@@ -319,11 +319,6 @@ export default function AppLayout() {
             onAutoClose: redirectToWorkspaceBoards,
         })
     }, [lostBoardAccessModalOpen, lostBoardAccessWorkspaceId, workspaceID, setDomainModalOpen, setLostBoardAccessModalOpen, navigate])
-
-    const isMembersView = /^\/workspaces\/[^/]+\/members(\/.*)?$/.test(location.pathname)
-    const isUserView = /^\/users\/[^/]+(\/.*)?$/.test(location.pathname)
-    //const isBoardView = /^\/workspaces\/[^/]+\/boards\/[^/]+(\/.*)?$/.test(location.pathname)
-    //const isSingleMode = isMembersView || isUserView
 
     const isBoardViewV2 = useMatch("/workspaces/:workspaceId/boards/*")
     const isSingleMode = !isBoardViewV2

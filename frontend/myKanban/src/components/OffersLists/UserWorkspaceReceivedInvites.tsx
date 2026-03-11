@@ -15,20 +15,12 @@ export const UserWorkspaceReceivedInvites = forwardRef<HTMLDivElement, OutgoingR
     const fetchUserWorkspaceIncomingInvites = useShareOffersStore((state) => state.fetchUserWorkspaceIncomingInvites)
 
     const offersIds = useShareOffersStore(useShallow((state) => state.userWsIncomingOfferIds))
-    const offersById = useCacheStore((state) => state.offerById)
     useEffect(() => {
 
         fetchUserWorkspaceIncomingInvites();
     }, [fetchUserWorkspaceIncomingInvites])
 
     const boardById = useCacheStore((state) => state.offerBoardById)
-
-    function getBoardIdFromOffer(offer: ShareOffer) {
-        if (offer.TargetType === "board") {
-            return offer.TargetID;
-        }
-        return null;
-    }
 
     function getWorkspaceIdFromOffer(offer: ShareOffer) {
         if (offer.TargetType === "board") {

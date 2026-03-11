@@ -1,12 +1,10 @@
-import { forwardRef, use, useEffect, useRef, useState } from "react"
-import { CommonMenuWrapper } from "../menuElements/menuWrapper"
-import { AsyncRequestOverlayA, AsyncRequestOverlayGroups } from "./asyncRequestOverlayA"
+import { forwardRef, useEffect, useRef } from "react"
+import { AsyncRequestOverlayGroups } from "./asyncRequestOverlayA"
 import { useOverlayStore, type OverlayDescriptor } from "@/overlays/overlayStore"
 import { useAsyncRequestGroup } from "@/hooks/useAsyncRequestGroup"
 import type { AsyncRequestKey } from "@/stores/asyncRequestTypes"
 import { motion } from "motion/react"
 import type { AsyncRequestState } from "@/stores/asyncRequestStore"
-import { useParams } from "react-router"
 import type { RequestGroup } from "../modals/ActionMenuWrapper"
 
 
@@ -107,12 +105,6 @@ const AsyncRequestToaster = forwardRef<HTMLDivElement, AsyncRequestToasterProps>
 
     )
 })
-
-type Context = "board" | "card"
-type AsyncRequestDisplay = {
-    state: AsyncRequestState[];
-    keys: AsyncRequestKey[];
-}
 
 export const AsyncRequestToasterController = () => {
     const keys: AsyncRequestKey[] = ["list:detach", "list:move", "card:move:bulk",

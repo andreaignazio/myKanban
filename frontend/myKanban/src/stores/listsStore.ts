@@ -1,6 +1,5 @@
 ﻿import { create } from "zustand"
 import { api } from "@/api/api"
-import { useBoardDetailStore } from "@/stores/boardDetailStore"
 import { useAsyncRequestStore, useAsyncKey } from "@/stores/asyncRequestStore"
 
 import type { BulkCopyListsRequest, BulkCopyListsResponse, List, MirrorBoardListRequest, MirrorBoardListResponse, MoveBoardListRequest, MoveBoardListResponse, PatchListAccessModeRequest } from "./types"

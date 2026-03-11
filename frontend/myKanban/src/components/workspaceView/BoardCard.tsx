@@ -7,7 +7,7 @@ import { useNavigate, useParams } from "react-router";
 import { useBoardsStore } from "@/stores/boardsStore";
 import { BoardCardWrapper } from "@/components/workspaceView/BoardCardWrapper";
 import { useRef } from "react";
-import { LockClosedIcon, StarIcon } from "@heroicons/react/24/outline";
+import { StarIcon } from "@heroicons/react/24/outline";
 import { LockKeyholeIcon } from "lucide-react";
 import { useOverlayStore, type OverlayDescriptor } from "@/overlays/overlayStore";
 import { ShareActionModal } from "@/components/modals/ShareActionModal";

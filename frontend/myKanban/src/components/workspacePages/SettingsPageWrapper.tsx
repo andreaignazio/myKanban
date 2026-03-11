@@ -1,4 +1,3 @@
-import { Outlet } from "react-router-dom";
 import { AsideTabsBar, type AsideTabs } from "./asideTabs";
 
 type WorkspaceSettingsPageWrapperProps = {

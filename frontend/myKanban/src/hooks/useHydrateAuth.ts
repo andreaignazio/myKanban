@@ -3,7 +3,6 @@ import { useUserStore } from "@/stores/userStore";
 import { useEffect } from "react";
 
 export function useHydrateAuth() {
-    const userStore = useUserStore();
     const hydrateAuth = useAuthStore((state) => state.hydrate);
     const currentUserId = useAuthStore((state) => state.userID);
     const userById = useUserStore((state) => state.usersById);

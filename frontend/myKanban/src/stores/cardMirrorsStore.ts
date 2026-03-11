@@ -3,8 +3,6 @@ import { useAsyncKey, useAsyncRequestStore } from "./asyncRequestStore";
 import { api } from "@/api/api";
 import type { AxiosResponse } from "axios";
 import type { Board, BoardList, CardMirrorsResponse, List, MirrorCardData, UserBoard } from "./types";
-import { useBoardsStore } from "./boardsStore";
-import { useBoardMembersStore } from "./boardMembersStore";
 import type { ListCard } from "./boardDetailStore";
 
 type CardMirrorsState = {
@@ -50,7 +48,7 @@ export const useCardMirrorsStore = create<CardMirrorsState>()((set, get) => ({
 
     fetchCardMirrors: async (workspaceId: string, cardId: string) => {
 
-        const response = await useAsyncRequestStore.getState().execute<AxiosResponse>(
+        await useAsyncRequestStore.getState().execute<AxiosResponse>(
             useAsyncKey("card:mirror:fetch", workspaceId, cardId),
             () => api.get(`/workspaces/${workspaceId}/cards/${cardId}/mirrors`),
             {

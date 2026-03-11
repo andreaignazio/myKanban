@@ -1,17 +1,13 @@
-import { UserRow } from "@/components/UserRow";
 import { useWsMembersStore } from "@/stores/wsMembersStore";
 import { Outlet, useNavigate } from "react-router";
-import { use, useRef, useState } from "react";
 import { useParams } from "react-router"
 import { useShallow } from "zustand/shallow";
-import { WorkspaceSubRows } from "@/components/sidebar/WorkspaceSubRows";
-import { ChevronRight, UserPlusIcon } from "lucide-react";
-import { CatalogIcon } from "@/icons/iconCatalog";
+import { UserPlusIcon } from "lucide-react";
 import { LabeledButtonPresetA } from "@/components/buttons/labeledButton";
 import { CardRowMenuBtn } from "@/components/cardMenus/cardRowMenus";
 import { ShareActionModal } from "@/components/modals/ShareActionModal";
 import { useCurrentWorkspaceRole } from "@/hooks/useCurrentWorkspaceRole";
-import { AsideTabsBar, type AsideTabs } from "@/components/workspacePages/asideTabs";
+import { type AsideTabs } from "@/components/workspacePages/asideTabs";
 import { SettingsPageWrapper } from "@/components/workspacePages/SettingsPageWrapper";
 import { useSyncTabRouter } from "@/hooks/useSyncTabRouter";
 
@@ -21,10 +17,7 @@ export function WorkspaceMembers() {
 
     const workspaceID = useParams().workspaceId as string;
     const membersIds = useWsMembersStore(useShallow((state) => state.userIdsByWorkspaceId[workspaceID] ?? []));
-    const { isAdminOrOwner, isMember } = useCurrentWorkspaceRole(workspaceID ?? null);
-
-
-    const panelRef = useRef<HTMLDivElement | null>(null)
+    const { isAdminOrOwner } = useCurrentWorkspaceRole(workspaceID ?? null);
     const asideLinks: AsideTabs[] = [
         { id: "members", label: "Members", href: `/workspaces/${workspaceID}/members/`, type: "page" },
         { id: "guests", label: "Guests", href: `/workspaces/${workspaceID}/members/guests/`, type: "page" },
@@ -41,7 +34,7 @@ export function WorkspaceMembers() {
         navigate(href);
     }
 
-    const { activeTab, setActiveTab } = useSyncTabRouter(asideLinks);
+    const { activeTab } = useSyncTabRouter(asideLinks);
 
 
     return (

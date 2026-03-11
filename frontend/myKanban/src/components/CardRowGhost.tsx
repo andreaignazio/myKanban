@@ -1,6 +1,5 @@
 import { useUiStore } from "@/stores/uiStore"
-import { AnimatePresence, motion } from "framer-motion"
-import { useState } from "react"
+import { motion } from "framer-motion"
 import { useShallow } from "zustand/shallow"
 type CardRowProps = {
     active: boolean

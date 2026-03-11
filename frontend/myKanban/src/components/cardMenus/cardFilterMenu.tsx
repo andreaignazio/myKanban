@@ -98,7 +98,6 @@ export const CardFilterMenu = forwardRef<HTMLDivElement, CardFilterMenuProps>(({
         fontSize: "13px",
         marginTop: 12
     }
-    const entiresClassName = `!font-medium !text-neutral-300`
     const entriesStyle: React.CSSProperties = {
         color: "rgb(183,183,183)",
         fontWeight: 450,

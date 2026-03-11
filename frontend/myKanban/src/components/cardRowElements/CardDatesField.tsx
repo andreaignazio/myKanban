@@ -1,12 +1,8 @@
 import { useDateTimeParser } from "@/hooks/useDateTimeParser"
 
-import { UserAvatar } from "@/components/badges/UserAvatar"
-import { useUserStore } from "@/stores/userStore"
-
 import type { Card } from "@/stores/types"
 import { DateStatusBadge, type DateBadgeTextClasses } from "./DateStatusBadge"
 
-const CARD_ROW_FIELDS_HEIGHT = 28
 type CardDatesFieldProps = {
     card?: Card | null;
     rowHeight: number;
@@ -56,7 +52,6 @@ export const CardDatesField = ({ card, rowHeight, cardHasDates, className, dataT
 
     const isDone = !!card?.Done
     const isOverdue = to ? to < now : false
-    const isStartingSoon = from ? from > now && from.getTime() - now.getTime() < 24 * 60 * 60 * 1000 : false
     const isDueSoon = to ? to > now && to.getTime() - now.getTime() < 24 * 60 * 60 * 1000 : false
     const tone = isDone ? "done" : isOverdue ? "overdue" : isDueSoon ? "dueSoon" : "default"
 

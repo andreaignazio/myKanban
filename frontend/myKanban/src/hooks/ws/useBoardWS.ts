@@ -1,7 +1,7 @@
 ﻿
 import { useBoardDetailStore } from "@/stores/boardDetailStore"
 import { useAuthStore } from "@/stores/auth"
-import { useRef, useEffect, useState, use } from "react"
+import { useRef, useEffect, useState } from "react"
 import type { BoardEvent, UserEvent, WorkspaceEvent } from "@/stores/types"
 import { usePresenceStore } from "@/stores/presenceStore"
 import { useAuditStore } from "@/stores/auditStore"

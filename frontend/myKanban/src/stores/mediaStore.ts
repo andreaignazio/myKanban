@@ -22,8 +22,6 @@ export const useMediaStore = create<MediaStore>((set, get) => ({
         activeSearchController = controller;
 
         try {
-            const baseURL = "/media/providers/unsplash/search" + encodeURIComponent(`?query=${q}&perPage=${perPage}&page=${page}`);
-            // console.log("Fetching media with URL:", baseURL);
             const response = await api.get("/media/providers/unsplash/search", {
                 params: { query: q, perPage, page },
                 signal: controller.signal,

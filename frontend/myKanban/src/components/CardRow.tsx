@@ -1,17 +1,14 @@
 ﻿
 
 import type { CardContext, CardRouteState } from "@/domain/cardContext"
-import { useBoardDetailStore, type ListCard } from "@/stores/boardDetailStore"
+import { useBoardDetailStore } from "@/stores/boardDetailStore"
 import { useCardsStore } from "@/stores/cardsStore"
 import { useNavigate, useLocation, useParams } from "react-router-dom"
 
-import { TrashIcon } from "@heroicons/react/24/outline"
-import { use, useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 
-import type { Card } from "@/stores/types"
 import { useLabelsStore } from "@/stores/labelsStore"
-import { useUserWatchStore } from "@/stores/userWatchStore"
-import { ArchiveIcon, Clock, EyeIcon, List, SquareCheckBig, SquarePenIcon, TextAlignStartIcon } from "lucide-react"
+import { ArchiveIcon, SquarePenIcon } from "lucide-react"
 import { CardFieldsLabels } from "./cardRowElements/CardFieldsLabels"
 import { Mirrors } from "./cardRowElements/CardMirrorsField"
 import { CardRowTitle } from "./cardRowElements/CardRowTitle"
@@ -32,17 +29,6 @@ type CardRowProps = {
     inboxCardId?: string
     rootListCardId?: string
     editMenuPrefix?: string
-}
-
-function getStableIndexFromString(value: string, length: number): number {
-    if (length <= 0) return 0
-
-    let hash = 0
-    for (let index = 0; index < value.length; index++) {
-        hash = (hash * 31 + value.charCodeAt(index)) >>> 0
-    }
-
-    return hash % length
 }
 
 export const CardRow = ({ boardID, listId, listCardID: listCardID, cardId, index, isDragDisabled = false, source = "board", inboxCardId, rootListCardId, editMenuPrefix }: CardRowProps) => {
@@ -81,7 +67,7 @@ export const CardRow = ({ boardID, listId, listCardID: listCardID, cardId, index
     }
 
 
-    const { cardColor, cardCoverURL, hasCover, coverSize, isDetailed } = useCardBackground({ card })
+    const { cardColor, cardCoverURL, hasCover, isDetailed } = useCardBackground({ card })
 
     const cardHasLabels = useLabelsStore((state) => {
         if (!cardID) return false;
@@ -105,8 +91,6 @@ export const CardRow = ({ boardID, listId, listCardID: listCardID, cardId, index
         isInbox,
         isInboxMode,
         isMirrorCard,
-        effectiveListCardID,
-        effectiveRootBoard,
         rootBoardBackgroundType,
         rootBoardBgImage,
         rootBoardBgColorClass,
@@ -123,7 +107,7 @@ export const CardRow = ({ boardID, listId, listCardID: listCardID, cardId, index
 
     const done = card?.Done
 
-    const { canEdit, isReadOnlyList } = useCardEditableContext({ cardContext, boardId })
+    const { canEdit } = useCardEditableContext({ cardContext, boardId })
 
 
 
@@ -159,7 +143,6 @@ export const CardRow = ({ boardID, listId, listCardID: listCardID, cardId, index
     const onMenuClose = useOverlayStore((state) => state.close);
 
     const ActionsMenuRef = useRef<HTMLDivElement>(null)
-    const anchorRef = useRef<HTMLDivElement>(null)
 
     const editMenutID = editMenuPrefix + "card-action-menu"
     function handleOpenCardActionModal() {
@@ -398,35 +381,17 @@ export const CardRow = ({ boardID, listId, listCardID: listCardID, cardId, index
 
 
 
-
-const EMPTY_IDS: string[] = []
-
-
-
-import { useDateTimeParser } from "@/hooks/useDateTimeParser"
-import { useChecklistStore } from "@/stores/checklistStore"
-
-import { useShallow } from "zustand/shallow"
-import { useCardMembersStore } from "@/stores/CardMembersStore"
-import { UserAvatar } from "./badges/UserAvatar"
-import { useUserStore } from "@/stores/userStore"
 import { LabeledButtonPresetBSubmit } from "./buttons/labeledButton"
 import { useOverlayStore, type OverlayDescriptor } from "@/overlays/overlayStore"
 import { createPortal } from "react-dom"
-import { ListActionsMenu } from "./modals/ListActionsMenu"
 import { CardEditMenu } from "./modals/cardEditMenu"
-import { useBuildPublicURL } from "@/hooks/useBuildPublicURL"
 import { useCardActionRegistry } from "@/actionRegistry/cardActionRegistry"
 import { CardRowCoverWrapper } from "./cardRowElements/CardRowCoverWrapper"
-import { useBoardsStore } from "@/stores/boardsStore"
-import { getClassNamesForColorToken, gradientColorTokens } from "@/domain/colorTokens"
-import { useBoardBackground } from "@/hooks/useBoardBackground"
 import { useAsyncKey } from "@/stores/asyncRequestStore"
 import { useCardBackground } from "@/hooks/useCardBackground"
 import { useCardRootBoardContext } from "@/hooks/useCardRootBoardContext"
 import type { CardSource } from "@/domain/cardContext"
 import { useCardEditableContext } from "@/hooks/useCardEditableContext"
-import { create } from "zustand"
 
 
 

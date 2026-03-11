@@ -1,9 +1,7 @@
-import { useAuditStore } from "@/stores/auditStore"
-import type { RenderFeed } from "@/hooks/useFeedFromAudit"
 import { useBoardsStore } from "@/stores/boardsStore"
 import { useCardsStore } from "@/stores/cardsStore"
 import { useUserNotificationStore, type FeedsByActor, type UserNotificationRender } from "@/stores/userNotificationStore"
-import { use, useEffect } from "react"
+import { useEffect } from "react"
 import { useShallow } from "zustand/shallow"
 import { UserAvatar } from "../badges/UserAvatar"
 import { useListsStore } from "@/stores/listsStore"
@@ -67,7 +65,6 @@ export const NotificationItemByEntity = ({ id, notification }: NotificationItemB
     const listTitle = list?.Title || "list not found"
     const fallbackBackgroundUrl = "https://images.unsplash.com/photo-1454496522488-7a8e488e8606?auto=format&fit=crop&w=1920&q=80"
     const boardBackground = board?.Props?.Background?.Image?.Url ?? fallbackBackgroundUrl
-    const readableFromTS = useAuditStore((state) => state.readableDateFromTimestamp)
     //const actionNameFromActionType = useAuditStore((state) => state.actionNameFromActionType)
     if (!notification) return null
 
@@ -121,8 +118,6 @@ type NotificationActionItemProps = {
 }
 export const NotificationActionItem = ({ FeedsByActor: FeedsByActor }: NotificationActionItemProps) => {
     const actor = useUserStore((state) => state.usersById[FeedsByActor.ActorID])
-    const readableFromTS = useAuditStore((state) => state.readableDateFromTimestamp)
-    const actionNameFromActionType = useAuditStore((state) => state.actionNameFromActionType)
 
     return (
         <div className="relative z-0 p-3 pb-6 pt-6 grid grid-cols-[40px_1fr]  items-center gap-2">

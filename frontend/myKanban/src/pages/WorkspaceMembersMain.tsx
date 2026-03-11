@@ -1,24 +1,16 @@
-﻿import { LabeledButtonCustom } from "@/components/buttons/labeledButton";
-import { OverlayRootDummy } from "@/components/menu/OverlayRootDummy";
-import { CustomInput } from "@/components/menuElements/CustomInput";
-import { SearchModal } from "@/components/modals/searchmodal";
-import { ShareActionModal } from "@/components/modals/ShareActionModal";
-import { WorkspaceShareLinks } from "@/components/OffersLists/WorkspaceShareLinks";
+﻿import { CustomInput } from "@/components/menuElements/CustomInput";
 import { UserRow } from "@/components/UserRow";
-import { useOverlayStore, type OverlayDescriptor } from "@/overlays/overlayStore";
 import type { UserWorkspace } from "@/stores/types";
 import { useUserStore } from "@/stores/userStore";
 import { useWsMembersStore } from "@/stores/wsMembersStore";
 import { BriefcaseBusiness } from "lucide-react";
-import { use, useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useMatch, useParams } from "react-router-dom";
 import { useShallow } from "zustand/shallow";
 
 export function WorkspaceMembersMain() {
     const workspaceID = useParams().workspaceId as string;
     const membersIds = useWsMembersStore(useShallow((state) => state.userIdsByWorkspaceId[workspaceID] ?? []));
-    const openOverlay = useOverlayStore((state) => state.open);
-    const onMenuClose = useOverlayStore((state) => state.close);
     const membersById = useWsMembersStore(useShallow((state) => state.userWorkspacesByWorkspaceId[workspaceID] ?? {}));
 
     const [visibleIds, setVisibleIds] = useState<string[]>(membersIds);
@@ -26,10 +18,6 @@ export function WorkspaceMembersMain() {
 
     const isMembersRoute = useMatch("/workspaces/:workspaceId/members/");
     const isGuestsRoute = useMatch("/workspaces/:workspaceId/members/guests/*");
-
-    const panelRef = useRef<HTMLDivElement | null>(null)
-
-    const roles = ["member", "admin", "owner"] as const;
 
     /*useEffect(() => {
         if (!membersIds) return;

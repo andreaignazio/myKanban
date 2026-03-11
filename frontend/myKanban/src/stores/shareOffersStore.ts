@@ -1,16 +1,14 @@
 ﻿import { api } from "@/api/api";
 import axios from "axios";
 import { create } from "zustand";
-import type { BoardEvent, UserBoard, UserEvent, UserWorkspace, WorkspaceEvent } from "./types";
+import type { BoardEvent, UserEvent, WorkspaceEvent } from "./types";
 import { useWorkspaceStore, type UserWorkspaceData } from "./workspaceStore";
 import { useCacheStore } from "./cacheStore";
 import { useUserStore } from "./userStore";
 import type { UserBoardShareOffersDetails, ShareOffer, ShareOfferDetailsByIDResponse, ShareOfferDetailsResponse, WorkspaceOutgoingShareOfferResponse, BoardShareOfferWithUserDetails } from "./shareOfferTypes";
-import { use } from "react";
 import type { DomainEventTypes, UserEventTypes } from "./eventTypes";
 import type { BoardDetailPatch } from "./boardDetailStore";
 import { useWsMembersStore, type WorkspaceMemberData } from "./wsMembersStore";
-import { Target } from "lucide-react";
 import { useSortByDate } from "@/hooks/useSortByDate";
 import { useBoardsStore } from "./boardsStore";
 import { useBoardMembersStore } from "./boardMembersStore";
@@ -21,12 +19,6 @@ export type { ShareOffer } from "./shareOfferTypes";
 
 type RespondToShareOfferPayload = {
     Decision: "accepted" | "rejected"
-}
-type RespondToShareOfferResponse = {
-    ShareOffer: ShareOffer;
-    // Depending on the TargetType and OfferedRole, one of these might be populated
-    UserBoard?: UserBoard;
-    UserWorkspace?: UserWorkspace;
 }
 
 type ShareOffersState = {
@@ -114,8 +106,6 @@ export const useShareOffersStore = create<ShareOffersState>((set, get) => ({
 
                     workspacesDetails.forEach((wsDetail) => {
                         const ws = wsDetail.Workspace;
-                        const userWs = wsDetail.WorkspaceMembers[0].UserWorkspace
-                        const users = wsDetail.WorkspaceMembers[0].User
                         const subscription = wsDetail.WorkspaceSubscription
                         const dataForWsStore: UserWorkspaceData = {
                             Workspaces: [ws],
@@ -1083,9 +1073,8 @@ export const useShareOffersStore = create<ShareOffersState>((set, get) => ({
             const payload: RespondToShareOfferPayload = {
                 Decision: accept ? "accepted" : "rejected"
             }
-            const response = await api.post(`/shareoffers/${offerID}/respond`, payload);
+            await api.post(`/shareoffers/${offerID}/respond`, payload);
             set({ isRequestSuccessful: true });
-            const data: RespondToShareOfferResponse = response.data;
 
 
         } catch (error) {

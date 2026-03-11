@@ -3,7 +3,7 @@ import { useWorkspaceStore } from "@/stores/workspaceStore"
 import { useMatch } from "react-router-dom"
 import { SubscriptionBadge } from "../badges/subscriptionBadge"
 
-function SidebarFooter() {
+export function AutoSubscriptionBadge() {
     const isBoard = useMatch("/board/:boardId")
     const isWorkspace = useMatch("/workspaces/:workspaceId/*")
     const workspaceIdByBoardId = useBoardsStore((state) => state.findWorkspaceIdByBoardId)

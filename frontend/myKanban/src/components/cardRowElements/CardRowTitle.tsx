@@ -1,6 +1,4 @@
 import CheckIcon from "@heroicons/react/24/outline/CheckIcon"
-import { CardDoneIcon } from "./CardDoneIcon"
-import { useCardActionRegistry } from "@/actionRegistry/cardActionRegistry"
 
 
 type CardRowTitleProps = {

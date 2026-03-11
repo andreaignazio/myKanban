@@ -1,7 +1,7 @@
 import { useOverlayStore, type OverlayDescriptor } from "@/overlays/overlayStore";
 import { BaseBtn } from "@/pages/BoardView";
 import { BellIcon, CheckIcon } from "@heroicons/react/24/outline";
-import { forwardRef, use, useEffect, useRef, useState, type MutableRefObject } from "react";
+import { forwardRef, useEffect, useRef, useState, type MutableRefObject } from "react";
 import { ActionMenuWrapper } from "./ListActionsMenu";
 import { useUserWatchStore } from "@/stores/userWatchStore";
 import { useUserNotificationStore } from "@/stores/userNotificationStore";
@@ -14,7 +14,7 @@ import { useShallow } from "zustand/react/shallow";
 import { UserAvatar } from "../badges/UserAvatar";
 import { UserNotificationTabPlaceholder } from "./UserNotificationTabPlaceholder";
 import { FloatingTabSelector } from "../menuElements/floatingTabSelector";
-import { CrossIcon, XIcon } from "lucide-react";
+import { XIcon } from "lucide-react";
 
 type UserNotificationMenuBtnProps = {
     className?: string;
@@ -25,7 +25,6 @@ export const UserNotificationMenuBtn = forwardRef<HTMLButtonElement, UserNotific
     const onMenuClose = useOverlayStore((state) => state.close);
     const unreadCount = useUserNotificationStore((state) => state.unreadCount)
     const generateRenderNotifications = useUserNotificationStore((state) => state.generateRenderNotifications)
-    const renderNotifications = useUserNotificationStore(useShallow((state) => state.renderNotifications))
     const notificationsIds = useUserNotificationStore(useShallow((state) => state.notificationsIDs))
     const fetchUserNotifications = useUserNotificationStore((state) => state.fetchUserNotifications)
 

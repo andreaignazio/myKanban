@@ -1,10 +1,10 @@
 ﻿import { useCacheStore } from "@/stores/cacheStore";
 import { useShareOffersStore, type ShareOffer } from "@/stores/shareOffersStore";
-import type { Board, PublicShareLink, User, Workspace } from "@/stores/types";
-import { Component, forwardRef, use, useEffect, useRef, useState, type JSX, type RefObject } from "react";
+import type { Board, PublicShareLink, Workspace } from "@/stores/types";
+import { forwardRef, useEffect, useRef, useState, type JSX, type RefObject } from "react";
 import { useShallow } from "zustand/shallow";
 import { SubscriptionBadge } from "@/components/badges/subscriptionBadge";
-import { ExclamationCircleIcon, PencilIcon, ShieldCheckIcon, SquaresPlusIcon, XCircleIcon } from "@heroicons/react/24/outline";
+import { ExclamationCircleIcon, PencilIcon, ShieldCheckIcon, XCircleIcon } from "@heroicons/react/24/outline";
 import { useOverlayStore, type OverlayDescriptor } from "@/overlays/overlayStore";
 import { ShareActionModal } from "../modals/ShareActionModal";
 import { UserHoverCard } from "../modals/UserHoverCard";
@@ -45,7 +45,6 @@ export const UserBoardOutgoingRequests = forwardRef<HTMLDivElement, OutgoingRequ
 
     const fetchUserBoardAccessSentRequests = useShareOffersStore((state) => state.fetchUserBoardAccessSentRequests)
     const offersIds = useShareOffersStore(useShallow((state) => state.userBoardAccessSentRequestsIds))
-    const offersById = useCacheStore((state) => state.offerById)
     useEffect(() => {
 
         fetchUserBoardAccessSentRequests();

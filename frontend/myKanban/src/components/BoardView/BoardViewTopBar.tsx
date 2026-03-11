@@ -1,41 +1,18 @@
-import { forwardRef, useRef, useEffect, useMemo, useState } from "react";
-import { ListRow } from "@/components/ListRow";
-import { useBoardDetailStore } from "@/stores/boardDetailStore";
-import { Outlet, useParams } from "react-router-dom";
-import { useShallow } from "zustand/shallow"
-import { useBoardWebSocket } from "@/hooks/ws/useBoardWS";
+import { forwardRef, useRef, useEffect, useState } from "react";
 import { useBoardsStore } from "@/stores/boardsStore";
-import { ListAdd } from "@/components/ListAdd";
 
-import type { Board, Card, UserLite } from "@/stores/types";
+import type { Board, UserLite } from "@/stores/types";
 import { ChartBarIcon, FunnelIcon, UsersIcon, } from "@heroicons/react/24/solid";
 import { ChevronDownIcon, EnvelopeIcon, StarIcon } from "@heroicons/react/24/outline";
 import { usePresenceStore } from "@/stores/presenceStore";
 import { BoardActionMenuBtn } from "@/components/modals/BoardActionMenu";
 import { BoardShareMenu } from "@/components/modals/BoardShareMenu";
 import { useOverlayStore, type OverlayDescriptor } from "@/overlays/overlayStore";
-import { CardDetailMenu } from "@/components/modals/CardDetailMenu";
 import { BoardOfferManager } from "@/components/OffersLists/BoardOfferManager";
 
-import { useNavigate, useLocation, type Location } from "react-router-dom";
-import { FloatingTabSelector, type TabType } from "@/components/menuElements/floatingTabSelector";
-import { Calendar, Columns3Icon, Inbox, List, TableColumnsSplit, WalletCardsIcon } from "lucide-react";
-import { CardRow } from "@/components/CardRow";
-import { SwitchBoardsModal } from "@/components/modals/switchBoards";
-import { useUserInboxStore } from "@/stores/userInboxStore";
-import { CardRowInbox } from "@/components/cardRowInbox";
-import { useCardActionRegistry } from "@/actionRegistry/cardActionRegistry";
 import { useBoardActionRegistry } from "@/actionRegistry/boardActionRegistry";
-import { CustomInput, type CustomInputHandle } from "@/components/menuElements/CustomInput";
-import { LabeledButtonPresetBSubmit } from "@/components/buttons/labeledButton/LabeledButtonPresetBSubmit";
-import { LabeledButtonPresetB } from "@/components/buttons/labeledButton";
 import { useBoardMembersStore } from "@/stores/boardMembersStore";
-import { DragDropContext, Droppable } from "@hello-pangea/dnd"
-import { ListContainer } from "@/pages/BoardView/ListContainer";
-import { useBoardBackground } from "@/hooks/useBoardBackground";
 import { useIsOverlayActive } from "@/hooks/useIsOverlayActive";
-import { InboxView } from "@/pages/Inbox/InboxView";
-import { useSmoothBoardBackground, type BoardBackgroundSpec } from "@/hooks/useSmoothBoardBackground";
 
 
 

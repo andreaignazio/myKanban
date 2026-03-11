@@ -12,7 +12,6 @@ type CopySingleListInput = {
 export function useListActionRegistry() {
     const cardsStore = useCardsStore();
     const listStore = useListsStore();
-    const userWatchStore = useUserWatchStore();
 
     async function addCardAtEnd(boardId: string, listId: string) {
         const payload: CreateCardPayload = {

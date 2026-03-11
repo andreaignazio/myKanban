@@ -1,5 +1,5 @@
 import { DateTimeSelectorField } from "../common/DateTimeSelectorField";
-import { LabeledButtonCustom, LabeledButtonPresetB, LabeledButtonPresetBSubmit } from "../buttons/labeledButton";
+import { LabeledButtonPresetB, LabeledButtonPresetBSubmit } from "../buttons/labeledButton";
 import { CommonMenuWrapper } from "../menuElements/menuWrapper";
 
 type ShareLinkExpiryMenuProps = {

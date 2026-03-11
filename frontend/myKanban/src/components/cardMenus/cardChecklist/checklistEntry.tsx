@@ -1,5 +1,5 @@
 import { useChecklistStore } from "@/stores/checklistStore";
-import { use, useEffect, useImperativeHandle, useRef, useState, type ComponentType, type SVGProps } from "react";
+import { useEffect, useImperativeHandle, useRef, useState, type ComponentType, type SVGProps } from "react";
 import { useParams } from "react-router-dom";
 import { PADDING_L, type Buttons } from "../../modals/CardDetailMenu";
 import { EllipsisHorizontalIcon } from "@heroicons/react/24/solid";

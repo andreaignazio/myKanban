@@ -1,4 +1,4 @@
-import { Children, forwardRef, useEffect, useMemo, useState } from "react";
+import { forwardRef, useEffect, useMemo, useState } from "react";
 import type { MenuItemExtended } from "@/types/uiTypes";
 import { DropDown } from "../menuElements/DropDown";
 import { useListActionRegistry } from "@/actionRegistry/listActionRegistry";

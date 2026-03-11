@@ -1,9 +1,7 @@
-import { UserHeaderCard } from "@/pages/User/UserHeaderCard";
 import { useUiStore } from "@/stores/uiStore";
 import { useUserStore } from "@/stores/userStore";
 import { forwardRef, useEffect, useState } from "react";
 import { ImageColorRenderer } from "../menuElements/ImageColorRenderer";
-import { UserAvatar } from "../badges/UserAvatar";
 import { useCoverDerivedColors } from "@/hooks/useCoverDerivedColors";
 import { gradientColorTokens } from "@/domain/colorTokens";
 import { UserAvatarDummy } from "../badges/UserAvatarDummy";
@@ -27,8 +25,7 @@ export const UserHoverCard = forwardRef<HTMLDivElement, UserHoverCardProps>((pro
         ? (user?.Props?.Cover?.Color ?? undefined)
         : (coverType ? undefined : (user?.Props?.Cover?.Color ?? undefined));
 
-
-    const { footerBackgroundColor, avatarRingColor } = useCoverDerivedColors({
+    useCoverDerivedColors({
         coverClassName: coverColor,
         coverImageUrl: coverImage,
         contrast: 0.1,

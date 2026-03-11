@@ -1,5 +1,5 @@
 import { useWorkspaceStore } from "@/stores/workspaceStore"
-import { CatalogIcon, type IconId, iconCatalog } from "@/icons/iconCatalog"
+import { type IconId, iconCatalog } from "@/icons/iconCatalog"
 import { getClassNamesForColorToken } from "@/domain/colorTokens"
 import type { Workspace } from "@/stores/types"
 

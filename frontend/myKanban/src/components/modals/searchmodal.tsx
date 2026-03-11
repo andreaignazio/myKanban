@@ -15,8 +15,6 @@ import { LabeledButtonCustom } from "../buttons/labeledButton";
 export const SearchModal = forwardRef<HTMLDivElement, {}>((props, ref) => {
 
     const serachUsers = useUserStore((state) => state.searchUser)
-    const isSendingShareOffer = useShareOffersStore((state) => state.isSendingShareOffer);
-    const isRequestSuccessful = useShareOffersStore((state) => state.isRequestSuccessful);
 
     const closeMenu = useOverlayStore((state) => state.close);
 

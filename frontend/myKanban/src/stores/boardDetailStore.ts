@@ -7,8 +7,6 @@ import { useListsStore } from "./listsStore";
 import { useCardsStore, type CrossMoveCardRequest } from "./cardsStore";
 import { useBoardsStore } from "./boardsStore";
 import type { Board, BoardEvent, BoardLabel, BoardListAccessMode, Card, CardChecklist, CardComment, CardLabelLink, Checklist, ChecklistEntry, CrossBoardMoveBoardPayload, Entry, EntryMember, List, ListCardMovedPayload, ListCardRelation, RootBoardListResponse, User, UserBoard, UserWorkspace } from "./types";
-
-import type { BoardAuditLogEvent } from "./audittypes";
 import { useLabelsStore } from "./labelsStore";
 import { useBoardMembersStore } from "./boardMembersStore";
 import { useUserStore } from "./userStore";
@@ -242,8 +240,6 @@ export const useBoardDetailStore = create<BoardDetailStore>((set, get) => ({
         useUserStore.getState().mergeUsers(Object.values(payload.Users))
         useCardMembersStore.getState().replaceCardMembers(payload.CardMembers)
         useChecklistStore.getState().replaceChecklistData(payload)
-
-        const boardID = payload.Board.ID
 
         const ListCardById = payload.ListCardRelations.reduce((acc, lc) => {
             acc[lc.ID] = lc

@@ -1,7 +1,6 @@
 import { useCardActionRegistry } from "@/actionRegistry/cardActionRegistry";
-import { useCardsStore } from "@/stores/cardsStore";
 import type { MenuItemExtended } from "@/types/uiTypes";
-import { forwardRef, use, useEffect, useRef, useState, useTransition } from "react";
+import { forwardRef, useEffect, useRef, useState, useTransition } from "react";
 import { useParams } from "react-router";
 import { DropDown } from "../menuElements/DropDown";
 import { CustomInput } from "../menuElements/CustomInput";
@@ -28,11 +27,9 @@ export const ImageSearchMenu = forwardRef<HTMLDivElement, CardActionsMenuProps>(
     const boardID = useParams().boardId as string;
     const cardID = cardId ?? useParams().cardId as string;
     const cardActions = useCardActionRegistry();
-    const removeCover = cardActions.removeCardCover;
     const fetchMedia = useMediaStore((state) => state.fetchMedia);
     const [searchInput, setSearchInput] = useState("");
     //console.log("ImageSearchMenu rendered with coverColor:", coverColor);
-    const card = useCardsStore((state) => state.cardsById[cardID]);
     const isInboxMode = source === "inbox" || source === "inbox-mirror";
 
     const setCardCoverURL = (url: string) => {
@@ -81,8 +78,6 @@ export const ImageSearchMenu = forwardRef<HTMLDivElement, CardActionsMenuProps>(
 
 
     const headerStyle = { color: "rgba(255, 255, 255, 0.7)", fontSize: "14px", fontWeight: 600 };
-    const tipStyle = { color: "rgba(255, 255, 255, 0.5)", fontSize: "12px", fontWeight: 400 };
-    const h = 32; // Standard height for menu items, can be adjusted as needed
     const useExternalImageClickHandler = typeof onImageClick === "function";
     const menuItems: MenuItemExtended[] = [
         { id: "searchmedia", label: "Search Unplash for photos", kind: "custom", customElement: input },
@@ -101,7 +96,6 @@ export const ImageSearchMenu = forwardRef<HTMLDivElement, CardActionsMenuProps>(
         },
     ]
 
-    const Title = "Search Photos";
     return (
         <>
 

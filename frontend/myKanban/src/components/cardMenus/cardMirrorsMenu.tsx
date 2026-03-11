@@ -79,7 +79,6 @@ const MirrorRow = ({ mirrorId, cardId }: MirrorRowProps) => {
     const { listColor, listGradient } = useListTheme(mirrorData.list)
 
     const hoverClassMain = "mb-0 hover:mb-[13px] transition-all duration-300"
-    const hoverClassMirror = "-bottom-[5px] group-hover:!-bottom-[20px] group-hover:w-[95%]  transition-all duration-300"
 
     const [boardDetailMode, setBoardDetailMode] = useState<boolean>(false)
 

@@ -10,7 +10,6 @@ import { useBoardsStore, type UserBoardData } from "./boardsStore";
 import type { AnyUser } from "./usertypes";
 import { useUiStore } from "./uiStore";
 import { useAuthStore } from "./auth";
-import { use } from "react";
 import type { RequestSubscriptionCheckout, SubscriptionCheckoutResponse } from "@/types/subscriptiontypes";
 import type { ShareOffer } from "./shareOfferTypes";
 import { useAsyncRequestStore } from "./asyncRequestStore";
@@ -222,7 +221,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     },
     createWorkspace: async (Name: string) => {
         try {
-            const response = await api.post("/workspaces", { Name });
+            await api.post("/workspaces", { Name });
             //const data: UserWorkspaceData = response.data;
         } catch (error) {
             // console.log("Error creating workspace")
@@ -605,7 +604,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     },
     getWorkspaceStatus: (workspaceId: string) => {
 
-        const { workspaceIds, pendingOfferedWorkspaceIds, pendingRequestedWorkspaceIds } = get();
+        const { pendingOfferedWorkspaceIds, pendingRequestedWorkspaceIds } = get();
         const isAccessible = get().isWorkspaceAccessible(workspaceId)
         if (isAccessible) {
             return "accessible"

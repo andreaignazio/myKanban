@@ -1,12 +1,10 @@
-﻿import { useEffect, useLayoutEffect, useState, useRef, use, type RefObject, type ReactNode } from "react";
+﻿import { useEffect, useLayoutEffect, useState, useRef, type RefObject, type ReactNode } from "react";
 import { useBoardMembersStore } from "@/stores/boardMembersStore";
 import { useUserStore } from "@/stores/userStore";
 import { useShallow } from "zustand/shallow";
 import { UserAvatar } from "../badges/UserAvatar";
 import { useAuthStore } from "@/stores/auth";
-import { CustomDropDown } from "../menuElements/CustomDropDown";
-import { FunnelIcon, LinkIcon } from "@heroicons/react/24/outline";
-import type { MenuItem } from "../menuElements/CustomDropDown";
+import { FunnelIcon } from "@heroicons/react/24/outline";
 import { useCurrentBoardRole } from "@/hooks/useCurrentBoardRole";
 import { useUiStore } from "@/stores/uiStore";
 
@@ -185,15 +183,13 @@ export const BoardMembersTab = ({ boardID, isAdminOrOwner, dynamicHeight = false
     )
 
 }
-import type { CustomDropDownHandle } from "../menuElements/CustomDropDown";
 import { useBoardActionRegistry } from "@/actionRegistry/boardActionRegistry";
 import { useParams } from "react-router";
 import { BoardMembersDropdown } from "../menuElements/MembersDropdown/BoardMembersDropdown";
-import { TabSelector } from "../cardMenus/cardMoveMenu";
 import { LabeledButtonCustom, LabeledButtonPresetA } from "../buttons/labeledButton";
 import { useShareLinksStore } from "@/stores/shareLinksStore";
 import type { PublicShareLink, User } from "@/stores/types";
-import { CircleAlert, Link, ShieldCheck, ShieldCheckIcon, ShieldX, ShieldXIcon } from "lucide-react";
+import { CircleAlert, Link, ShieldCheckIcon, ShieldXIcon } from "lucide-react";
 import { UserRoleBadge, type Role } from "../badges/UserRoleBadge";
 import { DateStatusBadge } from "../cardRowElements/DateStatusBadge";
 import { LeaveRemoveMember } from "../common/leaveRemoveMember";

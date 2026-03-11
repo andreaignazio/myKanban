@@ -4,7 +4,6 @@ import type { List } from "@/stores/types"
 import type { MenuItemExtended } from "@/types/uiTypes"
 import { forwardRef, useEffect, useRef, useState } from "react"
 import { CustomInput, type CustomInputHandle } from "../menuElements/CustomInput"
-import { useUserStore } from "@/stores/userStore"
 import { DropDown } from "../menuElements/DropDown"
 import { CommonMenuWrapper } from "../menuElements/menuWrapper"
 import { useCardActionRegistry } from "@/actionRegistry/cardActionRegistry"
@@ -58,19 +57,14 @@ export const CardMoveToListMenu = forwardRef<HTMLDivElement, CardMoveToListMenuP
     }, [lists, currentSearch]);
 
     const handleMove = async () => {
-
-        const sourceBoardId = boardID;
         const sourceListId = listId;
         const targetBoardId = boardID;
         const targetListId = activeListId;
 
 
-        let insertAtEnd = true;
-
-
 
         try {
-            await moveCardToBoard(boardID, cardId, sourceListId, targetBoardId, targetListId, null, insertAtEnd, false)
+            await moveCardToBoard(boardID, cardId, sourceListId, targetBoardId, targetListId, null, true, false)
 
             onClose();
         }

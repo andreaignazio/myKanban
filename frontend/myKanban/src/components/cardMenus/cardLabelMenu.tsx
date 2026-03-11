@@ -1,10 +1,9 @@
-﻿import { forwardRef, use, useEffect, useRef, useState, type ComponentType, type SVGProps } from "react";
+﻿import { forwardRef, useEffect, useState } from "react";
 import { LabeledButtonCustom } from "../buttons/labeledButton";
 import { CustomInput } from "../menuElements/CustomInput";
 import { DropDown } from "../menuElements/DropDown";
 import { ActionMenuWrapper } from "../modals/ListActionsMenu";
 import type { MenuItemExtended } from "@/types/uiTypes";
-import { useCardActionRegistry } from "@/actionRegistry/cardActionRegistry";
 import { CheckIcon, PencilIcon, XMarkIcon } from "@heroicons/react/24/solid";
 import { useParams } from "react-router";
 import { useBoardActionRegistry } from "@/actionRegistry/boardActionRegistry";
@@ -70,15 +69,6 @@ type SelectCardLabelMenuProps = {
 
 
 export const SelectCardLabelMenu = forwardRef<HTMLDivElement, SelectCardLabelMenuProps>(({ onClose, setActiveTab, setActiveLabelId, cardID }, ref) => {
-    const boardID = useParams().boardId as string;
-    const cardActions = useCardActionRegistry();
-    const ICON_SIZE_CLASS = "w-5 h-";
-    const iconClassName = `${ICON_SIZE_CLASS} text-neutral-300`;
-    const icon = (Icon: ComponentType<SVGProps<SVGSVGElement>>) => (
-        <div className="flex  items-center justify-center h-[38px] aspect-square border border-gray-500/30 rounded-md">
-            <Icon className={iconClassName} />
-        </div>
-    );
     const [searchInput, setSearchInput] = useState("");
 
     const input = () => {
@@ -101,8 +91,6 @@ export const SelectCardLabelMenu = forwardRef<HTMLDivElement, SelectCardLabelMen
             </div>
         )
     }
-
-    const h = 22; // Standard height for menu items, can be adjusted as needed
     const menuItems: MenuItemExtended[] = [
 
         { id: "search", label: "Search Labels", kind: "custom", customElement: input },
@@ -132,8 +120,6 @@ export const SelectCardLabelMenu = forwardRef<HTMLDivElement, SelectCardLabelMen
         },
 
     ]
-
-    const Title = "Labels";
     return (
         <>
             <div style={{ paddingInline: PADDING_X }}>
@@ -357,10 +343,6 @@ export const CreateBoardLabelMenu = forwardRef<HTMLDivElement, CreateBoardLabelM
         "#245FBF", "#2A7F9E", "#567E1F", "#97417F", "#6A6E75",
         "#6997DF", "#69B9D3", "#93C548", "#D16AAE", "#9FA3A9"
     ];
-
-    const DEFAULT_COLOR = "#61bd4f";
-
-    const h = 22; // Standard height for menu items, can be adjusted as needed
     const menuItems: MenuItemExtended[] = [
 
         {

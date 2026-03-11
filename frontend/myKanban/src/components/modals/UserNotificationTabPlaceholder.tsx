@@ -5,13 +5,10 @@ import { ImageColorRenderer } from "../menuElements/ImageColorRenderer";
 
 import { useLookUpInterface } from "@/hooks/useLookUpInterface"
 import type { MainEntityTypeStrict } from "@/hooks/useFeedFromAudit";
-import { act, use, useEffect, useState } from "react";
-import type { A } from "node_modules/react-router/dist/development/router-5iOvts3c.d.mts";
+import { useEffect, useState } from "react";
 import { useUserStore } from "@/stores/userStore";
 import { UserAvatar } from "../badges/UserAvatar";
-import { AuditBodyRenderer } from "../menuElements/AuditBodyRenderer";
 import { AuditActivityItem } from "../activityfeed/AuditActivityItem";
-import { Icon } from "lucide-react";
 import { CatalogIcon } from "@/icons/iconCatalog";
 import { AnimatePresence, motion } from "framer-motion";
 

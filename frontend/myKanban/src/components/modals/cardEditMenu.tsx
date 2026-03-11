@@ -1,7 +1,6 @@
 import { ArchiveIcon, ArrowBigRight, ArrowRight, Clock10Icon, CopyIcon, CreditCardIcon, Link2Icon, TagIcon, User2 } from "lucide-react";
-import { forwardRef, useRef, type JSX, type RefObject } from "react";
+import { forwardRef, useRef, type JSX } from "react";
 import { CardLabelMenu } from "../cardMenus/cardLabelMenu";
-import { CardRowMenuBtn } from "../cardMenus/cardRowMenus";
 import { useOverlayStore, type OverlayDescriptor } from "@/overlays/overlayStore";
 import { LabeledButtonPresetB } from "../buttons/labeledButton";
 
@@ -10,7 +9,7 @@ import { CardMembersMenu } from "../cardMenus/cardMembersMenu";
 import { CardCoverTabSelector } from "./CardCoverMenu";
 import { CardDatesMenu } from "../cardMenus/cardDatesMenu";
 import { CardMoveMenu } from "../cardMenus/cardMoveMenu";
-import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { useCardActionRegistry } from "@/actionRegistry/cardActionRegistry";
 import { useCardsStore } from "@/stores/cardsStore";
 import { ConfirmDeletionPopover } from "./ConfirmDeletion";
@@ -43,17 +42,12 @@ export const CardEditMenu = forwardRef<HTMLDivElement, CardEditMenuProps>((props
     const { cardId: cardID, sourceListId: listId, source = "board" } = cardContext;
     const iconClass = "w-4 h-4 text-neutral-400"
     const isInboxSource = source === "inbox" || source === "inbox-mirror"
-    const navigate = useNavigate()
-    const location = useLocation()
     const { workspaceId, boardId } = useParams<{ workspaceId: string; boardId: string }>()
     const cardActions = useCardActionRegistry();
     const cardsStore = useCardsStore();
     const detatchInboxCard = useUserInboxStore((state) => state.detatchInboxCard)
     const getRootListIdForCardId = useBoardDetailStore((state) => state.getRootListIdForCardId);
     const resolvedListId = listId || getRootListIdForCardId(cardID) || "";
-
-
-
 
     const handleOpenCardDetailMenu = () => {
         onClose();
@@ -66,8 +60,6 @@ export const CardEditMenu = forwardRef<HTMLDivElement, CardEditMenuProps>((props
             workspaceId: workspaceId!,
         })
     };
-
-    const overlayCloseAll = useOverlayStore((state) => state.closeAll)
     const onMenuClose = useOverlayStore((state) => state.close);
 
 
@@ -203,7 +195,6 @@ export const CardEditMenu = forwardRef<HTMLDivElement, CardEditMenuProps>((props
 
 
     const cardActionsMenuRef = useRef<HTMLDivElement>(null)
-    const acnhorRef = ref as React.RefObject<HTMLDivElement>;
     const btnRef = useRef<HTMLDivElement>(null);
 
     const anchorMap = new Map<string, React.RefObject<HTMLElement | null>>()

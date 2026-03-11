@@ -336,21 +336,6 @@ const SuspendBoardsList = ({
     );
 };
 
-type SuspensionFlagShape = {
-    IsSuspended: boolean;
-    IsPendingSuspend: boolean;
-};
-
-const getRowClassName = (entity: SuspensionFlagShape, isSelected: boolean) => {
-    if (entity.IsSuspended) {
-        return "bg-red-500/10";
-    }
-    if (isSelected || entity.IsPendingSuspend) {
-        return "bg-amber-500/50";
-    }
-    return "";
-};
-
 type InfoBoxProps = {
     text: string;
 };

@@ -1,9 +1,5 @@
 import { useCardsStore } from "@/stores/cardsStore"
-import { CardRowSentinel } from "./CardRowSentinel"
-import { use, useEffect, useRef, useState } from "react"
-import { CustomInput, type CustomInputHandle } from "./menuElements/CustomInput"
-import { LabeledButtonPresetBSubmit } from "./buttons/labeledButton"
-import { XIcon } from "lucide-react"
+import { useState } from "react"
 import { AddForm } from "./common/AddForm"
 
 type ListRowFooterProps = {

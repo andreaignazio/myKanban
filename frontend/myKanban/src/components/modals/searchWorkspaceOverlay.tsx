@@ -1,4 +1,4 @@
-import { forwardRef, use, useState } from "react";
+import { forwardRef, useEffect, useState } from "react";
 import { CommonMenuWrapper } from "../menuElements/menuWrapper"
 import { CustomInput } from "../menuElements/CustomInput";
 import { useWorkspaceStore, type SearchPublicWorkspacesParams } from "@/stores/workspaceStore";
@@ -25,11 +25,10 @@ export const SearchWorkspaceOverlay = forwardRef<HTMLDivElement, SearchWorkspace
         limit: 10,
     }
 
-    const handleSearch = async () => {
-        await searchPublicWorkspaces(query)
-    }
+    useEffect(() => {
+        void searchPublicWorkspaces(query)
+    }, [searchPublicWorkspaces, searchTerm])
 
-    const searchResults = searchPublicWorkspaces(query)
     return (
         <CommonMenuWrapper
             ref={ref}
@@ -77,9 +76,9 @@ const RequestableWorkspaceCard = ({ workspaceId }: { workspaceId: string }) => {
 
 const WorkspaceCard = ({ workspaceId }: { workspaceId: string }) => {
 
-    const { workspace, workspaceName, headerProps } = useWorkspaceDerivedProps(workspaceId)
+    const { workspaceName, headerProps } = useWorkspaceDerivedProps(workspaceId)
 
-    const { coverType, coverColor, coverImage, footerBackgroundColorOverride } = headerProps
+    const { coverType, coverColor, coverImage } = headerProps
 
     const heights = {
         coverHeight: "58%",

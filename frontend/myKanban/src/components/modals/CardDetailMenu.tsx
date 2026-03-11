@@ -1,7 +1,7 @@
-import { forwardRef, use, useEffect, useRef, useState, type ComponentType, type RefObject, type SVGProps, type TransitionEvent } from "react";
+import { forwardRef, useEffect, useRef, useState, type ComponentType, type RefObject, type SVGProps, type TransitionEvent } from "react";
 
-import { ClockIcon, EllipsisHorizontalIcon, XMarkIcon } from "@heroicons/react/24/outline";
-import { CardActionMenuBtn, CardCoverMenu, CardCoverTabSelector } from "./CardCoverMenu";
+import { ClockIcon, EllipsisHorizontalIcon } from "@heroicons/react/24/outline";
+import { CardCoverTabSelector } from "./CardCoverMenu";
 import { useCardsStore } from "@/stores/cardsStore";
 import { useCardActionRegistry } from "@/actionRegistry/cardActionRegistry";
 import { useParams } from "react-router";
@@ -16,15 +16,14 @@ import { CardChecklists } from "../cardMenus/cardChecklist/cardChecklists";
 import { CardDatesMenu } from "../cardMenus/cardDatesMenu";
 import { headerStyle } from "../cardMenus/cardMenuStyle";
 import { useDateTimeParser } from "@/hooks/useDateTimeParser";
-import { LabeledButtonPresetA, LabeledButtonPresetB, LabeledButtonPresetBSubmit } from "../buttons/labeledButton";
-import { Car, ChevronDown, ChevronDownIcon, Eye, EyeIcon, TextAlignEndIcon, TextAlignStartIcon, XIcon } from "lucide-react";
+import { LabeledButtonPresetB } from "../buttons/labeledButton";
+import { ChevronDown, ChevronDownIcon, EyeIcon, TextAlignEndIcon, XIcon } from "lucide-react";
 import { CardComments } from "../cardMenus/CardDetailActivityTabs/CardComments";
 import { EntityDescriptionEditor } from "../common/EntityDescriptionEditor";
 import { useCardMembersStore } from "@/stores/CardMembersStore";
 import { useShallow } from "zustand/shallow";
 import { UserAvatar } from "../badges/UserAvatar";
 import { useUserStore } from "@/stores/userStore";
-import { CardRow } from "../CardRow";
 import { useLabelsStore } from "@/stores/labelsStore";
 import { CardMoveMenu, TabSelector } from "../cardMenus/cardMoveMenu";
 import { useUserWatchStore } from "@/stores/userWatchStore";
@@ -65,10 +64,7 @@ export const CardDetailMenu = forwardRef<HTMLDivElement, CardDetailMenuProps>(({
     const listCard = useBoardDetailStore((state) => listCardId ? state.listCardById[listCardId] : undefined);
 
     const {
-        effectiveRootBoard,
-        isInboxMirror,
         isMirrorCard,
-        effectiveListCardID,
         rootListCardData,
         rootBoardBackgroundType,
         rootBoardBgImage,
@@ -113,7 +109,7 @@ export const CardDetailMenu = forwardRef<HTMLDivElement, CardDetailMenuProps>(({
         patchCardWatchActive(cardId, !isCardWatched);
     };
 
-    const { canEdit, isReadOnlyList } = useCardEditableContext({ cardContext, boardId })
+    const { canEdit } = useCardEditableContext({ cardContext, boardId })
 
     const [asideActiveTab, setAsideActiveTab] = useState("activity");
     const isAsideCollapsedByWindow = useMediaQuery(`(max-width: ${ACTIVITY_COLUMN_COLLAPSE_WIDTH - 1}px)`);
@@ -150,7 +146,7 @@ export const CardDetailMenu = forwardRef<HTMLDivElement, CardDetailMenuProps>(({
     const rootList = rootId ? listsById[rootId] : null;
     //const rootList = useListsStore(useShallow((state) => rootId ? state.listsById[rootId] : null));
     const rootListName = rootList?.Title || "Unknown List";
-    const { listColor, listTheme, listTextColor, hasListTheme } = useListTheme(rootList);
+    const { listColor, listTextColor, hasListTheme } = useListTheme(rootList);
 
 
     const coverMenuId = "card-cover-menu";
@@ -599,9 +595,6 @@ export const CardMain = ({ cardId, source = "board", listCardId, canEdit, isAsid
         { id: "checklist", label: "Checklist", icon: icon(CheckCircleIcon), onClick: () => console.log("Checklist button clicked"), menuToOpen: ({ onClose, ref }) => <CardChecklistMenu onClose={onClose} ref={ref} /> },
 
     ]
-
-    const description = "...";
-
     return (
         <div className="relative bg-[rgba(36,37,40,1)] w-full h-full min-h-0 pt-4 px-4 flex flex-col">
 
@@ -844,7 +837,6 @@ const CardMembersField = ({ cardId }: { cardId: string }) => {
 const CardLabelsField = () => {
     const cardID = useParams().cardId as string;
     const boardId = useParams().boardId as string;
-    const labelsById = useLabelsStore((state) => state.BoardLabelsById);
     const cardLabelsIds = useLabelsStore((state) => {
         if (!cardID) return EMPTY_IDS;
         return state.cardLabelsIdsByCardIdAndBoardId[boardId]?.[cardID] ?? EMPTY_IDS;
@@ -892,7 +884,6 @@ type PlusButtonProps = {
     showLabelWhenCompact?: boolean;
 }
 const PlusButton = ({ height, variant }: PlusButtonProps) => {
-    const classSquare = ""
     return (
         <div style={{ height: height ?? '100%', width: height ?? '100%' }}
             className={`flex items-center justify-center  ${variant === "round" ? "rounded-full" : "rounded-md"} bg-menubtn text-neutral-300

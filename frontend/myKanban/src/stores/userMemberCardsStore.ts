@@ -8,8 +8,7 @@ import type {
     List,
     ListCardRelation,
     UserEvent,
-    UserMemberCardsResponse,
-    Workspace
+    UserMemberCardsResponse
 } from "./types";
 import { useCardsStore } from "./cardsStore";
 import { useListsStore } from "./listsStore";
@@ -30,10 +29,6 @@ function toRecordById<T extends EntityWithID>(items: T[]): Record<string, T> {
 
 function uniqueIds(ids: string[]): string[] {
     return Array.from(new Set(ids));
-}
-
-function mergeUniqueById<T extends EntityWithID>(a: T[], b: T[]): T[] {
-    return Object.values({ ...toRecordById(a), ...toRecordById(b) });
 }
 
 type UserMemberCardsStore = {

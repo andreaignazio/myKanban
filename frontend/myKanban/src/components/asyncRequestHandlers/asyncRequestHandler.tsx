@@ -1,5 +1,5 @@
 import { CircleAlert, CircleCheck } from "lucide-react";
-import { useEffect, useImperativeHandle, useState, type Ref } from "react";
+import { useImperativeHandle, useState, type Ref } from "react";
 
 type AsyncRequestHandlerProps = {
 
@@ -19,7 +19,7 @@ export type AsyncRequestHandle = {
 
 
 export const AsyncRequestHandler = ({ onSuccess, onError, ref, isLoading: externalIsLoading, setIsLoading: setExternalIsLoading, isError: externalIsError, setIsError: setExternalIsError }: AsyncRequestHandlerProps) => {
-    const [isLoading, setIsLoading] = useState(false);
+    const [, setIsLoading] = useState(false);
     const [isError, setIsError] = useState<Error | null>(null);
     const [isSuccess, setIsSuccess] = useState(false);
 

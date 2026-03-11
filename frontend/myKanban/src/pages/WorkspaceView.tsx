@@ -1,17 +1,10 @@
-
-import { BoardCard } from "../components/workspaceView/BoardCard";
-import { BoardCardAdd } from "../components/workspaceView/BoardCardAdd";
 import { WorkspaceHeader } from "@/components/workspaceView/WorkspaceHeader";
-import { useBoardsStore } from "@/stores/boardsStore";
-import { useEffect, useMemo } from "react";
 import { useParams } from "react-router";
 import { UserRound } from "lucide-react";
-import { useShallow } from "zustand/shallow";
 import { LabeledButtonPresetA } from "@/components/buttons/labeledButton";
 import { ViewDeletedBoards } from "@/components/modals/ViewDeletedBoards";
 import { CardRowMenuBtn } from "@/components/cardMenus/cardRowMenus";
 import { useCurrentWorkspaceRole } from "@/hooks/useCurrentWorkspaceRole";
-import { useSortByPosition } from "@/hooks/useSortByPosition";
 import { BoardGrid } from "@/components/workspaceView/BoardGrid";
 
 
@@ -19,11 +12,7 @@ export function WorkspaceView() {
 
     const workspaceId = useParams().workspaceId as string;
 
-    const useWsRole = useCurrentWorkspaceRole(workspaceId ?? null);
-    console.log("Current workspace role in WorkspaceView:", useWsRole);
-
-
-    const { isAdminOrOwner, isMember } = useCurrentWorkspaceRole(workspaceId ?? null);
+    const { isAdminOrOwner } = useCurrentWorkspaceRole(workspaceId ?? null);
 
 
     return (

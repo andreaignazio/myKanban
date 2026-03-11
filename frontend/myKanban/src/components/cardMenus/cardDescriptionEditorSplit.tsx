@@ -21,8 +21,8 @@ export default function CardDescriptionEditorSplit({ boardID, cardID, value, onC
     const [draft, setDraft] = useState<string | undefined>(value);
     const [baseValue, setBaseValue] = useState<string | undefined>(value);
     const [saving, setSaving] = useState<boolean>(false);
-    const [error, setError] = useState<string | null>(null);
-    const [remoteChanged, setRemoteChanged] = useState<boolean>(false);
+    const [, setError] = useState<string | null>(null);
+    const [, setRemoteChanged] = useState<boolean>(false);
     const dirty = draft !== baseValue;
     const cardActionRegistry = useCardActionRegistry();
     const { taRef, applyFormat } = useMarkdownFormatter(draft ?? "", setDraft);
@@ -41,14 +41,6 @@ export default function CardDescriptionEditorSplit({ boardID, cardID, value, onC
             setSaving(false);
         }
     };
-
-    function handleBlurContainer(e: React.FocusEvent<HTMLDivElement>) {
-        const next = e.relatedTarget as Node | null;
-        if (next && e.currentTarget.contains(next)) return; // focus is still within the container
-        void save();
-        setMode("preview");
-    }
-
     function onEditorKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
         const mod = e.ctrlKey || e.metaKey;
         if (!mod) return;

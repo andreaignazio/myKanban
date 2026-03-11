@@ -1,7 +1,7 @@
 import { UserActivityFeed } from "@/pages/User/userActivityFeed"
 import { WorkspaceVisibility } from "@/components/workspaceView/WorkspaceVisibility"
 import { useWorkspaceStore } from "@/stores/workspaceStore"
-import { ListTodo, User, User2Icon, UsersRoundIcon, UserX2Icon } from "lucide-react"
+import { ListTodo, UsersRoundIcon } from "lucide-react"
 import { useState } from "react"
 import { useShallow } from "zustand/shallow"
 import { UserPagesWrapper } from "./userPagesWrapper"

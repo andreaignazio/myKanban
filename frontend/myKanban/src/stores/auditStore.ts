@@ -1,5 +1,5 @@
 ﻿import { create } from 'zustand';
-import type { ApiAuditLogEvent, ApiAuditLogResponse, AuditCursor, AuditLogPaginatedResponse, AuditPage, AuditPageInfo, RealtimeAuditBoardEvent } from './audittypes';
+import type { ApiAuditLogEvent, ApiAuditLogResponse, AuditCursor, AuditLogPaginatedResponse, AuditPageInfo, RealtimeAuditBoardEvent } from './audittypes';
 import { api } from '@/api/api';
 import { buildFeedFromAudit, type RenderFeed } from '@/hooks/useFeedFromAudit';
 import { useAuditEntityStore } from './auditEntityStore';

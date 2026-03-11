@@ -1,7 +1,7 @@
 import type { FeedBodyChunk } from "@/hooks/useFeedFromAudit";
 import { UserHoverCard } from "@/components/modals/UserHoverCard";
 import { useOverlayStore, type OverlayDescriptor } from "@/overlays/overlayStore";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useRef } from "react";
 
 type AuditBodyRendererProps = {

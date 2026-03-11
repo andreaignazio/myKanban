@@ -30,14 +30,6 @@ type WsMembersState = {
 
 }
 
-type ShareOfferPayload = {
-    TargetUsers: string[];
-    Role: string;
-    Message: string;
-}
-
-
-
 export const useWsMembersStore = create<WsMembersState>((set, get) => ({
     userWorkspacesByWorkspaceId: {}, //by workspaceID -> userID
     userIdsByWorkspaceId: {}, //by workspaceID
@@ -45,8 +37,7 @@ export const useWsMembersStore = create<WsMembersState>((set, get) => ({
     fetchWorkspaceMembers: async (workspaceID: string) => {
         try {
             const response = await api.get(`/workspaces/${workspaceID}/members`);
-            const data: WorkspaceMemberData = response.data;
-            get().hardReplaceWorkspaceMembers(workspaceID, data);
+            get().hardReplaceWorkspaceMembers(workspaceID, response.data as WorkspaceMemberData);
         } catch (error) {
             // console.log("Error fetching workspace members");
             throw error;
@@ -84,8 +75,7 @@ export const useWsMembersStore = create<WsMembersState>((set, get) => ({
     },
     addWorkspaceMember: async (workspaceID: string, userID: string, role: string) => {
         try {
-            const res = await api.post(`/workspaces/${workspaceID}/members`, { TargetUserID: userID, Role: role });
-            const data: WorkspaceMemberData = res.data;
+            await api.post(`/workspaces/${workspaceID}/members`, { TargetUserID: userID, Role: role });
             get().fetchWorkspaceMembers(workspaceID);
         } catch (error) {
             // console.log("Error adding workspace member");
@@ -165,8 +155,6 @@ export const useWsMembersStore = create<WsMembersState>((set, get) => ({
         return Object.values(members);
     },
     updateMemberRole: async (workspaceID: string, userID: string, payload: ChangeWorkspaceMemberRoleRequest) => {
-        const prevMember = get().userWorkspacesByWorkspaceId[workspaceID]?.[userID];
-        //console.log("Updating member role for user", userID, "in workspace", workspaceID, "with payload", payload, "previous member data", prevMember);
         try {
             const resposne = await api.patch(`/workspaces/${workspaceID}/members/${userID}`, payload);
             const data: UserWorkspace = resposne.data;

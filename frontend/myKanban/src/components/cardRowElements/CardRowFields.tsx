@@ -2,7 +2,7 @@ import { useCardMembersStore } from "@/stores/CardMembersStore"
 import { useCardsStore } from "@/stores/cardsStore"
 import { useChecklistStore } from "@/stores/checklistStore"
 import { useUserWatchStore } from "@/stores/userWatchStore"
-import { Clock, EyeIcon, SquareCheckBig, TextAlignStartIcon } from "lucide-react"
+import { EyeIcon, SquareCheckBig, TextAlignStartIcon } from "lucide-react"
 import { useParams } from "react-router-dom"
 import { useShallow } from "zustand/shallow"
 

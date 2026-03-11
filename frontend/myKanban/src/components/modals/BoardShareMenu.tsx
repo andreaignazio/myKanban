@@ -1,5 +1,4 @@
 ﻿import { BaseBtn } from "@/pages/BoardView";
-import { UserPlusIcon } from "@heroicons/react/24/outline"
 
 import type { OverlayDescriptor } from "@/overlays/overlayStore";
 import { useOverlayStore } from "@/overlays/overlayStore";
@@ -15,7 +14,6 @@ type BoardShareMenuProps = {
 export const BoardShareMenu = ({ className }: BoardShareMenuProps) => {
     const openOverlay = useOverlayStore((state) => state.open);
     const onMenuClose = useOverlayStore((state) => state.close);
-    const workspaceID = useParams().workspaceId as string;
     const boardID = useParams().boardId as string;
 
     const shareBoardMenu = useRef<HTMLDivElement>(null)

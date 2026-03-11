@@ -5,22 +5,17 @@ import type { MenuItemExtended } from "@/types/uiTypes";
 import { DropDown } from "../menuElements/DropDown";
 import { CheckIcon, EllipsisHorizontalIcon } from "@heroicons/react/24/solid";
 import {
-    AdjustmentsHorizontalIcon,
     ArchiveBoxIcon,
     ArchiveBoxXMarkIcon,
     ArrowsPointingInIcon,
-    Cog6ToothIcon,
     DocumentDuplicateIcon,
     EnvelopeIcon,
     EyeIcon,
     InformationCircleIcon,
     PaintBrushIcon,
-    PrinterIcon,
     ShareIcon,
-    SparklesIcon,
     StarIcon,
     TagIcon,
-    RectangleStackIcon,
     ClockIcon,
     XMarkIcon,
 } from "@heroicons/react/24/outline";

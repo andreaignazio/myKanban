@@ -1,4 +1,4 @@
-import type { AnyUser, User } from "@/stores/usertypes"
+import type { AnyUser } from "@/stores/usertypes"
 import { UserAvatar } from "../badges/UserAvatar"
 
 

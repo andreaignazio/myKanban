@@ -2,7 +2,6 @@ import type { ShareOffer } from "@/stores/shareOfferTypes"
 import { GridBuilder, type ColumnDefinition } from "./UserBoardOutgoingRequests"
 import { forwardRef, useEffect, useState } from "react"
 import { useShareOffersStore } from "@/stores/shareOffersStore"
-import { useCacheStore } from "@/stores/cacheStore"
 import { useShallow } from "zustand/shallow"
 import { useParams } from "react-router-dom"
 
@@ -28,25 +27,6 @@ export const BoardReceivedRequests = forwardRef<HTMLDivElement, {}>((props, ref)
     useEffect(() => {
         setOffersIds(idsByBoardId[boardId] || [])
     }, [idsByBoardId, boardId])
-
-    const boardById = useCacheStore((state) => state.offerBoardById)
-
-    function getBoardIdFromOffer(offer: ShareOffer) {
-        if (offer.TargetType === "board") {
-            return offer.TargetID;
-        }
-        return null;
-    }
-
-    function getWorkspaceIdFromOffer(offer: ShareOffer) {
-        if (offer.TargetType === "board") {
-            const board = boardById[offer.TargetID];
-            //   console.log("Board fetched for offer:", offer.ID, "is:", board);
-            return board?.WorkspaceID || null;
-        }
-        return null;
-    }
-
     function getActionForOffer(offer: ShareOffer) {
         if (offer.Status === "pending") {
             return "respond";

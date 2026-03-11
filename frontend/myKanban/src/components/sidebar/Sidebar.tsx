@@ -11,7 +11,6 @@ import { WorkspaceSubRows, type SidebarItem } from "@/components/sidebar/Workspa
 import { SimpleWorkspaceRow } from "./SimpleWorkspaceRow"
 import { SidebarSubRow } from "./SidebarSubRow"
 import { useAuthStore } from "@/stores/auth"
-import { useUserStore } from "@/stores/userStore"
 import { useResolveSubscriptionPlan } from "@/hooks/useResolveSubscriptionPlan"
 import { SearchWorkspaceOverlay } from "../modals/searchWorkspaceOverlay"
 import { CardFilterMenu, type CardFilterShowCategory, type CardFilterState } from "../cardMenus/cardFilterMenu"
@@ -76,9 +75,6 @@ const WorkspaceList = ({ isSingleMode }: { isSingleMode?: boolean }) => {
     const membersMatch = useMatch("/workspaces/:workspaceId/members/*")
     const userMatch = useMatch("/users/:userID/*")
 
-    const currentUserId = useAuthStore((state) => state.userID)
-    const routeUserId = userMatch?.params.userID
-    const isOthersProfile = userMatch && currentUserId !== routeUserId
     const isMembersView = !!(membersMatch || userMatch)
 
     const filteredIds = useWorkspaceFilter(workspaceIds, filterState)
@@ -144,12 +140,6 @@ const WorkspaceList = ({ isSingleMode }: { isSingleMode?: boolean }) => {
             // noop: empty state handles no accessible workspaces after retry
         })
     }, [currentWorkspaceId, accessibleWorkspaceIds.length, hasRetriedAccessibleRefetch, fetchWorkspaces])
-
-    const otherUserName = useUserStore((state) => {
-        if (!routeUserId) return null;
-        const user = state.usersById[routeUserId];
-        return user ? user.Name : null;
-    })
 
     const acitivityLabel = "Personal Activities"
 
@@ -302,8 +292,6 @@ type SidebarPersonalActivitiesProps = {
 }
 
 const SidebarPersonalActivities = ({ isMembersView }: SidebarPersonalActivitiesProps) => {
-
-    const routeUserId = useMatch("/users/:userID/*")?.params.userID
     const routeParam = "users/me/"
 
     const items: SidebarItem[] = [

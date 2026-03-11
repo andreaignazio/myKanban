@@ -1,21 +1,19 @@
 ﻿
-import { act, forwardRef, use, useEffect, useRef, useState, type ComponentType, type RefObject, type SVGProps } from "react";
+import { forwardRef, useEffect, useState } from "react";
 import type { MenuItemExtended } from "@/types/uiTypes";
 import { useCardActionRegistry } from "@/actionRegistry/cardActionRegistry";
 import { useParams } from "react-router";
 import { DropDown } from "../menuElements/DropDown";
 import { ActionMenuWrapper } from "../modals/ListActionsMenu";
-import { LabeledButtonCustom, LabeledButtonPresetBSubmit } from "../buttons/labeledButton";
+import { LabeledButtonPresetBSubmit } from "../buttons/labeledButton";
 import { headerStyle } from "./cardMenuStyle";
 import { CustomDropDown } from "../menuElements/CustomDropDown";
 import { useBoardsStore } from "@/stores/boardsStore";
 import { useShallow } from "zustand/shallow";
 import { useBoardDetailStore } from "@/stores/boardDetailStore";
-import { useListsStore } from "@/stores/listsStore";
 import type { CopyCardToListRequest, CopyInboxToListRequest, List, MirrorCardToInboxRequest, MirrorCardToListRequest, MoveInboxToListRequest } from "@/stores/types";
 import { useCardsStore } from "@/stores/cardsStore";
 import { CustomInput } from "../menuElements/CustomInput";
-import type { AsyncRequestKey } from "@/stores/asyncRequestTypes";
 import { useUserInboxStore } from "@/stores/userInboxStore";
 
 type cardMoveMenuMode = "move" | "copy" | "mirror" | "moveInboxCard" | "copyInboxCard";
@@ -30,8 +28,6 @@ type CardMoveMenuProps = {
 }
 
 export const CardMoveMenu = forwardRef<HTMLDivElement, CardMoveMenuProps>(({ onClose, cardId, listId, mode = "move", headless = false, onMoveSubmitSuccess }, ref) => {
-    const boardID = useParams().boardId as string;
-    const cardActions = useCardActionRegistry();
     const [activeTab, setActiveTab] = useState("board")
 
 
@@ -70,9 +66,6 @@ export const CardMoveMenu = forwardRef<HTMLDivElement, CardMoveMenuProps>(({ onC
         : mode === "copy" || mode === "copyInboxCard"
             ? "Copy card to..."
             : "Mirror card to...";
-
-    const keys: AsyncRequestKey[] = ["card:move", "card:copy", "card:mirror"]
-
     return (
         <>
             <ActionMenuWrapper
@@ -149,7 +142,6 @@ const MoveToBoardTab = ({ onClose, cardId, listId, mode, onMoveSubmitSuccess }: 
     const boardIds = useBoardsStore(useShallow((state) => state.boardIdsByWorkspaceId[workspaceId] ?? []))
     const boardsById = useBoardsStore((state) => state.boardsById)
     const canModifyByBoardID = useBoardsStore(useShallow((state) => state.canModifyByBoardIDByWorkspaceId[workspaceId] ?? {}))
-    const fetchBoardListByBoardId = useBoardDetailStore((state) => state.fetchBoardListByBoardId)
     const getListsForBoard = useBoardDetailStore((state) => state.getListsForBoard)
     const getListCardIds = useBoardDetailStore((state) => state.listCardIdsByListId)
     const listCardById = useBoardDetailStore((state) => state.listCardById)
@@ -367,12 +359,6 @@ const MoveToBoardTab = ({ onClose, cardId, listId, mode, onMoveSubmitSuccess }: 
         kind: "standard"
     })
 
-    const scheduleClose = (delay: number) => {
-        setTimeout(() => {
-            onClose();
-        }, delay);
-    }
-
     const delayedExecute = (action: () => Promise<void>, delay: number) => {
         onClose();
         setTimeout(() => {
@@ -531,10 +517,6 @@ const MoveToBoardTab = ({ onClose, cardId, listId, mode, onMoveSubmitSuccess }: 
         )
     }
 
-
-
-
-    const h = 48; // Standard height for menu items, can be adjusted as needed
     const menuItems: MenuItemExtended[] = [
         {
             id: "copyCard", label: "Copy card instead", kind: "custom",

@@ -16,5 +16,3 @@ export type MenuItemExtended = MenuItem & {
     className?: string;
     anchoredMenuProps?: Omit<CardRowMenuBtnProps, | "label" | "icon">;
 };
-
-type AnchoredMenuProps = CardRowMenuBtnProps 

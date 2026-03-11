@@ -13,15 +13,11 @@ import { HomeIcon } from "@heroicons/react/24/solid";
 
 
 import { useWorkspaceStore } from "@/stores/workspaceStore";
-import { useNavigate, useParams } from "react-router-dom";
-import { WorkspaceSubRows } from "@/components/sidebar/WorkspaceSubRows";
 import { forwardRef, useEffect, useState } from "react";
 import { ChevronDown } from "lucide-react";
 
 export const WorkspaceRow = forwardRef<HTMLDivElement, WorkspaceRowProps>(({ workspaceId, activeSubRowId, onSubRowToggle, className, isActive, status }, ref) => {
     const workspace = useWorkspaceStore((state) => state.workspacesById[workspaceId]);
-
-    const activeWorkspaceId = useParams().workspaceId as string | undefined
 
     const subscription = useWorkspaceStore((state) => state.wSubscriptionsById[workspaceId]?.Plan ?? "free")
     const subscriptionLabel = subscription.charAt(0).toUpperCase() + subscription.slice(1)
@@ -36,16 +32,6 @@ export const WorkspaceRow = forwardRef<HTMLDivElement, WorkspaceRowProps>(({ wor
 
     if (!workspace) {
         return null;
-    }
-
-    const navigate = useNavigate()
-    const handleOpenWorkspace = () => {
-
-        navigate(`/workspaces/${workspaceId}`)
-    }
-    const handleToggleSubRows = (e: React.MouseEvent) => {
-        e.stopPropagation();
-        setIsSubRowsOpen((prev) => !prev);
     }
 
     const [isSubRowsOpen, setIsSubRowsOpen] = useState(false);

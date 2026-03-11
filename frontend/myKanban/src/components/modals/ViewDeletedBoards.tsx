@@ -2,7 +2,6 @@ import { useBoardsStore } from "@/stores/boardsStore";
 import { forwardRef, useEffect, useRef } from "react";
 import { useShallow } from "zustand/shallow";
 import { LabeledButtonPresetA } from "../buttons/labeledButton";
-import { BoardCoverRenderer } from "../menuElements/BoardCoverRenderer";
 import { LucideTrash2, TrashIcon } from "lucide-react";
 import { ButtonXMark } from "../menuElements/buttonXMark";
 import { useBoardActionRegistry } from "@/actionRegistry/boardActionRegistry";

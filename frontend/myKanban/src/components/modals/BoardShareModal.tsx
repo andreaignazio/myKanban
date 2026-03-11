@@ -6,9 +6,7 @@ import { XMarkIcon } from "@heroicons/react/24/solid";
 
 import { LabeledButtonCustom } from "@/components/buttons/labeledButton";
 import { CustomDropDown, type MenuItem } from "@/components/menuElements/CustomDropDown";
-import { UserRoleBadgeSelector } from "@/components/badges/RoleBadge";
 import { BoardMembersSubMenu } from "@/components/modals/BoardMembersSubMenu";
-import type { BoardRole } from "@/hooks/useCurrentBoardRole";
 import { useCurrentBoardRole } from "@/hooks/useCurrentBoardRole";
 import { useShareOffersStore, type CreateShareOfferPayload } from "@/stores/shareOffersStore";
 import { useAsyncRequestStore } from "@/stores/asyncRequestStore";

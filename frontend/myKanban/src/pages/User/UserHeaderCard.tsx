@@ -21,7 +21,7 @@ export const UserHeaderCard = ({ user, children }: UserHeaderCardProps) => {
         ? (user?.Props?.Cover?.Color ?? undefined)
         : (coverType ? undefined : (user?.Props?.Cover?.Color ?? undefined));
 
-    const { footerBackgroundColor, avatarRingColor } = useCoverDerivedColors({
+    const { avatarRingColor } = useCoverDerivedColors({
         coverClassName: coverColor,
         coverImageUrl: coverImage,
         contrast: 0.9,

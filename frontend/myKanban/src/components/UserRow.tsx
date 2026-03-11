@@ -1,14 +1,10 @@
 import { useWsMembersStore } from "@/stores/wsMembersStore";
 import { useUserStore } from "@/stores/userStore";
-import { TextButton } from "./buttons/TextButton";
 
 import type { User } from "@/stores/types";
-import { UserAvatar } from "./badges/UserAvatar";
 import { useCurrentWorkspaceRole } from "@/hooks/useCurrentWorkspaceRole";
 import { WorkspaceMembersDropdown } from "./menuElements/MembersDropdown/WorkspaceMembersDropdown";
 import { useAuthStore } from "@/stores/auth";
-import { LabeledButtonPresetA } from "./buttons/labeledButton";
-import { X } from "lucide-react";
 import { useWorkspaceActionRegistry } from "@/actionRegistry/workspaceActionRegistry";
 import { LeaveRemoveMember } from "./common/leaveRemoveMember";
 import { UserIdentityRow } from "./common/UserIdentityRow";
@@ -25,7 +21,6 @@ export function UserRow({ userID, workspaceId }: { userID: string; workspaceId: 
 
     const removeMember = useWorkspaceActionRegistry().deleteWorkspaceMember;
     const leaveWorkspaceWithConfirmation = useWorkspaceActionRegistry().leaveWorkspaceWithConfirmation;
-    const updateMemberRole = useWorkspaceActionRegistry().setWorkspaceMemberRole;
 
     const canLeave = membership?.Role !== "owner" && isCurrentUser;
 
@@ -36,10 +31,6 @@ export function UserRow({ userID, workspaceId }: { userID: string; workspaceId: 
     const handleLeaveWorkspace = async () => {
         leaveWorkspaceWithConfirmation(workspaceId, userID);
     }
-    const handleChangeRole = async (newRole: string) => {
-        await updateMemberRole(workspaceId, userID, newRole);
-    }
-
 
     if (!userID) return;
     return (

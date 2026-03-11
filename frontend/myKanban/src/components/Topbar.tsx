@@ -1,5 +1,4 @@
 import { useMatch, useParams } from "react-router"
-import { useBoardsStore } from "@/stores/boardsStore"
 import { useShallow } from "zustand/shallow"
 import { useAuthStore } from "@/stores/auth"
 import { useUiStore } from "@/stores/uiStore"
@@ -56,7 +55,7 @@ export default function Topbar({ onClick, isHidden }: TopbarProps) {
 }
 import type { OverlayDescriptor } from "@/overlays/overlayStore"
 import { useRef } from "react"
-import { UserNotificationMenu, UserNotificationMenuBtn } from "./modals/UserNotificationMenu"
+import { UserNotificationMenuBtn } from "./modals/UserNotificationMenu"
 import { UserAvatar } from "./badges/UserAvatar"
 
 function UserHeader({ context }: { context: string | null }) {
@@ -119,9 +118,6 @@ function BoardHeader() {
     const { boardId } = useParams<{ boardId: string }>()
     const { workspaceId } = useParams<{ workspaceId: string }>()
     const toggleSidebarHidden = useUiStore((state) => state.toggleSidebarHidden)
-    const board = useBoardsStore(
-        useShallow((state) => (boardId ? state.boardsById[boardId] : undefined))
-    )
     const workspace = useWorkspaceStore(
         useShallow((state) => (workspaceId ? state.workspacesById[workspaceId] : undefined))
     )

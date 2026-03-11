@@ -18,10 +18,8 @@ export const WorkspaceSubscriptionManage = () => {
     const resumeWorkspaceSubscription = useWorkspaceStore((state) => state.resumeWorkspaceSubscription);
     const [isSubmittingSubscriptionChange, setIsSubmittingSubscriptionChange] = useState(false);
     const currentPlan = subscription?.Plan ?? "free";
-    const status = subscription?.Status ?? "inactive";
     const cancelAtPeriodEnd = subscription?.CancelAtPeriodEnd ?? false;
     const pendingPlan = subscription?.PendingPlan;
-    const pendingSeatQuantity = subscription?.PendingSeatQuantity;
     const pendingChangeEffectiveAt = subscription?.PendingChangeEffectiveAt ? new Date(subscription.PendingChangeEffectiveAt) : null;
     const expiryDate = subscription?.CurrentPeriodEnd ? new Date(subscription.CurrentPeriodEnd) : null;
     const formattedExpiryDate = expiryDate ? useDateTimeParser().stringifyDatePretty(expiryDate)?.date : "N/A";
@@ -37,7 +35,6 @@ export const WorkspaceSubscriptionManage = () => {
         maxMembers,
         hasUnlimitedMembers,
         nextBillingAmount,
-        shouldUpgrade,
     } = useWorkspaceSubscriptionBilling({
         currentPlan,
         nextPlan: pendingPlan,

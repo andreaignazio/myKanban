@@ -1,11 +1,10 @@
 ﻿import { useCardActionRegistry } from "@/actionRegistry/cardActionRegistry";
-import { forwardRef, use, useEffect, useRef, useState, useTransition } from "react";
+import { forwardRef, useEffect, useRef, useState, useTransition } from "react";
 import { useParams } from "react-router-dom";
 import { ActionMenuWrapper } from "./ActionMenuWrapper";
-import { ListColorSelector } from "./ListColorSelector";
 import { DropDown } from "../menuElements/DropDown";
 import { useOverlayStore, type OverlayDescriptor } from "@/overlays/overlayStore";
-import { PhotoIcon, XMarkIcon } from "@heroicons/react/24/outline";
+import { PhotoIcon } from "@heroicons/react/24/outline";
 import type { MenuItemExtended } from "@/types/uiTypes";
 import { LabeledButtonCustom } from "../buttons/labeledButton";
 import { CardSkeleton } from "../cardMenus/cardSkeleton";
@@ -25,7 +24,6 @@ export const CardActionMenuBtn = forwardRef<HTMLDivElement, CardActionMenuBtnPro
     const onMenuClose = useOverlayStore((state) => state.close);
 
     const cardActionsMenuRef = useRef<HTMLDivElement>(null)
-    const acnhorRef = ref as React.RefObject<HTMLDivElement>;
     const btnRef = useRef<HTMLDivElement>(null);
     function handleOpenCardActionModal() {
         // console.log("Opening respond modal for share offer");
@@ -165,7 +163,6 @@ export const CardCoverMenu = forwardRef<HTMLDivElement, CardActionsMenuProps>(({
 
     const headerStyle = { color: "rgba(255, 255, 255, 0.7)", fontSize: "14px", fontWeight: 600 };
     const tipStyle = { color: "rgba(255, 255, 255, 0.5)", fontSize: "12px", fontWeight: 400 };
-    const h = 32; // Standard height for menu items, can be adjusted as needed
     const menuItems: MenuItemExtended[] = [
         { id: "size", label: "Size", kind: "header", style: headerStyle },
         {
@@ -206,8 +203,6 @@ export const CardCoverMenu = forwardRef<HTMLDivElement, CardActionsMenuProps>(({
                 () => { setActiveTab?.("search") })
         },
     ]
-
-    const Title = "Cover";
     return (
         <>
 

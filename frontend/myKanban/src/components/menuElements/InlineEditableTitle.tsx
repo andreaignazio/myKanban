@@ -1,4 +1,4 @@
-import { forwardRef, useRef } from "react"
+import { forwardRef } from "react"
 
 
 type InlineEditableTitleProps = {
@@ -18,13 +18,7 @@ type InlineEditableTitleProps = {
 }
 
 export const InlineEditableTitle = forwardRef<HTMLInputElement, InlineEditableTitleProps>((props, ref) => {
-    const { title, setTitle, setTitleFocused, handleOnBlurTitle, isDisabled, className, titleFocused, focusDragThreshold = 6, isReadonly = false } = props;
-    const pointerStartRef = useRef<{ x: number; y: number } | null>(null)
-    const suppressNextFocusRef = useRef(false)
-
-    const clearPointerStart = () => {
-        pointerStartRef.current = null
-    }
+    const { title, setTitle, handleOnBlurTitle, isDisabled, className, titleFocused, isReadonly = false } = props;
 
     return (
         <div

@@ -1,6 +1,5 @@
 ﻿import { create } from "zustand";
-import type { AddEntryMemberRequest, Board, BoardEvent, CardChecklist, Checklist, ChecklistEntry, ChecklistEntryRowResponse, CloneChecklistRequest, CloneChecklistResponse, ConvertChecklistEntryRequest, ConvertChecklistEntryResponse, CreateChecklistEntryRequest, CreateChecklistRequest, CrossMoveChecklistEntryRequest, Entry, EntryMember, MoveChecklistEntryRequest, MoveChecklistRequest, PatchChecklistEntryRequest } from "./types";
-import type { E } from "node_modules/react-router/dist/development/router-5iOvts3c.d.mts";
+import type { AddEntryMemberRequest, BoardEvent, CardChecklist, Checklist, ChecklistEntry, ChecklistEntryRowResponse, CloneChecklistRequest, CloneChecklistResponse, ConvertChecklistEntryRequest, ConvertChecklistEntryResponse, CreateChecklistEntryRequest, CreateChecklistRequest, CrossMoveChecklistEntryRequest, Entry, EntryMember, MoveChecklistEntryRequest, MoveChecklistRequest, PatchChecklistEntryRequest } from "./types";
 import type { BoardDetailPatch } from "./boardDetailStore";
 import { api } from "@/api/api";
 import { useAsyncRequestStore, useAsyncKey } from "@/stores/asyncRequestStore";
@@ -357,7 +356,6 @@ export const useChecklistStore = create<ChecklistStore>((set, get) => ({
         }
 
         set((state) => ({ eventIds: [...state.eventIds, evt.ID] }))
-        const Payload = (evt.Payload as EventPayloadEnvelope).StatePayload as BoardDetailPatch;
         switch (evt.Type as ChecklistEventTypes) {
             case "checklist.created":
                 get().applyUpsertChecklist(evt)

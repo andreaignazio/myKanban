@@ -1,6 +1,4 @@
-
-import { CatalogIcon, type IconId } from "@/icons/iconCatalog";
-import { ArrowRightIcon, ChevronRight } from "lucide-react";
+import { type IconId } from "@/icons/iconCatalog";
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { SidebarSubRow } from "./SidebarSubRow";

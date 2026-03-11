@@ -2,7 +2,7 @@ import { forwardRef, useState, type ComponentType, type SVGProps } from "react";
 import type { MenuItemExtended } from "@/types/uiTypes";
 import { DropDown } from "../menuElements/DropDown";
 import { ActionMenuWrapper } from "../modals/ListActionsMenu";
-import { CheckIcon, ClockIcon, PencilIcon, TagIcon, UserPlusIcon, PaperClipIcon, MapPinIcon, SparklesIcon } from "@heroicons/react/24/outline";
+import { CheckIcon, ClockIcon, TagIcon, UserPlusIcon, PaperClipIcon, MapPinIcon, SparklesIcon } from "@heroicons/react/24/outline";
 import { CardLabelMenu } from "./cardLabelMenu";
 import { CardDatesMenu } from "./cardDatesMenu";
 import { CardMembersMenu } from "./cardMembersMenu";

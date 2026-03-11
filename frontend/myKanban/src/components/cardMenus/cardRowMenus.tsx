@@ -1,15 +1,6 @@
 import { useOverlayStore, type OverlayDescriptor } from "@/overlays/overlayStore";
 import { PhotoIcon } from "@heroicons/react/24/solid";
-import { forwardRef, useRef, useState, type ComponentType, type RefObject, type SVGProps } from "react";
-import type { MenuItemExtended } from "@/types/uiTypes";
-import { CardColorSelector, CardCoverMenu, CoverSizeMenu } from "../modals/CardCoverMenu";
-import { useCardActionRegistry } from "@/actionRegistry/cardActionRegistry";
-import { useParams } from "react-router";
-import { DropDown } from "../menuElements/DropDown";
-import { ActionMenuWrapper } from "../modals/ListActionsMenu";
-import { CheckIcon, ClockIcon, PencilIcon, TagIcon, UserPlusIcon, PaperClipIcon, MapPinIcon, SparklesIcon } from "@heroicons/react/24/outline";
-import { CustomInput } from "../menuElements/CustomInput";
-import { LabeledButtonCustom } from "../buttons/labeledButton";
+import { forwardRef, useRef, type RefObject } from "react";
 
 export type CardRowMenuBtnProps = {
     cardID?: string;
@@ -45,7 +36,6 @@ export const CardRowMenuBtn = forwardRef<HTMLDivElement, CardRowMenuBtnProps>(({
     const onMenuClose = useOverlayStore((state) => state.close);
 
     const cardActionsMenuRef = useRef<HTMLDivElement>(null)
-    const acnhorRef = ref as React.RefObject<HTMLDivElement>;
     const btnRef = useRef<HTMLDivElement>(null);
     const resolvedId = customId ? customId : "card-action-menu";
 

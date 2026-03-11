@@ -29,8 +29,6 @@ export const BoardCoverRenderer = ({ board, className, overrideClassName }: Boar
     if (bgColor) {
         bgColor = getClassNamesForColorToken(bgColor)
     }
-    const randomIndex = Math.floor(Math.random() * gradientColorTokens.length);
-    const randomGradient = gradientColorTokens[randomIndex];
     const gradientIndex = getStableIndexFromString(board.ID, gradientColorTokens.length);
     const fallbackGradient = gradientColorTokens[gradientIndex];
     const finalClassName = overrideClassName ? className || "" : `flex h-full w-16 rounded-md overflow-hidden ${className || ""}`

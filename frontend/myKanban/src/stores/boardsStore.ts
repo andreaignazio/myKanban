@@ -6,12 +6,9 @@ import type { Board, CreateBoardRequest, PatchUserBoardPropsRequest, UserBoard, 
 import type { BoardDetailPatch } from "./boardDetailStore";
 import type { ShareOffer } from "./shareOfferTypes";
 import { useCacheStore } from "./cacheStore";
-import { useSortByPosition } from "@/hooks/useSortByPosition";
 import { useAsyncRequestStore } from "./asyncRequestStore";
 import type { AsyncRequestKey } from "./asyncRequestTypes";
 import { useWorkspaceStore, type UserWorkspaceData } from "./workspaceStore";
-
-const { sortByPosition } = useSortByPosition();
 export type UserBoardData = {
     Boards: Board[];
     UserBoards: UserBoard[];

@@ -1,5 +1,5 @@
 ﻿import { create } from "zustand";
-import type { UserBoard, BoardMember, UserWorkspace, User } from "./types";
+import type { UserBoard, BoardMember, UserWorkspace } from "./types";
 import { api } from "@/api/api";
 import { useUserStore } from "@/stores/userStore";
 import { useWsMembersStore } from "./wsMembersStore";

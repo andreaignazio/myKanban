@@ -151,7 +151,7 @@ export const useUserInboxStore = create<UserInboxStore>((set, get) => ({
         }
     },
     getInboxCardByRootCardID: (rootCardID: string) => {
-        const { inboxCardsById, inboxCardsIds } = get();
+        const { inboxCardsById } = get();
         const inboxCard = Object.values(inboxCardsById).find(card => card.RootListCardID === rootCardID);
         return inboxCard;
     },

@@ -2,8 +2,7 @@ import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "re
 import { CustomInput } from "../menuElements/CustomInput";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import { LockClosedIcon, UsersIcon, GlobeAsiaAustraliaIcon } from "@heroicons/react/24/solid";
-import { LabeledButtonCustom, LabeledButtonPresetA } from "../buttons/labeledButton";
-import { useOverlayStore, type OverlayDescriptor } from "@/overlays/overlayStore";
+import { LabeledButtonPresetA } from "../buttons/labeledButton";
 
 import { useWorkspaceStore } from "@/stores/workspaceStore";
 import { useBoardsStore, type CreateBoardPayload } from "@/stores/boardsStore";
@@ -18,11 +17,7 @@ export type CreateBoardModalProps = {
 }
 
 import { gradientColorTokens, type ColorToken } from "@/domain/colorTokens";
-import { Ellipsis } from "lucide-react";
-import { ButtonHoverInset } from "../menuElements/buttonHoverInset";
 import { useParams } from "react-router-dom";
-import { CardRowMenuBtn } from "../cardMenus/cardRowMenus";
-import { BoardColorSelector } from "../workspaceView/boardColorSelector";
 import type { BoardBackgroundColorProps, BoardBackgroundImageProps, BoardBackgroundProps, BoardProps, CreateBoardRequest } from "@/stores/types";
 import { ImageColorSelector } from "../menuElements/ImageColorSelector";
 
@@ -37,12 +32,6 @@ export const CreateBoardModal = forwardRef<HTMLDivElement, CreateBoardModalProps
     const [selectedWorkspace, setSelectedWorkspace] = useState<string | null>(null);
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
     const [selectedVisibility, setSelectedVisibility] = useState<"private" | "public" | "workspace" | null>("workspace");
-
-
-
-    const dropdownActiveIdMap = useOverlayStore((state) => state.dropdownActiveIdMap);
-    const wsMenuId = "workspace-dropdown";
-    const visibilityMenuId = "visibility-dropdown";
 
     const getIsSuccess = useBoardsStore((state) => state.getIsSuccess);
     const requestHandlerRef = useRef<ChildHandle>(null);

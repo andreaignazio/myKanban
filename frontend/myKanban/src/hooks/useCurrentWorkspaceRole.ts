@@ -1,5 +1,4 @@
 import { useAuthStore } from "@/stores/auth";
-import { useBoardsStore } from "@/stores/boardsStore";
 import { useWsMembersStore } from "@/stores/wsMembersStore";
 import { useShallow } from "zustand/shallow";
 

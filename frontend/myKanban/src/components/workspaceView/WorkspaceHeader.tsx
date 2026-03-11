@@ -1,7 +1,5 @@
 import { useWorkspaceStore } from "@/stores/workspaceStore";
 import HomeIcon from "@heroicons/react/24/solid/HomeIcon";
-import { LockClosedIcon, } from "@heroicons/react/24/solid";
-import { GlobeAltIcon } from "@heroicons/react/24/solid";
 import { WorkspaceVisibility } from "./WorkspaceVisibility";
 
 type WorkspaceHeaderProps = {
@@ -10,8 +8,6 @@ type WorkspaceHeaderProps = {
 
 export function WorkspaceHeader({ workspaceId }: WorkspaceHeaderProps) {
     const workspace = useWorkspaceStore((state) => state.workspacesById[workspaceId]);
-
-    const visibilityText = workspace?.Visibility === "public" ? "Public" : "Private";
 
     return (
         <div className="flex items-center justify-start w-full pb-8 pt-6">

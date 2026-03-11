@@ -1,4 +1,3 @@
-import type { CardFilterState } from "@/components/cardMenus/cardFilterMenu";
 import type { WorkspaceFilterState } from "@/components/sidebar/Sidebar";
 import { useWorkspaceStore } from "@/stores/workspaceStore";
 

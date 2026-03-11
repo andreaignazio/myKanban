@@ -1,18 +1,10 @@
-﻿import { useOverlayStore, type OverlayDescriptor } from "@/overlays/overlayStore";
-import { PhotoIcon, XMarkIcon } from "@heroicons/react/24/solid";
-import { forwardRef, useRef, useState, type ComponentType, type RefObject, type SVGProps } from "react";
+﻿import { forwardRef, useState } from "react";
 import type { MenuItemExtended } from "@/types/uiTypes";
-import { CardColorSelector, CardCoverMenu, CoverSizeMenu } from "../modals/CardCoverMenu";
 import { useCardActionRegistry } from "@/actionRegistry/cardActionRegistry";
 import { useParams } from "react-router";
 import { DropDown } from "../menuElements/DropDown";
 import { ActionMenuWrapper } from "../modals/ListActionsMenu";
-import { CheckIcon, ClockIcon, PencilIcon, TagIcon, UserPlusIcon, PaperClipIcon, MapPinIcon, SparklesIcon } from "@heroicons/react/24/outline";
 import { headerStyle, PADDING_X } from "./cardMenuStyle";
-import { UserAvatar } from "../badges/UserAvatar";
-import { useUserStore } from "@/stores/userStore";
-import { useBoardMembersStore } from "@/stores/boardMembersStore";
-import { useCardMembersStore } from "@/stores/CardMembersStore";
 import { CustomInput } from "../menuElements/CustomInput";
 import { useShallow } from "zustand/shallow";
 import { CustomDropDown } from "../menuElements/CustomDropDown";
@@ -100,14 +92,6 @@ export const CardChecklistMenu = forwardRef<HTMLDivElement, CardChecklistMenuPro
         label: checklistInCard.Checklist.Title,
         kind: "standard"
     }))
-
-    const checklistItems: MenuItemExtended[] = [
-        { id: "checklist1", label: "Checklist 1", kind: "standard" },
-        { id: "checklist2", label: "Checklist 2", kind: "standard" },
-        { id: "checklist3", label: "Checklist 3", kind: "standard" },
-    ]
-
-    const h = 48; // Standard height for menu items, can be adjusted as needed
     const menuItems: MenuItemExtended[] = [
         { id: "checklistTitle", label: "Title", kind: "header", style: { ...headerStyle } },
         { id: "searchUser", label: "Search Members", kind: "custom", customElement: input },

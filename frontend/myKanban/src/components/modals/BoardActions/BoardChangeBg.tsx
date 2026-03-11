@@ -1,6 +1,6 @@
 
 import { ImageColorRenderer } from "@/components/menuElements/ImageColorRenderer"
-import { flatColorTokens, gradientColorTokens, baseImages, type BaseImage, type ColorToken } from "@/domain/colorTokens"
+import { flatColorTokens, gradientColorTokens, baseImages, type ColorToken } from "@/domain/colorTokens"
 import type { BoardActionsMenuTabs } from "../BoardActionMenu"
 
 

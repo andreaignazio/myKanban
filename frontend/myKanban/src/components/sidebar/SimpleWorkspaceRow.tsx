@@ -1,6 +1,4 @@
 import { useBuildPublicURL } from "@/hooks/useBuildPublicURL"
-import { useAuthStore } from "@/stores/auth"
-import { SidebarSubRow } from "./SidebarSubRow"
 import { useWorkspaceStore } from "@/stores/workspaceStore";
 import HomeIcon from "@heroicons/react/24/outline/HomeIcon";
 import { useNavigate } from "react-router-dom";

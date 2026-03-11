@@ -1,10 +1,5 @@
 import { useUserWatched } from "@/hooks/useUserWatched";
 import { UserPagesWrapper } from "./userPagesWrapper"
-import type { Board, BoardWatch, Card, CardWatch, List, ListWatch } from "@/stores/types";
-import { useListsStore } from "@/stores/listsStore";
-import { useCardsStore } from "@/stores/cardsStore";
-import { useBoardsStore } from "@/stores/boardsStore";
-import { useUserWatchStore } from "@/stores/userWatchStore";
 import { useLookUpInterface, type Lookup } from "@/hooks/useLookUpInterface";
 import { Eye } from "lucide-react";
 

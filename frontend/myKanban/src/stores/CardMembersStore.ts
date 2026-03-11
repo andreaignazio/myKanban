@@ -1,5 +1,5 @@
 ﻿import { create } from "zustand";
-import type { AddCardMemberRequest, BoardEvent, Card, CardMember } from "./types";
+import type { AddCardMemberRequest, BoardEvent, CardMember } from "./types";
 import { api } from "@/api/api";
 import { useAsyncRequestStore, useAsyncKey } from "@/stores/asyncRequestStore";
 import type { EventPayloadEnvelope } from "./audittypes";

@@ -1,4 +1,4 @@
-import { X, XIcon } from "lucide-react";
+import { XIcon } from "lucide-react";
 import { LabeledButtonPresetA } from "../buttons/labeledButton/LabeledButtonPresetA"
 
 type LeaveRemoveMemberProps = {

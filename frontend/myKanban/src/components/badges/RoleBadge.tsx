@@ -18,11 +18,10 @@ export function UserRoleBadgeSelector({ items, role, className, onClick, size = 
     const anchorRef = useRef<HTMLDivElement>(null);
     const onOpenOverlay = useOverlayStore((state) => state.open)
     const closeOverlay = useOverlayStore((state) => state.close)
-    const isActive = useOverlayStore((state) => state.isActive)
     const panelRef = useRef<HTMLDivElement>(null)
     //const triggerUpdate = useOverlayStore((state) => state.triggerUpdate)
 
-    const [activeId, setActiveId] = useState<string | null>(null)
+    const [, setActiveId] = useState<string | null>(null)
     const setDropdownActiveId = useOverlayStore((state) => state.setDropdownActiveId)
 
 

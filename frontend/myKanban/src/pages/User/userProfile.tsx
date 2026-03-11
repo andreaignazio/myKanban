@@ -2,26 +2,15 @@ import { CustomInput } from "@/components/menuElements/CustomInput"
 import { UserPagesWrapper } from "./userPagesWrapper"
 import { useEffect, useState } from "react";
 import { useAuthStore } from "@/stores/auth";
-import { useUserStore } from "@/stores/userStore";
-import { Asterisk, Globe, Pencil } from "lucide-react";
-import { GlobeEuropeAfricaIcon } from "@heroicons/react/24/solid";
+import { Asterisk, Globe } from "lucide-react";
 import { LabeledButtonPresetBSubmit } from "@/components/buttons/labeledButton";
-import { UserAvatar } from "@/components/badges/UserAvatar";
-import type { User, UserProps } from "@/stores/usertypes";
-import { CardRowMenuBtn } from "@/components/cardMenus/cardRowMenus";
-import { UserAvatarEditor } from "./userAvatarEditor";
-import { ButtonHoverInset } from "@/components/menuElements/buttonHoverInset";
-import { UserCoverEditor } from "./userCoverEditor";
-import { ImageColorRenderer } from "@/components/menuElements/ImageColorRenderer";
-import { gradientColorTokens } from "@/domain/colorTokens";
-import { useCoverDerivedColors } from "@/hooks/useCoverDerivedColors";
+import type { UserProps } from "@/stores/usertypes";
 import { useUserActionRegistry } from "@/actionRegistry/userActionRegistry";
-import type { PatchMeDetailRequest, PatchMePropsRequest } from "@/stores/types";
+import type { PatchMeDetailRequest } from "@/stores/types";
 import { UserHeaderCard } from "./UserHeaderCard";
 
 export const UserProfilePage = () => {
     const fetchUserData = useAuthStore((state) => state.fetchUser);
-    const userId = useAuthStore((state) => state.userID);
     const user = useAuthStore((state) => state.user || undefined);
     const [username, setUsername] = useState(user?.Username || "");
     const [bio, setBio] = useState("bio");

@@ -1,13 +1,10 @@
-﻿import { useOverlayStore, type OverlayDescriptor } from "@/overlays/overlayStore";
-import { PhotoIcon, XMarkIcon } from "@heroicons/react/24/solid";
-import { forwardRef, useEffect, useRef, useState, type ComponentType, type RefObject, type SVGProps } from "react";
+﻿import { XMarkIcon } from "@heroicons/react/24/solid";
+import { forwardRef, useState } from "react";
 import type { MenuItemExtended } from "@/types/uiTypes";
-import { CardColorSelector, CardCoverMenu, CoverSizeMenu } from "../modals/CardCoverMenu";
 import { useCardActionRegistry } from "@/actionRegistry/cardActionRegistry";
 import { useParams } from "react-router";
 import { DropDown } from "../menuElements/DropDown";
 import { ActionMenuWrapper } from "../modals/ListActionsMenu";
-import { CheckIcon, ClockIcon, PencilIcon, TagIcon, UserPlusIcon, PaperClipIcon, MapPinIcon, SparklesIcon } from "@heroicons/react/24/outline";
 import { headerStyle, PADDING_X } from "./cardMenuStyle";
 import { UserAvatar } from "../badges/UserAvatar";
 import { useUserStore } from "@/stores/userStore";
@@ -105,8 +102,6 @@ export const CardMembersMenu = forwardRef<HTMLDivElement, CardMembersMenuProps>(
         )
     }
 
-    const h = 48; // Standard height for menu items, can be adjusted as needed
-
     const toIdsHeader = entryId ? "Entry Members" : "Card Members";
 
     const menuItems: MenuItemExtended[] = [
@@ -134,18 +129,6 @@ export const CardMembersMenu = forwardRef<HTMLDivElement, CardMembersMenuProps>(
 
 
     ]
-
-    useEffect(() => {
-        // console.log("Members menu state updated", {
-        // boardID,
-        // cardID,
-        // entryId,
-        // boardMembersIds,
-        // cardMembersIds,
-        // availableToAddIds: resolvedBoardMembersIds,
-        // });
-    }, [boardID, cardID, entryId, boardMembersIds, cardMembersIds, resolvedBoardMembersIds]);
-
     const content = (
         <>
             <div className="relative w-full h-full mb-3" />
@@ -238,13 +221,6 @@ export const UserRowRenderer = ({ userID, onClick, className, disabled }: UserRo
 export const UserRowRendererAdv = ({ userID, onClick, className, showXMark, onRemoveClick, cardId, disabled, disabledTooltipText }: UserRowRendererProps & { cardId?: string }) => {
     const user: User | undefined = useUserStore((state) => state.usersById[userID]) as User | undefined;
     if (!user) return null;
-    const removeMember = useCardMembersStore((state) => state.removeMemberFromCard);
-    const boardID = useParams().boardId as string;
-    const cardID = cardId ?? useParams().cardId as string;
-    const handleRemoveMember = () => {
-        // console.log("Removing member with ID:", userID, "from card:", cardID, "on board:", boardID);
-        removeMember(boardID, cardID, userID);
-    }
     const isDisabled = Boolean(disabled);
     const tooltipText = isDisabled ? disabledTooltipText : undefined;
 

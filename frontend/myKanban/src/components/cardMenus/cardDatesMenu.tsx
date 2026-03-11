@@ -1,19 +1,13 @@
-import { useOverlayStore, type OverlayDescriptor } from "@/overlays/overlayStore";
-import { PhotoIcon } from "@heroicons/react/24/solid";
-import { forwardRef, use, useEffect, useRef, useState, type ComponentType, type RefObject, type SVGProps } from "react";
+import { forwardRef, useEffect, useState } from "react";
 import type { MenuItemExtended } from "@/types/uiTypes";
-import { CardColorSelector, CardCoverMenu, CoverSizeMenu } from "../modals/CardCoverMenu";
 import { useCardActionRegistry } from "@/actionRegistry/cardActionRegistry";
 import { useParams } from "react-router";
 import { DropDown } from "../menuElements/DropDown";
 import { ActionMenuWrapper } from "../modals/ListActionsMenu";
-import { CheckIcon, ClockIcon, PencilIcon, TagIcon, UserPlusIcon, PaperClipIcon, MapPinIcon, SparklesIcon } from "@heroicons/react/24/outline";
-import { CustomInput } from "../menuElements/CustomInput";
-import { LabeledButtonCustom, LabeledButtonPresetB, LabeledButtonPresetBSubmit } from "../buttons/labeledButton";
+import { LabeledButtonPresetB, LabeledButtonPresetBSubmit } from "../buttons/labeledButton";
 import { headerStyle, PADDING_X } from "./cardMenuStyle";
 
 import { type DateRange, DayPicker } from "react-day-picker";
-import { PADDING_L } from "../modals/CardDetailMenu";
 import { useCardsStore } from "@/stores/cardsStore";
 import { useChecklistStore } from "@/stores/checklistStore";
 import { DateTimeSelectorField } from "../common/DateTimeSelectorField";
@@ -46,13 +40,6 @@ export const CardDatesMenu = forwardRef<HTMLDivElement, CardDatesMenuProps>(({ o
     const setEntryDueDate = cardActions.setDueDateForChecklistEntry;
     const isEntryMode = !!entryID;
     const isInboxMode = source === "inbox" || source === "inbox-mirror";
-    const ICON_SIZE_CLASS = "w-5 h-";
-    const iconClassName = `${ICON_SIZE_CLASS} text-neutral-300`;
-    const icon = (Icon: ComponentType<SVGProps<SVGSVGElement>>) => (
-        <div className="flex  items-center justify-center h-[38px] aspect-square border border-gray-500/30 rounded-md">
-            <Icon className={iconClassName} />
-        </div>
-    );
 
     const [startDate, setStartDate] = useState<Date | undefined>(undefined);
     const [dueDate, setDueDate] = useState<Date | undefined>(undefined);
@@ -60,18 +47,6 @@ export const CardDatesMenu = forwardRef<HTMLDivElement, CardDatesMenuProps>(({ o
     const isStartDateSelected = !!startDate;
     const isDueDateSelected = !!dueDate;
     const isRangeSelected = isStartDateSelected && isDueDateSelected;
-
-
-    const stringifyDate = (date: Date | undefined) => {
-        if (!date) return "No date";
-        const day = String(date.getDate()).padStart(2, '0');
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const year = date.getFullYear();
-        const hours = String(date.getHours()).padStart(2, '0');
-        const minutes = String(date.getMinutes()).padStart(2, '0');
-        return `${day}/${month}/${year} ${hours}:${minutes}`;
-    }
-
     const key = useAsyncKey("card:edit:dates:add", `${contextKey}:${cardID}`)
     const removeKey = useAsyncKey("card:edit:dates:remove", `${contextKey}:${cardID}`)
 
@@ -165,8 +140,6 @@ export const CardDatesMenu = forwardRef<HTMLDivElement, CardDatesMenuProps>(({ o
     const calendarSelectedRange = isRangeSelected
         ? { from: startDate, to: dueDate }
         : undefined;
-
-    const h = 48; // Standard height for menu items, can be adjusted as needed
     const menuItems: MenuItemExtended[] = [
 
 

@@ -1,6 +1,5 @@
 import { BoardCard } from "@/components/workspaceView/BoardCard";
 import { BoardCardAdd } from "@/components/workspaceView/BoardCardAdd";
-;
 import { useBoardsStore } from "@/stores/boardsStore";
 import { forwardRef, useMemo } from "react";
 import { useParams } from "react-router";
@@ -22,14 +21,11 @@ export const BoardGrid = forwardRef<HTMLDivElement, BoardGridProps>(({ overrideW
         ? ""
         : "[grid-template-columns:repeat(auto-fit,minmax(clamp(140px,18vw,220px),1fr))]";
 
-    const useWsRole = useCurrentWorkspaceRole(workspaceId ?? null);
-    console.log("Current workspace role in WorkspaceView:", useWsRole);
-
     const boardIds = useBoardsStore(useShallow((state) => state.boardIdsByWorkspaceId[workspaceId] ?? []));
     const boardsById = useBoardsStore((state) => state.boardsById);
 
     const userBoardsById = useBoardsStore((state) => state.userBoardsById);
-    const { isAdminOrOwner, isMember } = useCurrentWorkspaceRole(workspaceId ?? null);
+    const { isMember } = useCurrentWorkspaceRole(workspaceId ?? null);
 
     const { sortByPosition } = useSortByPosition();
 

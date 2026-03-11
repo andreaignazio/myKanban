@@ -304,11 +304,6 @@ function mentionLabel(user: MentionSearchUser): string {
     return `@[${mentionLabel(user)}](user:${user.ID}) `;
 }*/
 
-function mentionToken(user: MentionSearchUser): string {
-    // Canonico: [@Nome](user:<id>) -> ID nascosto in href
-    return `[@${mentionLabel(user)}](user:${user.ID}) `;
-}
-
 function normalizeMentionTokens(markdown: string): string {
     if (!markdown) return "";
     // Legacy: @[Nome](user:id) -> Canonico: [@Nome](user:id)
@@ -676,7 +671,6 @@ export default function CardDescriptionMdEditor({ style, value, onChangeMarkdown
 
     const isInteractive = mode === "ready-to-edit";
 
-    const isEmpty = !value || value.trim() === "";
     const doNothing = () => { };
 
     const placeholderResolved = placeholder ?? "Scrivi la descrizione...";

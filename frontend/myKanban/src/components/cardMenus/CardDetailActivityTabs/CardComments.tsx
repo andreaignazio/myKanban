@@ -1,6 +1,4 @@
-﻿import { MessageSquareText } from "lucide-react"
-import { PADDING_L } from "../../modals/CardDetailMenu"
-import { LabeledButtonPresetB } from "../../buttons/labeledButton"
+﻿import { LabeledButtonPresetB } from "../../buttons/labeledButton"
 import { useCardCommentsStore } from "@/stores/cardCommentsStore"
 import { useShallow } from "zustand/shallow"
 import { useParams } from "react-router"
@@ -12,7 +10,6 @@ import { UserAvatar } from "../../badges/UserAvatar"
 import { useDateTimeParser } from "@/hooks/useDateTimeParser"
 import { SubmitFooter } from "../../menuElements/submitFooter"
 import { useAuthStore } from "@/stores/auth"
-import { extractMentionedUserIDs } from "@/hooks/commentMentions"
 import type { RefObject } from "react";
 import { useOverlayStore, type OverlayDescriptor } from "@/overlays/overlayStore";
 import { UserHoverCard } from "../../modals/UserHoverCard";
@@ -120,15 +117,6 @@ const CommentEditor = forwardRef<MainCommentEditorHandle, CommentEditorProps>(({
         setCommentDraft("")
         setIsEditing(false)
     }
-
-    const usersById = useUserStore((state) => state.usersById)
-
-    const mentionedUserIDs = extractMentionedUserIDs(commentDraft, usersById);
-    const payload = {
-        Content: commentDraft,
-        MentionedUserIDs: mentionedUserIDs.length ? mentionedUserIDs : undefined,
-    };
-
 
     const searchUser = useUserStore((s) => s.searchUser);
     const mergeUsers = useUserStore((s) => s.mergeUsers);

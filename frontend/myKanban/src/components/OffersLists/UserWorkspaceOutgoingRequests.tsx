@@ -1,4 +1,3 @@
-import { useCacheStore } from "@/stores/cacheStore";
 import { useShareOffersStore, type ShareOffer } from "@/stores/shareOffersStore";
 import { forwardRef, useEffect } from "react";
 import { useShallow } from "zustand/shallow";
@@ -12,7 +11,6 @@ export const UserWorkspaceOutgoingRequests = forwardRef<HTMLDivElement, Outgoing
     const fetchUserWorkspaceAccessSentRequests = useShareOffersStore((state) => state.fetchUserWorkspaceAccessSentRequests)
 
     const offersIds = useShareOffersStore(useShallow((state) => state.userWorkspaceAccessSentRequestsIds))
-    const offersById = useCacheStore((state) => state.offerById)
     useEffect(() => {
 
         fetchUserWorkspaceAccessSentRequests();

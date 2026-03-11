@@ -4,7 +4,6 @@ import { useUserInboxStore } from "@/stores/userInboxStore"
 import type { CardRowMode } from "./CardRow"
 import { CardRowTitle } from "./cardRowElements/CardRowTitle"
 import { Mirrors } from "./cardRowElements/CardMirrorsField"
-import { useBoardDetailStore } from "@/stores/boardDetailStore"
 import { useCardRootBoardContext } from "@/hooks/useCardRootBoardContext"
 import { useParams } from "react-router-dom"
 
@@ -17,7 +16,6 @@ export const CardRowInbox = ({ inboxCardId }: { inboxCardId: string }) => {
 
     const cardID = inboxCard?.CardID
     const card = useCardsStore(state => state.cardsById[cardID!])
-    const listcardsById = useBoardDetailStore(state => state.listCardById)
     //const rootListCard = listcardsById[inboxCard.RootListCardID || ""]
 
     const cardColor = card?.Props?.Props?.Display?.Cover?.Type === "color" ? card.Props.Props.Display.Cover.Color : undefined;

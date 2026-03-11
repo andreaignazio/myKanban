@@ -276,10 +276,6 @@ function resolveMainEntity(audit: AuditLike): { entityType?: ResolvedMainEntityT
 }
 
 function resolveLabelTitle(payload: AuditRenderPayload, audit: AuditLike): string {
-    const fromLink = payload.Links?.label?.EntityID;
-    const main = resolveMainEntity(audit);
-    const fromMain = (main.entityType === "label" || main.entityType === "board_label") ? main.entityID : undefined;
-    const labelID = fromLink ?? fromMain;
     return paramString(payload, "labelTitle", "etichetta");
 }
 

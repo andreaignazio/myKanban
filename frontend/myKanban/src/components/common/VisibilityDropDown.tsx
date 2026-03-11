@@ -1,5 +1,4 @@
 import { GlobeAsiaAustraliaIcon, LockClosedIcon, UsersIcon } from "@heroicons/react/24/solid"
-import { CustomDropDown, DropDownMenu, type MenuItem } from "../menuElements/CustomDropDown"
 import { CommonMenuWrapper } from "../menuElements/menuWrapper";
 import { DropDown } from "../menuElements/DropDown";
 import type { MenuItemExtended } from "@/types/uiTypes";

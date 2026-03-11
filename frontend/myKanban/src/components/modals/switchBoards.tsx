@@ -22,7 +22,7 @@ export const SwitchBoardsModal = forwardRef<HTMLDivElement, SwitchBoardsModalPro
         await fetchAllBoards()
     }
 
-    const { isLoading, isSuccessful, errorMessage } = useAsyncRequest("workspace:boards:fetch:all")
+    useAsyncRequest("workspace:boards:fetch:all")
 
     useEffect(() => {
         void handleFetchAllBoards();

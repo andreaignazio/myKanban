@@ -4,11 +4,9 @@ import { CardRow } from "./CardRow"
 import { api } from "@/api/api"
 
 import { useShallow } from "zustand/shallow"
-import { use, useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 
 import { ListRowFooter } from "./ListRowFooter"
-import { AnimatePresence, motion } from "framer-motion"
-import { TrashButton } from "./buttons/TrashButton"
 import { ActionMenuWrapper, ListActionsMenu, MoveListTab } from "./modals/ListActionsMenu"
 import { useNavigate, useParams } from "react-router-dom"
 import { InlineEditableTitle } from "./menuElements/InlineEditableTitle"
@@ -23,9 +21,7 @@ import { EllipsisIcon, EyeIcon } from "lucide-react"
 import { CardRowMenuBtn } from "./cardMenus/cardRowMenus"
 import { useOverlayStore } from "@/overlays/overlayStore"
 import { useUserWatchStore } from "@/stores/userWatchStore"
-import { getListCoverTheme } from "@/domain/colorTokens"
 import { useListTheme } from "@/hooks/useListTheme"
-import { useSortByPosition } from "@/hooks/useSortByPosition"
 
 type ListRowProps = {
     boardID: string
@@ -43,9 +39,6 @@ export function ListRow({ boardID: boardID, boardListID: boardListID, index: ind
     const getCardIdForListCardId = useBoardDetailStore((state) => state.getCardIdForListCardId)
     const isRootBoardList = !!boardList && boardList.ID === boardList.RootID
     const accessMode = boardList?.AccessMode === "readonly" ? "readonly" : "editable"
-    const listCardById = useBoardDetailStore((state) => state.listCardById)
-
-    const { sortByPosition } = useSortByPosition()
     /*const [sortedIds, setSortedIds] = useState(listCardIds)
 
     useEffect(() => {
@@ -58,7 +51,7 @@ export function ListRow({ boardID: boardID, boardListID: boardListID, index: ind
     const isDragSourceList = draggedSourceBoardListId === boardListID
     const alreadyContainsDraggedCard = !!draggedCardId && !isDragSourceList && listCardIds.some((listCardId) => getCardIdForListCardId(listCardId) === draggedCardId)
 
-    const { listColor, listTheme, listTextColor, hasListTheme, isReadonly } = useListTheme(list, accessMode)
+    const { listColor, listTextColor, hasListTheme, isReadonly } = useListTheme(list, accessMode)
     const stack = useOverlayStore(useShallow((state) => state.stack))
     const [isCardEditing, setIsCardEditing] = useState(false)
     const cardEditMenuIdPrefix = `card-edit-menu-${boardListID}`
@@ -206,8 +199,6 @@ const ListHeader = ({
         setTitle(list?.Title || "Untitled List")
     }, [list?.Title])
 
-
-    const detatchList = useListsStore((state) => state.detatchList)
     const handleWatchListToggle = async () => {
         if (listWatch) {
             await setListWatched(listID, !isListWatched)

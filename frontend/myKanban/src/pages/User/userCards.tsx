@@ -270,29 +270,16 @@ const CardTableRow = ({ cardId }: { cardId: string }) => {
     const cardURL = workspace?.ID && board?.ID && card?.ID
         ? buildURL.buildPublicURLFromCardID(workspace.ID, board.ID, card.ID)
         : ""
-    const borardURL = workspace?.ID && board?.ID
-        ? buildURL.buildPublicURLFromBoardID(workspace.ID, board.ID)
-        : ""
     const navigate = useNavigate()
 
     const handleNavigateToCard = () => {
         if (!cardURL) return
         navigate(cardURL)
     }
-    const handleNavigateToBoard = () => {
-        if (!borardURL) return
-        navigate(borardURL)
-    }
 
     const handleNavigateToBoardById = (boardId: string) => {
         if (!workspace?.ID) return
         const url = buildURL.buildPublicURLFromBoardID(workspace.ID, boardId)
-        navigate(url)
-    }
-
-    const navigateToCardByBoardId = (boardId: string) => {
-        if (!workspace?.ID) return
-        const url = buildURL.buildPublicURLFromCardID(workspace.ID, boardId, cardId)
         navigate(url)
     }
 

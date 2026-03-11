@@ -1,7 +1,6 @@
-import type { ApiAuditLogEvent, AuditActor } from "@/stores/audittypes";
+import type { ApiAuditLogEvent } from "@/stores/audittypes";
 import { useFeedFromAudit } from "@/hooks/useFeedFromAudit";
 import { ActivityFeedItem } from "./ActivityFeedItem";
-import { UserAvatar } from "../badges/UserAvatar";
 import type { TextClasses } from "../menuElements/AuditBodyRenderer";
 
 type AuditActivityItemProps = {
