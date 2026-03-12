@@ -26,9 +26,9 @@ export const ListContainer = ({ draggedCardId = null, draggedSourceBoardListId =
     const uniqueBoardListIds = Array.from(new Set(boardListIds))
 
     const fetchKey = useAsyncKey("board:read:detail", boardId ?? "")
-    const listAddKey = "list:create"
+    //const listAddKey = "list:create"
     const { isLoading } = useAsyncRequest(fetchKey)
-    const { isLoading: isCreatingList } = useAsyncRequest(listAddKey)
+    // const { isLoading: isCreatingList } = useAsyncRequest(listAddKey)
 
     const showSkeletons = isLoading && uniqueBoardListIds.length === 0
 
@@ -97,7 +97,7 @@ export const ListContainer = ({ draggedCardId = null, draggedSourceBoardListId =
                         ))}
                     </AnimatePresence>
                     {provided.placeholder}
-                    <ListAdd key="listAdd" boardID={boardId} />
+                    <ListAdd key="listAdd" boardID={boardId} setShouldAnimate={setShouldAnimate} />
                 </div>
             )}
         </Droppable>

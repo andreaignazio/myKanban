@@ -1058,3 +1058,8 @@ export type CopyInboxToListRequest = MoveInboxToListRequest & {
     KeepLabels: boolean;
     KeepChecklists: boolean;
 }
+
+export type CreateListInBoardResponse = {
+    List: List;
+    Relation: BoardList;
+}

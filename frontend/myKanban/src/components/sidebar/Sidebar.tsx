@@ -26,7 +26,7 @@ type SidebarProps = {
 
 }
 
-const PADDING_ASIDE = 16
+//const PADDING_ASIDE = 16
 export default function Sidebar({ isSingleMode }: SidebarProps) {
 
     //const isSingleMode = useMatch("/workspaces/:workspaceId/members/*")

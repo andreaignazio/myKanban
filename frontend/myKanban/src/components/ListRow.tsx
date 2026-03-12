@@ -22,6 +22,8 @@ import { CardRowMenuBtn } from "./cardMenus/cardRowMenus"
 import { useOverlayStore } from "@/overlays/overlayStore"
 import { useUserWatchStore } from "@/stores/userWatchStore"
 import { useListTheme } from "@/hooks/useListTheme"
+import { useAsyncKey } from "@/stores/asyncRequestStore"
+import { useAsyncRequest } from "@/hooks/useAsyncRequest"
 
 type ListRowProps = {
     boardID: string
@@ -39,18 +41,8 @@ export function ListRow({ boardID: boardID, boardListID: boardListID, index: ind
     const getCardIdForListCardId = useBoardDetailStore((state) => state.getCardIdForListCardId)
     const isRootBoardList = !!boardList && boardList.ID === boardList.RootID
     const accessMode = boardList?.AccessMode === "readonly" ? "readonly" : "editable"
-    /*const [sortedIds, setSortedIds] = useState(listCardIds)
 
-    useEffect(() => {
-        const sorted = sortByPosition(listCardIds.map(id => listCardById[id])).map(item => item.ID)
-        setSortedIds(sorted)
-    }, [listCardIds, listCardById, sortByPosition])*/
-
-    if (!boardList || !listID) return null
-
-    const isDragSourceList = draggedSourceBoardListId === boardListID
-    const alreadyContainsDraggedCard = !!draggedCardId && !isDragSourceList && listCardIds.some((listCardId) => getCardIdForListCardId(listCardId) === draggedCardId)
-
+    // All hooks must be called before any early return (Rules of Hooks)
     const { listColor, listTextColor, hasListTheme, isReadonly } = useListTheme(list, accessMode)
     const stack = useOverlayStore(useShallow((state) => state.stack))
     const [isCardEditing, setIsCardEditing] = useState(false)
@@ -59,6 +51,18 @@ export function ListRow({ boardID: boardID, boardListID: boardListID, index: ind
         const isEditMenuOpen = stack.some((overlay) => overlay.id.startsWith(cardEditMenuIdPrefix))
         setIsCardEditing(isEditMenuOpen)
     }, [stack, cardEditMenuIdPrefix])
+
+    const key = useAsyncKey("list:create", boardListID)
+    let { isLoading } = useAsyncRequest(key)
+    //isLoading = true
+
+
+    if (!boardList || !listID) return null
+
+    const isDragSourceList = draggedSourceBoardListId === boardListID
+    const alreadyContainsDraggedCard = !!draggedCardId && !isDragSourceList && listCardIds.some((listCardId) => getCardIdForListCardId(listCardId) === draggedCardId)
+
+
 
 
     //const isCardEditing = true
@@ -74,6 +78,18 @@ export function ListRow({ boardID: boardID, boardListID: boardListID, index: ind
                         ...provided.draggableProps.style,
                         color: listTextColor,
                     }}>
+                    <div className={`absolute flex flex-col items-center justify-center inset-0 z-10  rounded-xl 
+                    pointer-events-none   ${isLoading ? "opacity-100" : "opacity-0"} transition-opacity duration-300
+                       `} >
+                        <div className=" absolute z-10 inset-0 w-full h-full bg-black rounded-xl opacity-100" />
+                        <div className={` absolute z-20 inset-0 w-full h-full animate-pulse
+                            
+                              bg-neutral-200/50 rounded-xl transition-opacity duration-300`} >
+
+                        </div>
+
+
+                    </div>
                     <div className={`relative group/readonly ${isReadonly
                         ? `border-2 border-fuchsia-400/50 pt-1 hover:pt-6 ${isCardEditing ? "pt-6" : ""}  bg-fuchsia-500/50`
                         : " "}

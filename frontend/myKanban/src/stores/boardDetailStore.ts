@@ -292,7 +292,7 @@ export const useBoardDetailStore = create<BoardDetailStore>((set, get) => ({
         const key = useAsyncKey("board:read:detail", boardID)
 
         await useAsyncRequestStore.getState().execute(key,
-            async () => { await new Promise((r) => setTimeout(r, 1000)); return api.get(`/boards/${boardID}`) },
+            async () => api.get(`/boards/${boardID}`),
             {
                 successResetDelayMs: 2000,
                 onSuccess: (response: AxiosResponse) => {
@@ -304,18 +304,7 @@ export const useBoardDetailStore = create<BoardDetailStore>((set, get) => ({
             }
         )
 
-        const execFetch = async () => {
-            try {
-                const response = await api.get(`/boards/${boardID}`)
-                const data: BoardDetailPatch = response.data
-                // console.log("Fetched board detail patch:", data)
-                get().applyBoardDetailPatch(data)
 
-            } catch (error) {
-                // console.error("Error fetching board detail:", error)
-                throw error
-            }
-        }
     },
     async applyEvent(payload) {
         const eventType = payload?.Type

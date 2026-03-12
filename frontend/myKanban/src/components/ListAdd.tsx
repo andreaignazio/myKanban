@@ -2,20 +2,27 @@ import { useListsStore } from "@/stores/listsStore"
 
 import { AddForm } from "./common/AddForm"
 import { useState } from "react"
+import { useBoardDetailStore } from "@/stores/boardDetailStore"
+import type { BoardList, CreateListInBoardResponse, List } from "@/stores/types"
+import { useAsyncKey } from "@/stores/asyncRequestStore"
+
 
 type ListAddProps = {
     boardID: string | null
+    setShouldAnimate?: (shouldAnimate: boolean) => void
 }
 
 
-export const ListAdd = ({ boardID }: ListAddProps) => {
+export const ListAdd = ({ boardID, setShouldAnimate }: ListAddProps) => {
     const [isAdding, setIsAdding] = useState(false)
     // const boardID = useBoardDetailStore((state) => state.currentBoardId)
     const createList = useListsStore((state) => state.createList)
+
     function handleAdd(title: string) {
         try {
             if (!boardID) return
-            createList({ Title: title, AfterID: null, InsertAt: "end" }, boardID)
+            handleAddList(title)
+            //createList({ Title: title, AfterID: null, InsertAt: "end" }, boardID)
             setIsAdding(false)
         }
         catch (error) {
@@ -23,6 +30,150 @@ export const ListAdd = ({ boardID }: ListAddProps) => {
         }
         // Logic for adding a new list
     }
+
+    const boardListIdsByBoardId = useBoardDetailStore((state) => state.boardListIdsByBoardId)
+    const boardListById = useBoardDetailStore((state) => state.boardListById)
+    const listsById = useListsStore((state) => state.listsById)
+    const mergeLists = useListsStore((state) => state.mergeLists)
+    //const [tempID, setTempID] = useState<string | null>(null)
+    //const [requestKey, setRequestKey] = useState<AsyncRequestKey | null>(null)
+    const getListsById = useListsStore((state) => state.getListsById)
+    const setListsById = useListsStore((state) => state.setListsById)
+
+    const getRequestKey = (tempID: string) => {
+        return useAsyncKey("list:create", tempID)
+    }
+
+
+
+    const handleAddList = async (title: string) => {
+        if (!boardID) return
+        // setShouldAnimate && setShouldAnimate(true)
+        setTimeout(async () => {
+            const tempID = `temp-${Date.now()}`
+            // setTempID(tempID)
+            addListOptimistic(tempID, boardID, title)
+            const key = getRequestKey(tempID)
+            //setRequestKey(key)
+
+            try {
+                await createList({ Title: title, AfterID: null, InsertAt: "end" }, boardID, key).then((res) => {
+                    if (res) {
+                        reconcileAddList(res, tempID, boardID)
+                    } else {
+                        rollbackAddList(tempID, boardID)
+                    }
+                })
+            } catch (error) {
+                console.error("Error creating list:", error)
+                rollbackAddList(tempID, boardID)
+            } finally {
+                //setTempID(null)
+                //setRequestKey(null)
+                // setShouldAnimate && setShouldAnimate(false)
+            }
+
+
+        }, 100)
+
+
+    }
+
+    //const {isLoading, isSuccessful, errorMessage} = useAsyncRequest(requestKey ?? "")
+
+
+
+    const addListOptimistic = (tempID: string, boardID: string | null, title: string) => {
+        if (!boardID) return
+        const boardListIds = [...boardListIdsByBoardId[boardID ?? ""] ?? []]
+        const nextboardListById = { ...boardListById }
+        const nextlistsById = { ...listsById }
+
+
+        const tempList: List = {
+            ID: tempID,
+            Title: title,
+            Props: {},
+            CreatedAt: new Date().toISOString(),
+            UpdatedAt: new Date().toISOString(),
+            DeletedAt: null,
+        }
+        const tempBoardList: BoardList = {
+            ID: tempID,
+            BoardID: boardID,
+            RootID: tempID,
+            ListID: tempID,
+            Position: "",
+            AccessMode: "editable",
+            CreatedAt: new Date().toISOString(),
+            UpdatedAt: new Date().toISOString(),
+            DeletedAt: null,
+        }
+        boardListIds.push(tempID)
+        nextboardListById[tempID] = tempBoardList
+        nextlistsById[tempID] = tempList
+        useBoardDetailStore.setState({
+            boardListIdsByBoardId: {
+                ...useBoardDetailStore.getState().boardListIdsByBoardId,
+                [boardID]: boardListIds,
+            },
+            boardListById: nextboardListById,
+        })
+        mergeLists([tempList])
+    }
+
+    const rollbackAddList = (tempID: string, boardID: string) => {
+        useBoardDetailStore.setState((state) => {
+            const nextBoardListIds = (state.boardListIdsByBoardId[boardID] ?? []).filter((id) => id !== tempID)
+            const nextBoardListById = { ...state.boardListById }
+            delete nextBoardListById[tempID]
+            return {
+                boardListIdsByBoardId: {
+                    ...state.boardListIdsByBoardId,
+                    [boardID]: nextBoardListIds,
+                },
+                boardListById: nextBoardListById,
+            }
+        })
+        const nextListsById = { ...getListsById() }
+        delete nextListsById[tempID]
+        setListsById(nextListsById)
+    }
+
+    const reconcileAddList = (createdList: CreateListInBoardResponse, tempID: string, boardID: string) => {
+
+
+        const { List, Relation } = createdList
+
+        const nextListsById = { ...getListsById() }
+        nextListsById[List.ID] = List
+        delete nextListsById[tempID]
+        setListsById(nextListsById)
+
+        useBoardDetailStore.setState((state) => {
+            const nextBoardListIds = [...(state.boardListIdsByBoardId[boardID] ?? [])]
+            const tempIndex = nextBoardListIds.indexOf(tempID)
+            if (tempIndex !== -1) {
+                nextBoardListIds.splice(tempIndex, 1, Relation.ID)
+            }
+            const nextBoardListById = { ...state.boardListById }
+            nextBoardListById[Relation.ID] = Relation
+            delete nextBoardListById[tempID]
+            return {
+                boardListIdsByBoardId: {
+                    ...state.boardListIdsByBoardId,
+                    [boardID]: nextBoardListIds,
+                },
+                boardListById: nextBoardListById,
+            }
+        })
+
+    }
+
+
+
+
+
 
     return (
         <>

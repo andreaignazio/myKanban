@@ -60,11 +60,11 @@ import type { User } from "@/stores/types"
 import { useIsOverlayActive } from "@/hooks/useIsOverlayActive"
 
 import { CardRowMenuBtn } from "./cardMenus/cardRowMenus"
-import { useState } from "react"
+
 
 function UserHeader({ context }: { context: string | null }) {
     const user = useAuthStore((state) => state.user)
-    const [compactMenu, setCompactMenu] = useState(false)
+    //const [compactMenu, setCompactMenu] = useState(false)
 
     const iconSizeClass = context === "board" ? "w-4 h-4" : "w-5 h-5"
 
@@ -119,7 +119,7 @@ function UserHeader({ context }: { context: string | null }) {
             </motion.div>
 
             <MemberRow
-                onClickCapture={() => setCompactMenu((prev) => !prev)}
+                onClickCapture={() => { }}
                 compact={context === "board"}
                 rowClassName="!w-fit"
                 avatarSize={context === "board" ? 32 : 38}
