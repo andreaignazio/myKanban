@@ -5,16 +5,17 @@ import { CommonMenuWrapper } from "@/components/menuElements/menuWrapper";
 import { SubmitFooter } from "@/components/menuElements/submitFooter";
 import { gradientColorTokens, type ColorToken } from "@/domain/colorTokens";
 import { useImageOrColorSelector } from "@/hooks/UseImageOrColorSelector";
-import type { WorkspaceProps } from "@/stores/types";
+import type { WorkspaceCoverProps, WorkspaceProps } from "@/stores/types";
 import { useWorkspaceStore } from "@/stores/workspaceStore";
 import { forwardRef, useEffect } from "react";
 
 type WorkspaceCoverEditorProps = {
-    workspaceID: string;
+    workspaceID?: string;
     onClose: () => void;
+    onLocalSubmit?: (cover: WorkspaceCoverProps) => void;
 };
 
-export const WorkspaceCoverEditor = forwardRef<HTMLDivElement, WorkspaceCoverEditorProps>(({ workspaceID, onClose }, ref) => {
+export const WorkspaceCoverEditor = forwardRef<HTMLDivElement, WorkspaceCoverEditorProps>(({ workspaceID, onClose, onLocalSubmit }, ref) => {
     const { selectedColor, handleSetColor, selectedImage, handleSetImage } = useImageOrColorSelector();
     const workspaceActions = useWorkspaceActionRegistry();
     const workspace = useWorkspaceStore((state) => state.workspacesById[workspaceID]);
@@ -44,16 +45,20 @@ export const WorkspaceCoverEditor = forwardRef<HTMLDivElement, WorkspaceCoverEdi
     }, [workspace]);
 
     const handleSubmit = async () => {
-        if (!workspaceID) return;
-
-        const props: WorkspaceProps = {
-            Cover: {
-                Type: selectedImage ? "image" : selectedColor ? "color" : undefined,
-                Color: selectedColor?.className,
-                ImageUrl: selectedImage ?? (selectedColor ? null : undefined),
-            },
+        const cover: WorkspaceCoverProps = {
+            Type: selectedImage ? "image" : selectedColor ? "color" : undefined,
+            Color: selectedColor?.className,
+            ImageUrl: selectedImage ?? (selectedColor ? null : undefined),
         };
 
+        if (onLocalSubmit) {
+            onLocalSubmit(cover);
+            onClose();
+            return;
+        }
+
+        if (!workspaceID) return;
+        const props: WorkspaceProps = { Cover: cover };
         await workspaceActions.patchWorkspaceProps(workspaceID, { Props: props });
         onClose();
     };

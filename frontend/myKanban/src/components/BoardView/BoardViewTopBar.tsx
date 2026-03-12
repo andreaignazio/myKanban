@@ -136,15 +136,19 @@ export const BoardPresenceBadge = ({ boardId }: BoardPresenceBadgeProps) => {
 type BaseBtnProp = {
     children?: React.ReactNode
     className?: string
+    overrideClassName?: string
     label?: string
     labelClassName?: string
     onClick?: () => void
     active?: boolean
+    style?: React.CSSProperties
 }
-export const BaseBtn = forwardRef<HTMLButtonElement, BaseBtnProp>(({ children, className, label, labelClassName, onClick, active }, ref) => {
+export const BaseBtn = forwardRef<HTMLButtonElement, BaseBtnProp>(({ style, children, className, overrideClassName, label, labelClassName, onClick, active }, ref) => {
     return (
-        <button ref={ref} onClick={onClick} className={`flex items-center h-8 gap-1 px-2 py-1 rounded text-sm font-medium
-         hover:bg-gray-200 text-gray-700 transition-all ${active ? "bg-gray-200" : ""} ${className}`}>
+        <button ref={ref} onClick={onClick}
+            style={style}
+            className={overrideClassName ?? `flex items-center h-8 gap-1 px-2 py-1 rounded text-sm font-medium
+         hover:bg-gray-200  text-gray-700 transition-all ${active ? "bg-gray-200" : ""} ${className}`}>
             {children}
             {label && <span className={labelClassName}>{label}</span>}
         </button>

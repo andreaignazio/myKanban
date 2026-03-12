@@ -56,7 +56,12 @@ export default function Topbar({ onClick, isHidden }: TopbarProps) {
 import type { OverlayDescriptor } from "@/overlays/overlayStore"
 import { useRef } from "react"
 import { UserNotificationMenuBtn } from "./modals/UserNotificationMenu"
-import { UserAvatar } from "./badges/UserAvatar"
+
+import { MemberRow } from "./common/MemberRow"
+import type { User } from "@/stores/types"
+import { useIsOverlayActive } from "@/hooks/useIsOverlayActive"
+import { CardRow } from "./CardRow"
+import { CardRowMenuBtn } from "./cardMenus/cardRowMenus"
 
 function UserHeader({ context }: { context: string | null }) {
     const user = useAuthStore((state) => state.user)
@@ -86,24 +91,58 @@ function UserHeader({ context }: { context: string | null }) {
         }
         open(descriptor)
     }
-    function handleCloseInbox() {
-        close("inbox")
-    }
+
+    const inboxMenuId = "user-inbox-menu"
+    const notificationMenuId = "user-notification-menu"
+    const { isMenuActive: isNotificationMenuActive } = useIsOverlayActive(notificationMenuId)
+    const { isMenuActive: isInboxMenuActive } = useIsOverlayActive(inboxMenuId)
 
     return (
         <div className="flex-1 flex items-center gap-4 justify-end px-5" >
-            <InboxArrowDownIcon
-                onClick={handleOpenInbox}
-                className="w-5 h-5 text-gray-500" />
-            <SquaresPlusIcon
-                onClick={handleCloseInbox}
-                className="w-5 h-5 text-gray-500" />
-            <UserNotificationMenuBtn />
-            <div className="flex flex-col gap-0 items-end">
-                <p className="font-semibold text-text">{user?.Name}</p>
-                {context !== "board" && (<p className="text-xs text-text-text/70">@{user?.Username === "" ? "username" : user?.Username}</p>)}
+            <div className="flex flex-row gap-1 items-center justify-center">
+
+                <CardRowMenuBtn
+                    customId={inboxMenuId}
+                    renderType="virtual"
+                    menuComponent={
+                        ({ onClose, ref }) => <UserOfferManager ref={ref} />
+                    }
+                    desiredBackdropOpacity={0.5}
+                >
+
+                    <div className={`bg-transparent text-gray-300
+            hover:bg-neutral-400/20 p-2 rounded cursor-pointer transition-all
+            ${isInboxMenuActive ? "!bg-neutral-500/20 " : ""}
+            `}
+                    >
+                        <InboxArrowDownIcon
+
+                            className="w-5 h-" />
+                    </div>
+                </CardRowMenuBtn>
+
+                <UserNotificationMenuBtn
+                    style={{}}
+                    overrideClassName={`
+                    ${isNotificationMenuActive ? "ring-2 ring-white/80 ring-offset-1 ring-offset-neutral-900/80" : ""}
+                    flex items-center 
+                h-8 gap-1 px-2 py-1 rounded text-sm 
+                font-medium hover:bg-blue-400
+                bg-accent !text-neutral-900
+                hover:ring-2 hover:ring-white/80 hover:ring-offset-1 hover:ring-offset-neutral-900/80
+                
+                transition-all 
+
+                text-white transition-all`}
+                />
             </div>
-            <UserAvatar user={user ?? undefined} />
+
+            <MemberRow
+                rowClassName="!w-fit"
+                avatarSize={38}
+
+                showEndRow={false}
+                user={user as User} showRole={false} flip={true} />
 
 
         </div>

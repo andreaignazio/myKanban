@@ -17,11 +17,12 @@ import { useWorkspaceStore } from "@/stores/workspaceStore";
 import { forwardRef, useEffect, useMemo, useState } from "react";
 
 type WorkspaceIconEditorProps = {
-    workspaceID: string;
+    workspaceID?: string;
     onClose: () => void;
+    onLocalSubmit?: (iconId: IconId, bgToken: string, borderToken: string) => void;
 };
 
-export const WorkspaceIconEditor = forwardRef<HTMLDivElement, WorkspaceIconEditorProps>(({ workspaceID, onClose }, ref) => {
+export const WorkspaceIconEditor = forwardRef<HTMLDivElement, WorkspaceIconEditorProps>(({ workspaceID, onClose, onLocalSubmit }, ref) => {
     const workspaceActions = useWorkspaceActionRegistry();
     const workspace = useWorkspaceStore((state) => state.workspacesById[workspaceID]);
     const [isSaving, setIsSaving] = useState(false);
@@ -63,6 +64,11 @@ export const WorkspaceIconEditor = forwardRef<HTMLDivElement, WorkspaceIconEdito
     const hasBorder = iconBorderToken !== "ws_border_none" && !!iconBorderColor;
 
     const handleSubmit = async () => {
+        if (onLocalSubmit) {
+            onLocalSubmit(selectedIconId, iconBgToken, iconBorderToken);
+            onClose();
+            return;
+        }
         if (!workspaceID) return;
         try {
             setIsSaving(true);

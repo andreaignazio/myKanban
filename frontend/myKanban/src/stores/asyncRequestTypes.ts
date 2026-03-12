@@ -85,6 +85,7 @@ export const ASYNC_REQUEST_BASE_KEYS = [
     "subscription:suspension:boards:save",
     "subscription:suspension:members:save",
     "workspace:boards:fetch:all",
+    "workspace:create",
     "inbox:card:move:board:list",
     "inbox:card:copy:board:list",
     "inbox:card:detatch"

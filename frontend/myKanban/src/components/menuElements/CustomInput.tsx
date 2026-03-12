@@ -77,8 +77,7 @@ export const CustomInput = forwardRef<CustomInputHandle, CustomInputProps>(({ da
                 {children}
             </div>
             {!useTextArea && <input ref={inputRef as React.RefObject<HTMLInputElement>} onChange={() => onInputChange?.(inputRef as React.RefObject<HTMLInputElement>)} value={value}
-                className=" w-full min-h-8 bg-transparent cursor-text
-                text-sm font-inter font-medium"
+                className={`w-full min-h-8 bg-transparent cursor-text ${textAreaClassName ?? ""} text-sm font-inter font-medium`}
                 onFocus={handleFocus}
                 onBlur={() => { handleBlur(); onBlur?.(); }}
                 placeholder={placeholder ?? "Search..."}
@@ -89,7 +88,8 @@ export const CustomInput = forwardRef<CustomInputHandle, CustomInputProps>(({ da
             {useTextArea && <textarea ref={inputRef as React.RefObject<HTMLTextAreaElement>}
                 onChange={handleChange}
                 value={value}
-                className=" w-full  bg-transparent resize-none scrollbar-hidden py-2 cursor-text"
+                className={`w-full bg-transparent resize-none scrollbar-hidden py-2 cursor-text ${textAreaClassName ?? ""} 
+                text-sm font-inter font-medium`}
                 onFocus={handleFocus}
                 onBlur={() => { handleBlur(); onBlur?.(); }}
                 placeholder={placeholder ?? "Search..."}

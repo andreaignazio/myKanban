@@ -14,13 +14,16 @@ import { useShallow } from "zustand/react/shallow";
 import { UserAvatar } from "../badges/UserAvatar";
 import { UserNotificationTabPlaceholder } from "./UserNotificationTabPlaceholder";
 import { FloatingTabSelector } from "../menuElements/floatingTabSelector";
-import { XIcon } from "lucide-react";
+import { Bell, XIcon } from "lucide-react";
 
 type UserNotificationMenuBtnProps = {
     className?: string;
+    overrideClassName?: string;
+    style?: React.CSSProperties;
+    menuId?: string;
 }
 
-export const UserNotificationMenuBtn = forwardRef<HTMLButtonElement, UserNotificationMenuBtnProps>(({ className }, ref) => {
+export const UserNotificationMenuBtn = forwardRef<HTMLButtonElement, UserNotificationMenuBtnProps>(({ menuId, style, className, overrideClassName }, ref) => {
     const openOverlay = useOverlayStore((state) => state.open);
     const onMenuClose = useOverlayStore((state) => state.close);
     const unreadCount = useUserNotificationStore((state) => state.unreadCount)
@@ -53,9 +56,9 @@ export const UserNotificationMenuBtn = forwardRef<HTMLButtonElement, UserNotific
             (ref as MutableRefObject<HTMLButtonElement | null>).current = node;
         }
     };
-    function handleOpenListActionModal() {
+    function handleOpenUserNotificationMenu() {
         // console.log("Opening respond modal for share offer");
-        const id = "user-notification-menu";
+        const id = menuId || "user-notification-menu";
         const descriptor: OverlayDescriptor = {
             id: id,
             render: () => <UserNotificationMenu onClose={() => onMenuClose(id)} ref={listActionsMenuRef} />,
@@ -69,20 +72,25 @@ export const UserNotificationMenuBtn = forwardRef<HTMLButtonElement, UserNotific
                 closeOnClickOutside: true,
                 closeOnEscape: true,
                 lockBackdrop: true,
+
             },
             position: {
-                placement: "bottom-end",
-                offset: [0, 8],
-            }
+                placement: "bottom",
+                offset: [8, 22],
+            },
+            desiredBackdropOpacity: 0.0,
         }
         openOverlay(descriptor);
 
     }
 
     return (
-        <BaseBtn onClick={handleOpenListActionModal} ref={setAnchorRefs} className={className}>
+        <BaseBtn
+            style={style}
+            overrideClassName={overrideClassName}
+            onClick={handleOpenUserNotificationMenu} ref={setAnchorRefs} className={className}>
             <div className="relative">
-                <BellIcon className="w-6 h-6 " />
+                <Bell size={18}></Bell>
                 {unreadCount > 0 && (
                     <div className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">
                         {unreadCount > 9 ? "9+" : unreadCount}
@@ -125,13 +133,13 @@ export const UserNotificationMenu = forwardRef<HTMLDivElement, UserNotificationM
                 </div>
                 <div className="border-t border-gray-600 my-2 mx-4" />
 
-                <div className="fixed bottom-6 rounded-md bg-transparent w-full flex justify-center ">
+                {false && <div className="fixed bottom-6 rounded-md bg-transparent w-full flex justify-center ">
                     <FloatingTabSelector activeTab={activeTab} setActiveTab={setActiveTab} tabs={tabs} />
 
-                </div>
+                </div>}
 
-                {activeTab === "watched" && <UserWatchedMenu />}
-                {activeTab === "notifications" && <UserNotificationTabPlaceholder onlyShowUnread={showOnlyUnread} />}
+
+                <UserNotificationTabPlaceholder onlyShowUnread={showOnlyUnread} />
 
             </ActionMenuWrapper>
 

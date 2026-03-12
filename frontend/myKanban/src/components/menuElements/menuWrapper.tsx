@@ -77,6 +77,7 @@ type CommonMenuWrapperProps = {
     children: React.ReactNode;
     style?: React.CSSProperties;
     className?: string;
+    classNameContainer?: string;
     /** Single key or array of keys — renders one MenuStateIndicator. */
     requestKey?: AsyncRequestKey | AsyncRequestKey[];
     minLoadingMs?: number;
@@ -88,7 +89,7 @@ type CommonMenuWrapperProps = {
     stateChildren?: React.ReactNode;
 }
 
-export const CommonMenuWrapper = forwardRef<HTMLDivElement, CommonMenuWrapperProps>(({ children, Title, onClose, style, className, requestKey, minLoadingMs, minSuccessMs, maxSuccessMs, maxErrorMs, requestGroups, stateChildren }, ref) => {
+export const CommonMenuWrapper = forwardRef<HTMLDivElement, CommonMenuWrapperProps>(({ children, Title, onClose, style, className, classNameContainer, requestKey, minLoadingMs, minSuccessMs, maxSuccessMs, maxErrorMs, requestGroups, stateChildren }, ref) => {
 
     const resolvedStateChildren = stateChildren ?? (() => {
         if (requestGroups && requestGroups.length > 0) {
@@ -111,7 +112,7 @@ export const CommonMenuWrapper = forwardRef<HTMLDivElement, CommonMenuWrapperPro
     })();
 
     return (
-        <motion.div ref={ref} className="w-fit relative overflow-visible" {...menuMotionProps}>
+        <motion.div ref={ref} className={`w-fit relative overflow-visible ${classNameContainer}`} {...menuMotionProps}>
             {resolvedStateChildren}
             <div className={` flex justify-start items-start theme-dark bg-menu rounded-xl 
             shadow-lg shadow-black relative

@@ -130,12 +130,25 @@ func (s *WorkspaceService) CreateWorkspace(ctx context.Context, userID uuid.UUID
 		return nil, nil, domainerr.New(domainerr.ErrForbidden, "workspace membership limit reached")
 	}
 
+	initProps := req.Props
+	if initProps == nil {
+		initProps = &WorkspaceProps{}
+	}
+	if req.Description != nil && initProps.Description == nil {
+		initProps.Description = req.Description
+	}
+	propsJSON, err := json.Marshal(initProps)
+	if err != nil {
+		return nil, nil, domainerr.Wrap(err, "workspaces.service.CreateWorkspace.serializeProps")
+	}
+
 	workspace := &models.Workspace{
 		ID:                  uuid.New(),
 		Name:                req.Name,
 		WorkspaceVisibility: models.WorkspaceVisibilityPrivate,
 		PublicToken:         token,
 		CreatedByUserID:     userID,
+		Props:               datatypes.JSON(propsJSON),
 	}
 	userWorkspace := &models.UserWorkspace{
 		ID:          uuid.New(),

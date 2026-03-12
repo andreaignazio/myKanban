@@ -7,7 +7,9 @@ import (
 )
 
 type CreateWorkspaceRequest struct {
-	Name string `json:"Name" binding:"required"`
+	Name        string          `json:"Name" binding:"required"`
+	Description *string         `json:"Description,omitempty"`
+	Props       *WorkspaceProps `json:"Props,omitempty"`
 }
 
 type WorkspaceCoverProps struct {

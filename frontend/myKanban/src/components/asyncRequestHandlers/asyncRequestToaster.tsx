@@ -34,7 +34,7 @@ const AsyncRequestToaster = forwardRef<HTMLDivElement, AsyncRequestToasterProps>
             show: ["error", "loading", "success"],
         },
         {
-            requestKey: ["card:create"],
+            requestKey: ["card:create", "workspace:create"],
             minLoadingMs: 0,
             minSuccessMs: 3000,
             maxErrorMs: 3000,
@@ -111,7 +111,7 @@ export const AsyncRequestToasterController = () => {
         "card:edit:dates:editmodal"]
 
     const keysCard: AsyncRequestKey[] = ["card:copy", "card:move", "card:mirror", "card:create", "card:edit:title:inline", "card:edit:dates:add:editmodal"]
-    const keysCardB: AsyncRequestKey[] = ["card:create"]
+    const keysCardB: AsyncRequestKey[] = ["card:create", "workspace:create"]
     const keysArchive: AsyncRequestKey[] = ["card:delete", "list:detach", "board:archive:list:purge", "board:archive:card:purge"]
     const keysWatchBoardList: AsyncRequestKey[] = ["watch:add:board", "watch:add:list", "watch:patch:board", "watch:patch:list"]
 

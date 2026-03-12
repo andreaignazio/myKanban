@@ -64,7 +64,7 @@ export type WorkspaceStore = {
     fetchPendingOfferTargetWorkspaces: () => Promise<PendingOfferTargetWorkspacesResponse>;
     mergeWorkspaceData: (data: UserWorkspaceData) => void;
     mergeWorkspaces: (workspaces: Workspace[]) => void;
-    createWorkspace: (Name: string) => Promise<void>
+    createWorkspace: (payload: { Name: string; Description?: string; Props?: import('./types').WorkspaceProps }) => Promise<void>
     applyWorkspaceEventDelta: (delta: DeltaPayload) => void;
     applyWorkspaceCreated: (payload: UserWorkspaceData) => void;
     hydrateWorkspaces: () => Promise<void>;
@@ -83,6 +83,7 @@ export type WorkspaceStore = {
     appendPendingWorkspaceId: (workspaceId: string, offerKind: "invite" | "request", offerID?: string, workspace?: Workspace) => void;
     removePendingWorkspaceId: (workspaceId: string, offerKind: "invite" | "request") => void;
     getWorkspaceStatus: (workspaceId: string) => "accessible" | "offered" | "requested" | "none";
+    isAnyWorkspaceAvailabe: () => boolean;
 };
 
 export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
@@ -220,15 +221,18 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
 
         return data;
     },
-    createWorkspace: async (Name: string) => {
-        try {
-            const response = await api.post("/workspaces", { Name });
+    createWorkspace: async (payload) => {
+        await useAsyncRequestStore.getState().execute("workspace:create", async () => {
+            const response = await api.post("/workspaces", payload);
             const data = response.data as UserWorkspaceData;
-            get().mergeWorkspaceData(data)
-        } catch (error) {
-            // console.log("Error creating workspace")
-            throw error
-        }
+            get().mergeWorkspaceData(data);
+        },
+            {
+                successResetDelayMs: 2000,
+
+            },
+
+        );
     },
     applyWorkspaceEventDelta: (delta: DeltaPayload) => {
 
@@ -619,7 +623,13 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
             return "requested"
         }
         return "none"
+    },
+    isAnyWorkspaceAvailabe: () => {
+        const { workspaceIds } = get();
+        const accessibleWorkspaces = workspaceIds.filter((id) => get().isWorkspaceAccessible(id))
+        return accessibleWorkspaces.length > 0
     }
+
 
 
 

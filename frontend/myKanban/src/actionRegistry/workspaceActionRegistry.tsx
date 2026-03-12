@@ -32,6 +32,10 @@ export function useWorkspaceActionRegistry() {
         return workspaceStore.patchWorkspaceProps(workspaceID, payload);
     }
 
+    function createWorkspace(payload: { Name: string; Description?: string; Props?: import('@/stores/types').WorkspaceProps }) {
+        return workspaceStore.createWorkspace(payload);
+    }
+
     function leaveWorkspaceWithConfirmation(workspaceID: string, userID: string, anchorRef?: React.RefObject<HTMLElement | null>) {
         const data: DomainModalData = {
             componentent: (onClose) => (
@@ -56,7 +60,8 @@ export function useWorkspaceActionRegistry() {
         setWorkspaceMemberRole,
         deleteWorkspaceMember,
         patchWorkspaceProps,
-        leaveWorkspaceWithConfirmation
+        leaveWorkspaceWithConfirmation,
+        createWorkspace,
     }
 
 }

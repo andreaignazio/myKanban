@@ -5,8 +5,11 @@ import { useAuthStore } from "@/stores/auth"
 import { useAuth } from "@clerk/react"
 import { useUiStore } from "@/stores/uiStore"
 
-import { NotebookPen, User } from "lucide-react"
+import { Building2, NotebookPen, User } from "lucide-react"
 import { useNavigate } from "react-router-dom"
+import { CardRowMenuBtn } from "@/components/cardMenus/cardRowMenus"
+import { WorkspaceCreateWizard } from "@/components/WorkspaceCreate/WorkspaceCreateWizard"
+import { useWorkspaceStore } from "@/stores/workspaceStore"
 export default function Home() {
 
     const bgUrl = useUiStore((state) => state.sessionLandingBgUrl)
@@ -15,10 +18,16 @@ export default function Home() {
     const currentUser = useAuthStore((state) => state.user)
     const isSignedIn = useAuth().isSignedIn
     const navigate = useNavigate()
-
+    let isAnyWorkspaceAvailable = useWorkspaceStore((state) => state.isAnyWorkspaceAvailabe())
+    //isAnyWorkspaceAvailable = false
     const handleNavigate = () => {
         if (isSignedIn) {
-            navigate("/workspaces")
+            if (isAnyWorkspaceAvailable) {
+                navigate("/workspaces")
+            } else {
+                return
+            }
+
         } else {
             navigate("/sign-in")
         }
@@ -32,7 +41,9 @@ export default function Home() {
                 <BoardBackgroundTransition target={targetBg} />
             </div>
 
-            <WelcomeCard onClick={handleNavigate} isSignedIn={isSignedIn} />
+            <WelcomeCard onClick={handleNavigate}
+                isAnyWorkspaceAvailable={isAnyWorkspaceAvailable}
+                isSignedIn={isSignedIn} />
 
             <div className="absolute bottom-4">
                 {currentUser ? (
@@ -49,11 +60,12 @@ export default function Home() {
 type WelcomeCardProps = {
     onClick: () => void;
     isSignedIn?: boolean;
+    isAnyWorkspaceAvailable?: boolean;
 }
 
-const WelcomeCard = ({ onClick, isSignedIn }: WelcomeCardProps) => {
+const WelcomeCard = ({ onClick, isSignedIn, isAnyWorkspaceAvailable }: WelcomeCardProps) => {
 
-    const resolvedLabel = isSignedIn ? "Go to Workspaces" : "Login"
+    const resolvedLabel = isSignedIn ? isAnyWorkspaceAvailable ? "Go to Workspaces" : "Create workspace" : "Login"
 
 
     return (
@@ -65,18 +77,42 @@ const WelcomeCard = ({ onClick, isSignedIn }: WelcomeCardProps) => {
                 <p className="text-center text-md max-w-[300px] text-gray-300">Organize your tasks and projects with ease using MyKanban, the ultimate task management tool.</p>
             </div>
 
+            <StartButton onClick={onClick} isSignedIn={isSignedIn} isAnyWorkspaceAvailable={isAnyWorkspaceAvailable} resolvedLabel={resolvedLabel} />
+        </div>
+    )
+}
+
+const StartButton = ({ onClick, isSignedIn, isAnyWorkspaceAvailable, resolvedLabel }: { onClick: () => void; isSignedIn?: boolean; isAnyWorkspaceAvailable?: boolean; resolvedLabel: string }) => {
+    const wizardId = "create-workspace-wizard"
+    const exclusiveGroup = "home-page-wizards"
+
+    return (
+        <CardRowMenuBtn
+            disableClick={isSignedIn && isAnyWorkspaceAvailable}
+            exclusiveGroup={exclusiveGroup}
+            customId={wizardId}
+            renderType="virtual"
+            menuComponent={
+                ({ onClose, ref }) => <WorkspaceCreateWizard onClose={onClose} ref={ref} />
+            }
+        >
             <div onClick={onClick}
-                className=" aspect-square
+                className=" group w-32 h-32  justify-center items-center
                 group flex flex-col gap-3 p-6 transition-all duration-300
              ease-in-out cursor-pointer bg-gradient-to-tr from-sky-600 to-sky-400
              hover:bg-sky-500
             hover:shadow-lg hover:shadow-sky-500/50
-            hover:-translate-y-1
-            text-white font-bold rounded-[38px]  items-center">
-                {!isSignedIn && <User size={48} className="group-hover:scale-[1.1] transition-all duration-300 ease-in-out" />}
-                {isSignedIn && <NotebookPen size={48} className="group-hover:scale-[1.1] transition-all duration-300 ease-in-out" />}
-                {resolvedLabel}
+            hover:-translate-y-1 text-sm text-center
+            text-white font-bold rounded-[38px]  ">
+                <div className="group-hover:opacity-0 transition-opacity duration-300 ease-in-out absolute">
+                    {!isSignedIn && <User size={48} className="group-hover:scale-[1.1] transition-all duration-300 ease-in-out" />}
+                    {(isSignedIn && !isAnyWorkspaceAvailable) && <NotebookPen size={48} className="group-hover:scale-[1.1] transition-all duration-300 ease-in-out" />}
+                    {(isSignedIn && isAnyWorkspaceAvailable) && <Building2 size={48} className="group-hover:scale-[1.1] transition-all duration-300 ease-in-out" />}
+                </div>
+                <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 ease-in-out">
+                    {resolvedLabel}
+                </div>
             </div>
-        </div>
+        </CardRowMenuBtn>
     )
 }
