@@ -21,9 +21,10 @@ type UserNotificationMenuBtnProps = {
     overrideClassName?: string;
     style?: React.CSSProperties;
     menuId?: string;
+    iconClassName?: string;
 }
 
-export const UserNotificationMenuBtn = forwardRef<HTMLButtonElement, UserNotificationMenuBtnProps>(({ menuId, style, className, overrideClassName }, ref) => {
+export const UserNotificationMenuBtn = forwardRef<HTMLButtonElement, UserNotificationMenuBtnProps>(({ iconClassName, menuId, style, className, overrideClassName }, ref) => {
     const openOverlay = useOverlayStore((state) => state.open);
     const onMenuClose = useOverlayStore((state) => state.close);
     const unreadCount = useUserNotificationStore((state) => state.unreadCount)
@@ -90,7 +91,7 @@ export const UserNotificationMenuBtn = forwardRef<HTMLButtonElement, UserNotific
             overrideClassName={overrideClassName}
             onClick={handleOpenUserNotificationMenu} ref={setAnchorRefs} className={className}>
             <div className="relative">
-                <Bell size={18}></Bell>
+                <Bell className={iconClassName}></Bell>
                 {unreadCount > 0 && (
                     <div className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">
                         {unreadCount > 9 ? "9+" : unreadCount}

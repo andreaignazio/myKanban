@@ -3,6 +3,7 @@ import { useShallow } from "zustand/shallow"
 import { useAuthStore } from "@/stores/auth"
 import { useUiStore } from "@/stores/uiStore"
 import { ChevronRightIcon, InboxArrowDownIcon, RectangleGroupIcon } from "@heroicons/react/24/solid"
+import { motion } from "framer-motion"
 
 import { useWorkspaceStore } from "@/stores/workspaceStore"
 import { useWsMembersStore } from "@/stores/wsMembersStore"
@@ -59,11 +60,13 @@ import type { User } from "@/stores/types"
 import { useIsOverlayActive } from "@/hooks/useIsOverlayActive"
 
 import { CardRowMenuBtn } from "./cardMenus/cardRowMenus"
+import { useState } from "react"
 
 function UserHeader({ context }: { context: string | null }) {
     const user = useAuthStore((state) => state.user)
+    const [compactMenu, setCompactMenu] = useState(false)
 
-
+    const iconSizeClass = context === "board" ? "w-4 h-4" : "w-5 h-5"
 
     const inboxMenuId = "user-inbox-menu"
     const notificationMenuId = "user-notification-menu"
@@ -71,8 +74,10 @@ function UserHeader({ context }: { context: string | null }) {
     const { isMenuActive: isInboxMenuActive } = useIsOverlayActive(inboxMenuId)
 
     return (
-        <div className="flex-1 flex items-center gap-4 justify-end px-5" >
-            <div className="flex flex-row gap-2 items-center justify-center">
+        <motion.div layout className="flex-1
+        flex items-center gap-4 justify-end px-5" >
+            <motion.div layout className=" 
+            flex flex-row gap-2 items-center justify-center">
 
                 <CardRowMenuBtn
                     customId={inboxMenuId}
@@ -83,23 +88,26 @@ function UserHeader({ context }: { context: string | null }) {
                     desiredBackdropOpacity={0.5}
                 >
 
-                    <div className={`bg-transparent text-gray-400
-            hover:bg-neutral-400/20 p-2 rounded cursor-pointer transition-all
+                    <div className={`bg-transparent text-gray-400 items-center justify-center flex aspect-square
+            hover:bg-neutral-400/20 rounded cursor-pointer transition-all
             ${isInboxMenuActive ? "!bg-neutral-500/20 " : ""}
+            ${context === "board" ? "h-7" : "h-8"} 
             `}
                     >
                         <InboxArrowDownIcon
 
-                            className="w-5 h-" />
+                            className={iconSizeClass} />
                     </div>
                 </CardRowMenuBtn>
 
                 <UserNotificationMenuBtn
                     style={{}}
+                    iconClassName={iconSizeClass}
                     overrideClassName={`
                     ${isNotificationMenuActive ? "ring-2 ring-white/80 ring-offset-1 ring-offset-neutral-900/80" : ""}
-                    flex items-center 
-                h-8 gap-1 px-2 py-1 rounded text-sm 
+                    ${context === "board" ? "h-7" : "h-8"} 
+                    flex items-center justify-center 
+                 gap-1 aspect-square  rounded text-sm 
                 font-medium hover:bg-blue-400
                 bg-accent !text-neutral-900
                 hover:ring-2 hover:ring-white/80 hover:ring-offset-1 hover:ring-offset-neutral-900/80
@@ -108,17 +116,19 @@ function UserHeader({ context }: { context: string | null }) {
 
                 text-white transition-all`}
                 />
-            </div>
+            </motion.div>
 
             <MemberRow
+                onClickCapture={() => setCompactMenu((prev) => !prev)}
+                compact={context === "board"}
                 rowClassName="!w-fit"
-                avatarSize={38}
-
+                avatarSize={context === "board" ? 32 : 38}
                 showEndRow={false}
-                user={user as User} showRole={false} flip={true} />
+                user={user as User} showRole={false} flip={true}
+            />
 
 
-        </div>
+        </motion.div>
     )
 }
 
