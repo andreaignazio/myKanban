@@ -1,6 +1,7 @@
 import type { OverlayPlacement } from "@/overlays/overlayStore"
 
 import { create } from "zustand"
+import { baseImages } from "@/domain/colorTokens"
 
 type DraggingCardData = {
     listCardID: string
@@ -63,6 +64,8 @@ type UiStore = {
     userActivityOverlayOpen: boolean
     userActivityOverlayData?: UserActivityOverlayData
     setUserActivityOverlayOpen: (open: boolean, data?: UserActivityOverlayData) => void
+
+    sessionLandingBgUrl: string
 }
 
 export type DomainModalData = {
@@ -107,6 +110,7 @@ export const useUiStore = create<UiStore>((set, get) => ({
     domainModalData: undefined,
     userActivityOverlayOpen: false,
     userActivityOverlayData: undefined,
+    sessionLandingBgUrl: baseImages[Math.floor(Math.random() * baseImages.length)].url,
     setCurrentRouteParams: (routeParams: RouteParams) => {
         set(() => ({
             currentRouteParams: routeParams,

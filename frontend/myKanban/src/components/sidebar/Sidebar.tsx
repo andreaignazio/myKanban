@@ -41,9 +41,6 @@ export default function Sidebar({ isSingleMode }: SidebarProps) {
                     <NavLink to="/" className="block text-sm ">
                         Home
                     </NavLink>
-                    <NavLink to="/boards" className="block text-sm ">
-                        Boards
-                    </NavLink>
                     <NavLink to="/sign-in" className="block text-sm ">
                         Login
                     </NavLink>

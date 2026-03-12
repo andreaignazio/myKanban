@@ -20,6 +20,7 @@ import { useBoardWebSocket } from "@/hooks/ws/useBoardWS";
 import { useUserActivityOverlay } from "@/hooks/useUserActivityOverlay";
 import { useUserWatchStore } from "@/stores/userWatchStore";
 import { AsyncRequestToasterController } from "@/components/asyncRequestHandlers/asyncRequestToaster";
+import { useAuth } from "@clerk/react";
 
 
 export default function AppLayout() {
@@ -48,6 +49,13 @@ export default function AppLayout() {
     const layoutBgClass = isBoardView ? "bg-transparent" : "bg-main"
     const fetchUserWatches = useUserWatchStore((state) => state.fetchUserWatches)
 
+    const isSignedIn = useAuth().isSignedIn
+    useEffect(() => {
+        if (!isSignedIn) {
+            navigate("/", { replace: true })
+        }
+    }, [isSignedIn, navigate])
+
     useEffect(() => {
         const locked = isOverlayLocked()
         if (locked) {
@@ -60,6 +68,7 @@ export default function AppLayout() {
         return () => clearTimeout(timeoutId)
     }, [isOverlayLocked, overlayStack])
 
+
     useEffect(() => {
         if (!userId) {
             return
@@ -68,13 +77,14 @@ export default function AppLayout() {
         hydrateWorkspaces()
     }, [userId, fetchUserWatches, hydrateWorkspaces])
 
+    const shouldHideSidebar = isBoardView || !isSignedIn
     useEffect(() => {
-        if (isBoardView) {
+        if (shouldHideSidebar) {
             setIsSidebarHidden(true)
         } else {
             setIsSidebarHidden(false)
         }
-    }, [location.pathname, setIsSidebarHidden])
+    }, [shouldHideSidebar, location.pathname, setIsSidebarHidden])
 
     const routeWorkspaceID = useParams().workspaceId as string | undefined
     useEffect(() => {
@@ -317,6 +327,8 @@ export default function AppLayout() {
     useBoardWebSocket(workspaceId ?? "", boardId ?? null)
 
     useUserActivityOverlay();
+
+
 
     return (
         <>

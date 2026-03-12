@@ -18,7 +18,7 @@ import { DragDropContext, type DragStart, type DropResult } from "@hello-pangea/
 import { ListContainer } from "./BoardView/ListContainer";
 import { useBoardBackground } from "@/hooks/useBoardBackground";
 import { InboxView } from "./Inbox/InboxView";
-import { useSmoothBoardBackground, type BoardBackgroundSpec } from "@/hooks/useSmoothBoardBackground";
+import { BoardBackgroundTransition, type BoardBackgroundSpec } from "@/components/BoardView/BoardBackgroundTransition";
 import { BoardViewTopBar } from "@/components/BoardView/BoardViewTopBar";
 
 import { BaseBtn } from "@/components/BoardView/BoardViewTopBar";
@@ -29,43 +29,6 @@ export { BaseBtn }
 
 const EMPTY_LIST_IDS: string[] = []
 
-function BoardBackgroundLayer({ spec }: { spec: BoardBackgroundSpec }) {
-    if (spec.kind === "color") {
-        return (
-            <div
-                className={`absolute inset-0 ${spec.className}`.trim()}
-                style={!spec.className ? { backgroundColor: spec.colorToken ?? "#0f172a" } : undefined}
-            />
-        )
-    }
-
-    return (
-        <div
-            className="absolute inset-0 bg-center bg-cover"
-            style={{ backgroundImage: `url('${spec.url}')` }}
-        />
-    )
-}
-
-function BoardBackgroundTransition({ target }: { target: BoardBackgroundSpec }) {
-    const { activeBackground, incomingBackground, incomingVisible } = useSmoothBoardBackground(target, {
-        transitionMs: 320,
-        frameDelayMs: 16,
-    })
-
-    return (
-        <div className="absolute inset-0 -z-10 pointer-events-none">
-            <div className="absolute inset-0 opacity-100 transition-opacity duration-300 ease-out">
-                <BoardBackgroundLayer spec={activeBackground} />
-            </div>
-            {incomingBackground && (
-                <div className={`absolute inset-0 transition-opacity duration-300 ease-out ${incomingVisible ? "opacity-100" : "opacity-0"}`}>
-                    <BoardBackgroundLayer spec={incomingBackground} />
-                </div>
-            )}
-        </div>
-    )
-}
 
 export default function BoardView() {
 
@@ -94,6 +57,7 @@ export default function BoardView() {
 
 
     const { backgroundType, backgroundColorToken, backgroundColorClassName, resolvedBackgroundUrl } = useBoardBackground({ board })
+
     const targetBackground = useMemo<BoardBackgroundSpec>(() => {
         if (backgroundType === "color" && backgroundColorToken) {
             return {

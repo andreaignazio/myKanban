@@ -405,7 +405,7 @@ func NewRouter(db *gorm.DB,
 
 				//BOARD-CENTERED VIEWS
 				shareoffers.GET("/boards/:boardID/incoming/requests", shareHandler.GetBoardRequestsIncomingWithUsers) // richieste di partecipare a una board, visible to members with role >= admin
-				shareoffers.GET("/boards/:boardID/outgoing/invites", shareHandler.GetBoardInvitesOutgoingWithUsers)  //inviti a partecipare a un board (non ancora accettati)
+				shareoffers.GET("/boards/:boardID/outgoing/invites", shareHandler.GetBoardInvitesOutgoingWithUsers)   //inviti a partecipare a un board (non ancora accettati)
 				shareoffers.GET("/workspaces/:workspaceID/incoming/requests", shareHandler.GetWorkspaceRequestsIncomingWithUsers)
 				shareoffers.GET("/workspaces/:workspaceID/pending/boards", shareHandler.GetPendingOfferTargetBoardsByWorkspaceForUser)
 				shareoffers.GET("/workspaces/:workspaceID/pending/board-access-requests", shareHandler.GetPendingBoardAccessRequestCountsByWorkspaceForAdminOwner)
