@@ -1,5 +1,5 @@
-import { forwardRef, useEffect, useState } from "react";
-import { CustomInput } from "../menuElements/CustomInput";
+import { forwardRef, useEffect, useRef, useState } from "react";
+import { CustomInput, type CustomInputHandle } from "../menuElements/CustomInput";
 import { LockClosedIcon, UsersIcon, GlobeAsiaAustraliaIcon } from "@heroicons/react/24/solid";
 import { LabeledButtonPresetA } from "../buttons/labeledButton";
 
@@ -29,6 +29,7 @@ import { useOverlayStore } from "@/overlays/overlayStore";
 export const CreateBoardModal = forwardRef<HTMLDivElement, CreateBoardModalProps>((props, ref) => {
     const getMaxBoardsByWorkspaceId = useWorkspaceStore((state) => state.getMaxBoardsByWorkspaceId);
     const createBoardInWorkspace = useBoardsStore((state) => state.createBoardInWorkspace);
+    const titleInputRef = useRef<CustomInputHandle>(null);
     const [title, setTitle] = useState("");
     const [background, setBackground] = useState<ColorToken | null>(gradientColorTokens[0]);
     const [canSubmit, setCanSubmit] = useState(false);
@@ -49,6 +50,11 @@ export const CreateBoardModal = forwardRef<HTMLDivElement, CreateBoardModalProps
     })
 
     const currentWorkspaceId = useParams().workspaceId as string | undefined
+    useEffect(() => {
+        const t = setTimeout(() => titleInputRef.current?.focus(), 50);
+        return () => clearTimeout(t);
+    }, []);
+
     useEffect(() => {
         if (props.workspaceId) {
             setSelectedWorkspace(props.workspaceId);
@@ -171,6 +177,7 @@ export const CreateBoardModal = forwardRef<HTMLDivElement, CreateBoardModalProps
                 <div className="w-full flex flex-col gap-1 mt-4">
                     <span className={subTitleStyle}>Board title</span>
                     <CustomInput
+                        ref={titleInputRef}
                         value={title}
                         danger={title.trim().length === 0}
                         className="h-[38px]"

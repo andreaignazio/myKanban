@@ -26,16 +26,17 @@ type SidebarProps = {
 
 }
 
+const PADDING_ASIDE = 16
 export default function Sidebar({ isSingleMode }: SidebarProps) {
 
     //const isSingleMode = useMatch("/workspaces/:workspaceId/members/*")
     const isUserSet = useAuthStore((state) => !!state.userID)
 
     return (
-        <aside className={`flex flex-col min-w-[300px] h-full p-4 transition-colors duration-1000 overflow-hidden
+        <aside className={`flex flex-col min-w-[300px] h-full p-0 py-4 transition-colors duration-1000
          ${isSingleMode ? "!bg-[#18191a]" : "bg-main"}`}>
 
-            <div className="flex flex-col flex-1 min-h-0 overflow-y-auto scrollbar-hidden">
+            <div className="flex flex-col flex-1 min-h-0 [overflow-x:clip] [overflow-clip-margin:8px] overflow-y-auto scrollbar-hidden">
                 <WorkspaceList isSingleMode={isSingleMode} />
                 {!isUserSet && <nav className="space-y-2 text-muted">
                     <NavLink to="/" className="block text-sm ">
@@ -158,9 +159,9 @@ const WorkspaceList = ({ isSingleMode }: { isSingleMode?: boolean }) => {
     const hasActiveFilters = !!filterState.statusFilter || !!filterState.searchQuery?.trim()
 
     return (
-        <div className="flex flex-col gap-2 ">
+        <div className="flex flex-col gap-2  ">
 
-            <div className={`flex flex-col  overflow-hidden transition-all duration-300 ease-in-out 
+            <div className={`flex flex-col px-4 overflow-x-visible  overflow-y-hidden transition-all duration-300 ease-in-out 
                             ${isMembersView ? "max-h-[220px] opacity-100" : "max-h-0 opacity-0"}`}>
 
                 <div className="text-[13px] font-semibold text-neutral-400 px-2 mb-2">{acitivityLabel}</div>
@@ -168,7 +169,7 @@ const WorkspaceList = ({ isSingleMode }: { isSingleMode?: boolean }) => {
 
                 <div className="w-full h-px bg-neutral-700 mb-2" />
             </div>
-            <div className="flex flex-row items-center justify-between px-2">
+            <div className="flex flex-row items-center justify-between ps-6 pe-4">
                 <div className="text-[13px] font-semibold text-neutral-400 px-2">Workspaces</div>
                 <div className="flex flex-row items-center gap-1">
                     <CardRowMenuBtn
@@ -195,65 +196,77 @@ const WorkspaceList = ({ isSingleMode }: { isSingleMode?: boolean }) => {
                     </div>
                 </div>
             </div>
+            <div className=" bg-slate-200/5 h-px mb-1 ms-8 me-[24px]" />
+            <div className={`flex flex-col gap-0 transition-all duration-300 ease-in-out`}>
+                {workspaceIds.map((id) => {
+                    const isFilteredOut = !filteredIds.includes(id)
+                    const status = getStatus(id)
+                    const notAvailableToUser = status === "none"
+                    const shouldHideRow = !!(isMembersView && activeWorkspaceId && activeWorkspaceId !== id) || (isFilteredOut && activeWorkspaceId !== id) || notAvailableToUser
 
-            {workspaceIds.map((id) => {
-                const isFilteredOut = !filteredIds.includes(id)
-                const status = getStatus(id)
-                const notAvailableToUser = status === "none"
-                const shouldHideRow = !!(isMembersView && activeWorkspaceId && activeWorkspaceId !== id) || (isFilteredOut && activeWorkspaceId !== id) || notAvailableToUser
+                    const isActive = activeWorkspaceId === id
+                    const disableRowMenuClick = status === "accessible" && !isMembersView
 
-                const isActive = activeWorkspaceId === id
-                const disableRowMenuClick = status === "accessible" && !isMembersView
+                    return (
+                        <div className=" relative w-full h-fit">
 
-                return (
-                    <div
-                        key={`workspace-row-${id}`}
-                        className={`flex flex-col transition-all duration-300 ease-in-out overflow-hidden ${shouldHideRow
-                            ? "max-h-0 opacity-0 -translate-y-1 pointer-events-none"
-                            : "max-h-[250px] opacity-100 translate-y-0"
-                            }
-                           ${isActive ? "bg-slate-500/10 rounded-xl" : ""}`}
-                    >
+                            <div
+                                key={`workspace-row-${id}`}
+                                className={`relative flex flex-col transition-all duration-300 ease-in-out overflow-visible
+                            mx-4
+                                ${shouldHideRow
+                                        ? "max-h-0 opacity-0 -translate-y-1 pointer-events-none"
+                                        : "max-h-[250px] opacity-100 translate-y-0"
+                                    }
+                           ${isActive ? "bg-gradient-to-tr  from-slate-500/10 to-slate-500/20 rounded-[18px] mb-2 mt-1 shadow-lg shadow-black/10 p-2" : ""}`}
+                            >
+                                <div className={` ${isActive ? "opacity-100" : "opacity-0"}
+                            absolute -left-2 top-0  h-full  w-1 rounded flex flex-row items-center `} >
+                                    <div className="bg-gray-300 h-[90%] w-full rounded-full" />
+                                </div>
 
 
-                        <CardRowMenuBtn
-                            disableClick={disableRowMenuClick}
-                            offset={[0, 0]}
-                            key={`menu-btn-${id}`}
-                            menuComponent={({ onClose, ref, anchorRef }) => {
-                                if (status === "offered" || status === "requested") {
-                                    return (
-                                        <ShareOfferDetails onClose={onClose} ref={ref}
-                                            workspaceId={id} />
-                                    )
-                                } else {
-                                    return dropDown(onClose, ref, anchorRef)
-                                }
-                            }}
-                            desiredBackdropOpacity={0}
-                            renderType={status === "offered" || status === "requested" ? "virtual" : "anchored"}
-                        >
-                            < WorkspaceRow
-                                ref={rowRef}
-                                key={id} workspaceId={id}
-                                onSubRowToggle={handleSubRowToggle}
-                                activeSubRowId={activeWorkspaceId}
-                                className={` ${isMembersView ? "!border border-neutral-300/20 !p-2 !h-16" : ""}`}
-                                isActive={isActive}
-                                status={status}
-                            />
-                        </CardRowMenuBtn>
-                        <div
-                            className={`mt-1  overflow-hidden transition-all duration-300 ease-in-out 
+                                <CardRowMenuBtn
+                                    disableClick={disableRowMenuClick}
+                                    offset={[0, 0]}
+                                    key={`menu-btn-${id}`}
+                                    menuComponent={({ onClose, ref, anchorRef }) => {
+                                        if (status === "offered" || status === "requested") {
+                                            return (
+                                                <ShareOfferDetails onClose={onClose} ref={ref}
+                                                    workspaceId={id} />
+                                            )
+                                        } else {
+                                            return dropDown(onClose, ref, anchorRef)
+                                        }
+                                    }}
+                                    desiredBackdropOpacity={0}
+                                    renderType={status === "offered" || status === "requested" ? "virtual" : "anchored"}
+                                >
+                                    < WorkspaceRow
+                                        ref={rowRef}
+                                        key={id} workspaceId={id}
+                                        onSubRowToggle={handleSubRowToggle}
+                                        activeSubRowId={activeWorkspaceId}
+                                        className={` ${isMembersView ? "!border border-neutral-300/20 !p-2 gap-1 !h-[62px] !grid-cols-[46px_1fr_1fr_1fr]" : ""}`}
+                                        isActive={isActive}
+                                        status={status}
+                                    />
+                                </CardRowMenuBtn>
+                                <div
+                                    className={`mt-1  overflow-hidden transition-all duration-300 ease-in-out 
                             ${activeWorkspaceId === id ? "max-h-[250px] opacity-100" : "max-h-0 opacity-0"}`}>
-                            <WorkspaceSubRows
-                                className={` 
+                                    <WorkspaceSubRows
+                                        className={` 
                                     ${isMembersView ? "ps-4" : "ps-8"}`}
-                                workspaceId={id} />
+                                        workspaceId={id} />
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                )
-            })}
+                    )
+                })}
+            </div>
+
 
             {!currentWorkspaceId && accessibleWorkspaceIds.length === 0 && hasRetriedAccessibleRefetch && (
                 <NoAccessibleWorkspaceState onCreateWorkspace={handleCreateWorkspace} />

@@ -45,30 +45,36 @@ export const WorkspaceRow = forwardRef<HTMLDivElement, WorkspaceRowProps>(({ wor
 
     const resolvedActive = isActive ? isSubRowsOpen ? false : true : false
 
-
+    const isCompact = !isActive
 
 
     return (
         <>
             <div ref={ref}
                 onClick={(e) => onSubRowToggle && isWorkspaceAccessible && onSubRowToggle(workspaceId)}
-                className={`flex grid-cols-4 h-11 ${className}
-        p-1 items-center relative ${resolvedActive ? "bg-active" : "hover:bg-surface"}
+                className={`grid grid-cols-[36px_1fr_1fr_1fr] h-11 
+                    ${className}
+        p-1 items-center relative ${resolvedActive ? "bg-active " : "hover:bg-surface"}
+        ${isCompact ? "h-[36px]" : "h-[44px]"}
          rounded-xl text-text hover:bg-active 
          ${isWorkspaceAccessible ? "cursor-pointer" : "cursor-default opacity-50"}
           transition-[padding,height,border-color,background-color] duration-300 ease-in-out`}>
-                <div className="col-span-1 h-full bg-neutral-600/20 aspect-square
-             rounded-lg
-             flex items-center justify-center">
-                    <HomeIcon className="h-5 aspect-square" />
+                <div className={`col-span-1   h-full w-full
+             rounded-lg 
+             ${isCompact ? "bg-transparent" : "bg-neutral-600/20"}
+             flex items-center justify-center`}>
+                    <HomeIcon className={`${isCompact ? "h-4" : "h-5"} aspect-square`} />
 
                 </div>
-                <div className="flex flex-col items-start justify-center  col-span-3 ps-2 pb-0 ">
-                    <div className="text-sm font-medium">{workspace.Name}</div>
-                    <div className="text-xs font-extralight">{subscriptionLabel}</div>
+                <div className="flex flex-col items-start justify-center col-start-2  col-span-3 ps-2 pb-0 ">
+                    <div className={`${isCompact ? "text-[13px] font-normal text-gray-300/80" : "text-gray-200 text-sm font-medium"}`}>{workspace.Name}</div>
+                    <div className={`
+                        ${isCompact ? "h-0 opacity-0" : "h-auto opacity-100"}
+                        text-xs font-extralight`}>{subscriptionLabel}</div>
                 </div>
                 <div className="absolute end-2">
-                    <ChevronDown className={`h-6 w-6 text-neutral-400
+                    <ChevronDown className={`
+                    ${isCompact ? "h-5 w-5" : "h-6 w-6"} text-neutral-400
                      transition-transform ${isSubRowsOpen ? "rotate-180" : ""}`} />
                 </div>
                 <div className={`absolute inset-0
