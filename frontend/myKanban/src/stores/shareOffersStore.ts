@@ -1277,7 +1277,7 @@ export const useShareOffersStore = create<ShareOffersState>((set, get) => ({
     },
     fetchBoardSentInvites: async (boardID: string) => {
         try {
-            const response = await api.get(`/shareoffers/boards/${boardID}/outgoing/invites/`);
+            const response = await api.get(`/shareoffers/boards/${boardID}/outgoing/invites`);
             const shareOffersDetails = (response.data ?? []) as BoardShareOfferWithUserDetails[];
 
             useCacheStore.getState().upsertBoardShareOfferDetails(shareOffersDetails);

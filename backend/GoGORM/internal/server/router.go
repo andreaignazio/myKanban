@@ -178,8 +178,6 @@ func NewRouter(db *gorm.DB,
 		{
 			boards.GET("", workspacesHandler.GetWorkspacesBoardsForUserID)
 			boards.POST("", boardsHandler.CreateBoard)
-			boards.GET("/", workspacesHandler.GetWorkspacesBoardsForUserID)
-			boards.POST("/", boardsHandler.CreateBoard)
 
 			//boards.GET("/:boardID", boardsHandler.GetUserBoard)
 			boards.GET("/:boardID", linksHandler.GetUserBoardDetail)
@@ -256,9 +254,9 @@ func NewRouter(db *gorm.DB,
 			boards.POST("/:boardID/cards/:cardID/labels/:labelID", boardLabelsHandler.AddLabelToCard)
 			boards.DELETE("/:boardID/cards/:cardID/labels/:labelID", boardLabelsHandler.RemoveLabelFromCard)
 
-			boards.GET("/:boardID/cards/members/", cardMembersHandler.GetCardMembersForBoard)
-			boards.POST("/:boardID/cards/:cardID/members/", cardMembersHandler.AddCardMember)
-			boards.GET("/:boardID/cards/:cardID/members/", cardMembersHandler.GetCardMembersForCard)
+			boards.GET("/:boardID/cards/members", cardMembersHandler.GetCardMembersForBoard)
+			boards.POST("/:boardID/cards/:cardID/members", cardMembersHandler.AddCardMember)
+			boards.GET("/:boardID/cards/:cardID/members", cardMembersHandler.GetCardMembersForCard)
 			boards.DELETE("/:boardID/cards/:cardID/members/:memberID", cardMembersHandler.RemoveCardMember)
 			//delete card + bulk ? (DELETE)
 			//patch card position in a list -> single + bulk (PATCH)
@@ -311,7 +309,6 @@ func NewRouter(db *gorm.DB,
 			watches := api.Group("/watches")
 			{
 				watches.GET("", userWatchHandler.GetAllWatches)
-				watches.GET("/", userWatchHandler.GetAllWatches)
 				watches.GET("/boards", userWatchHandler.GetBoardWatch)
 				watches.GET("/lists", userWatchHandler.GetListWatch)
 				watches.GET("/cards", userWatchHandler.GetCardWatch)
@@ -338,7 +335,6 @@ func NewRouter(db *gorm.DB,
 			lists := api.Group("/lists")
 			{
 				lists.GET("", listsHandler.GetUserLists)
-				lists.GET("/", listsHandler.GetUserLists)
 				//lists.POST("/", listsHandler.CreateList )
 				lists.GET("/:listID", listsHandler.GetListMeta)
 				lists.GET("/:listID/cards", listsHandler.GetListDetail)
@@ -348,7 +344,6 @@ func NewRouter(db *gorm.DB,
 			cards := api.Group("/cards")
 			{
 				cards.GET("", cardsHandler.GetUserCards)
-				cards.GET("/", cardsHandler.GetUserCards)
 				cards.GET("/user/:userID/membercards", cardsHandler.GetCardsWhereUserIsMember)
 				cards.GET("/user/me/membercards", cardsHandler.GetCardsWhereIAmMember)
 				//cards.PATCH("/:cardID", cardsHandler.PatchCardDetails)
@@ -357,9 +352,7 @@ func NewRouter(db *gorm.DB,
 			workspaces := api.Group("/workspaces")
 			{
 				workspaces.POST("", workspacesHandler.CreateUserWorkspace)
-				workspaces.POST("/", workspacesHandler.CreateUserWorkspace)
 				workspaces.GET("", workspacesHandler.GetUserWorkspaces)
-				workspaces.GET("/", workspacesHandler.GetUserWorkspaces)
 				workspaces.GET("/search", workspacesHandler.SearchPublicWorkspaces)
 				workspaces.GET("/pending-offers/targets", workspacesHandler.GetPendingOfferTargetWorkspacesForUser)
 				workspaces.GET("/:workspaceID/auditlog", eventRegistryHandler.GetWorkspaceAuditLog)
@@ -412,7 +405,7 @@ func NewRouter(db *gorm.DB,
 
 				//BOARD-CENTERED VIEWS
 				shareoffers.GET("/boards/:boardID/incoming/requests", shareHandler.GetBoardRequestsIncomingWithUsers) // richieste di partecipare a una board, visible to members with role >= admin
-				shareoffers.GET("/boards/:boardID/outgoing/invites/", shareHandler.GetBoardInvitesOutgoingWithUsers)  //inviti a partecipare a un board (non ancora accettati)
+				shareoffers.GET("/boards/:boardID/outgoing/invites", shareHandler.GetBoardInvitesOutgoingWithUsers)  //inviti a partecipare a un board (non ancora accettati)
 				shareoffers.GET("/workspaces/:workspaceID/incoming/requests", shareHandler.GetWorkspaceRequestsIncomingWithUsers)
 				shareoffers.GET("/workspaces/:workspaceID/pending/boards", shareHandler.GetPendingOfferTargetBoardsByWorkspaceForUser)
 				shareoffers.GET("/workspaces/:workspaceID/pending/board-access-requests", shareHandler.GetPendingBoardAccessRequestCountsByWorkspaceForAdminOwner)
@@ -426,7 +419,6 @@ func NewRouter(db *gorm.DB,
 			sharelinks := api.Group("/sharelinks")
 			{
 				sharelinks.POST("", shareLinksHandler.CreateShareLink)
-				sharelinks.POST("/", shareLinksHandler.CreateShareLink)
 				sharelinks.POST("/:token/claim", shareLinksHandler.ClaimShareLink)
 				sharelinks.POST("/:token/revoke", shareLinksHandler.RevokeShareLink)
 				sharelinks.POST("/join/:token", shareLinksHandler.JoinViaShareLink)

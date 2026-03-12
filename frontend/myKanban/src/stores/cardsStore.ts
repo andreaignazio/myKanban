@@ -103,7 +103,7 @@ export const useCardsStore = create<CardsStore>((set, get) => ({
         return useAsyncRequestStore.getState().execute<Card>(
             useAsyncKey("card:create", listID),
             async () => {
-                const response = await api.post(`/boards/${boardID}/lists/${listID}/cards/`, payload)
+                const response = await api.post(`/boards/${boardID}/lists/${listID}/cards`, payload)
                 return response.data as Card
             },
             { successResetDelayMs: 2000 }
@@ -112,7 +112,7 @@ export const useCardsStore = create<CardsStore>((set, get) => ({
     removeCardFromList: async (boardID: string, listID: string, cardID: string) => {
         return useAsyncRequestStore.getState().execute(
             useAsyncKey("card:delete", cardID),
-            () => api.delete(`/boards/${boardID}/lists/${listID}/cards/${cardID}/`),
+            () => api.delete(`/boards/${boardID}/lists/${listID}/cards/${cardID}`),
             { successResetDelayMs: 1500 }
         )
     },
@@ -123,7 +123,7 @@ export const useCardsStore = create<CardsStore>((set, get) => ({
 
         return useAsyncRequestStore.getState().execute(
             asyncKey ?? useAsyncKey("card:edit:details", cardId),
-            () => api.patch(`/boards/${boardID}/cards/${cardId}/`, requestPayload),
+            () => api.patch(`/boards/${boardID}/cards/${cardId}`, requestPayload),
             { successResetDelayMs: 1500 }
         )
     },

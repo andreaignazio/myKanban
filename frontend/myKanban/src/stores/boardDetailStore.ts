@@ -527,7 +527,7 @@ export const useBoardDetailStore = create<BoardDetailStore>((set, get) => ({
     },
     fetchBoardListByBoardId: async (boardID: string) => {
         try {
-            const response = await api.get(`/boards/${boardID}/lists/`)
+            const response = await api.get(`/boards/${boardID}/lists`)
             const data: BoardDetailPatch = response.data
             // console.log("Fetched board lists:", data)
             const BoardListById = data.BoardListRelations.reduce((acc, bl) => {
