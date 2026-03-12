@@ -1,21 +1,26 @@
 import { useListsStore } from "@/stores/listsStore"
-import { useBoardDetailStore } from "@/stores/boardDetailStore"
+
 import { AddForm } from "./common/AddForm"
 import { useState } from "react"
 
 type ListAddProps = {
-
+    boardID: string | null
 }
 
 
-export const ListAdd = ({ }: ListAddProps) => {
+export const ListAdd = ({ boardID }: ListAddProps) => {
     const [isAdding, setIsAdding] = useState(false)
-    const boardID = useBoardDetailStore((state) => state.currentBoardId)
+    // const boardID = useBoardDetailStore((state) => state.currentBoardId)
     const createList = useListsStore((state) => state.createList)
     function handleAdd(title: string) {
-        if (!boardID) return
-        createList({ Title: title, AfterID: null, InsertAt: "end" }, boardID)
-        setIsAdding(false)
+        try {
+            if (!boardID) return
+            createList({ Title: title, AfterID: null, InsertAt: "end" }, boardID)
+            setIsAdding(false)
+        }
+        catch (error) {
+            console.error("Error creating list:", error)
+        }
         // Logic for adding a new list
     }
 

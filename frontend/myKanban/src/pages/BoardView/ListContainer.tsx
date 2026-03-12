@@ -38,7 +38,7 @@ export const ListContainer = ({ draggedCardId = null, draggedSourceBoardListId =
                             boardListID={boardListId} boardID={boardId} />
                     ))}
                     {provided.placeholder}
-                    <ListAdd key="listAdd" />
+                    <ListAdd key="listAdd" boardID={boardId} />
                 </div>
             )}
         </Droppable>
