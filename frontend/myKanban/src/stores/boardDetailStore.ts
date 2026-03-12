@@ -289,7 +289,7 @@ export const useBoardDetailStore = create<BoardDetailStore>((set, get) => ({
 
     getBoardDetailPatch: async (boardID: string) => {
         try {
-            const response = await api.get(`/boards/${boardID}/`)
+            const response = await api.get(`/boards/${boardID}`)
             const data: BoardDetailPatch = response.data
             // console.log("Fetched board detail patch:", data)
             get().applyBoardDetailPatch(data)
