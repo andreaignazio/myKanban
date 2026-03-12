@@ -15,10 +15,6 @@ export default function SignInPage() {
         url: useUiStore.getState().sessionLandingBgUrl,
     }
 
-    if (isLoaded && isSignedIn) {
-        return <Navigate to={redirectUrl} replace />
-    }
-
     const [isReallyLoaded, setIsReallyLoaded] = useState(false)
 
     useEffect(() => {
@@ -30,6 +26,10 @@ export default function SignInPage() {
             setIsReallyLoaded(false)
         }
     }, [isLoaded])
+
+    if (isLoaded && isSignedIn) {
+        return <Navigate to={redirectUrl} replace />
+    }
 
     return (
         <div className="min-h-screen bg-main flex items-center justify-center px-4 py-8">

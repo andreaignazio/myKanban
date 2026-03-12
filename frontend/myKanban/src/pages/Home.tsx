@@ -10,6 +10,7 @@ import { useNavigate } from "react-router-dom"
 import { CardRowMenuBtn } from "@/components/cardMenus/cardRowMenus"
 import { WorkspaceCreateWizard } from "@/components/WorkspaceCreate/WorkspaceCreateWizard"
 import { useWorkspaceStore } from "@/stores/workspaceStore"
+import { useEffect } from "react"
 export default function Home() {
 
     const bgUrl = useUiStore((state) => state.sessionLandingBgUrl)
@@ -19,6 +20,18 @@ export default function Home() {
     const isSignedIn = useAuth().isSignedIn
     const navigate = useNavigate()
     let isAnyWorkspaceAvailable = useWorkspaceStore((state) => state.isAnyWorkspaceAvailabe())
+    const workspaceIds = useWorkspaceStore((state) => state.workspaceIds)
+    const getWorkspaceStatus = useWorkspaceStore((state) => state.getWorkspaceStatus)
+    const hasHydratedWorkspaces = useWorkspaceStore((state) => state.hasHydratedWorkspaces)
+
+    useEffect(() => {
+        if (!isSignedIn || !hasHydratedWorkspaces) return
+        const firstAccessible = workspaceIds.find((id) => getWorkspaceStatus(id) === "accessible")
+        if (firstAccessible) {
+            navigate(`/workspaces/${firstAccessible}/boards`, { replace: true })
+        }
+    }, [isSignedIn, hasHydratedWorkspaces, workspaceIds, getWorkspaceStatus, navigate])
+
     //isAnyWorkspaceAvailable = false
     const handleNavigate = () => {
         if (isSignedIn) {
