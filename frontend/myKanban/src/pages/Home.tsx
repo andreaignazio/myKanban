@@ -88,7 +88,7 @@ const StartButton = ({ onClick, isSignedIn, isAnyWorkspaceAvailable, resolvedLab
 
     return (
         <CardRowMenuBtn
-            disableClick={isSignedIn && isAnyWorkspaceAvailable}
+            disableClick={(isSignedIn && isAnyWorkspaceAvailable) || !isSignedIn}
             exclusiveGroup={exclusiveGroup}
             customId={wizardId}
             renderType="virtual"

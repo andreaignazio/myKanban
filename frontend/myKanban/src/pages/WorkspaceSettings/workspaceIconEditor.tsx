@@ -24,7 +24,7 @@ type WorkspaceIconEditorProps = {
 
 export const WorkspaceIconEditor = forwardRef<HTMLDivElement, WorkspaceIconEditorProps>(({ workspaceID, onClose, onLocalSubmit }, ref) => {
     const workspaceActions = useWorkspaceActionRegistry();
-    const workspace = useWorkspaceStore((state) => state.workspacesById[workspaceID]);
+    const workspace = useWorkspaceStore((state) => state.workspacesById[workspaceID ?? ""]);
     const [isSaving, setIsSaving] = useState(false);
 
     const iconIds = useMemo(() => Object.keys(iconCatalog) as IconId[], []);

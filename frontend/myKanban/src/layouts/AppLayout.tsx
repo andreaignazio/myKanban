@@ -50,11 +50,13 @@ export default function AppLayout() {
     const fetchUserWatches = useUserWatchStore((state) => state.fetchUserWatches)
 
     const isSignedIn = useAuth().isSignedIn
+    const publicPaths = ["/sign-in", "/sign-up", "/login", "/"]
+    const isPublicPath = publicPaths.some(p => location.pathname === p || location.pathname.startsWith(p + "/"))
     useEffect(() => {
-        if (!isSignedIn) {
+        if (!isSignedIn && !isPublicPath) {
             navigate("/", { replace: true })
         }
-    }, [isSignedIn, navigate])
+    }, [isSignedIn, isPublicPath, navigate])
 
     useEffect(() => {
         const locked = isOverlayLocked()
@@ -339,9 +341,9 @@ export default function AppLayout() {
                     <Topbar isHidden={isSingleMode} />
 
 
-                    <div className="flex flex-1 min-h-0 overflow-hidden">
+                    <div className="flex  flex-1 min-h-0 overflow-hidden">
 
-                        <div className={isSidebarHidden ? "hidden" : ""}>
+                        <div className={`${isSidebarHidden ? "hidden" : "block"} transition-all duration-300 ease-in-out`}>
                             <Sidebar isSingleMode={isSingleMode} />
                         </div>
 

@@ -18,7 +18,7 @@ type WorkspaceCoverEditorProps = {
 export const WorkspaceCoverEditor = forwardRef<HTMLDivElement, WorkspaceCoverEditorProps>(({ workspaceID, onClose, onLocalSubmit }, ref) => {
     const { selectedColor, handleSetColor, selectedImage, handleSetImage } = useImageOrColorSelector();
     const workspaceActions = useWorkspaceActionRegistry();
-    const workspace = useWorkspaceStore((state) => state.workspacesById[workspaceID]);
+    const workspace = useWorkspaceStore((state) => state.workspacesById[workspaceID ?? ""]);
 
     useEffect(() => {
         const cover = workspace?.Props?.Cover;

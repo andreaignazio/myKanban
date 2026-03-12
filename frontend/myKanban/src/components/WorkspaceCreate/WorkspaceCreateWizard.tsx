@@ -279,7 +279,7 @@ const HeaderCol = ({ iconId, iconBgTokenClass, hasBorder, iconBorderColor, onIco
 }
 
 
-const HeaderInline = () => {
+/*const HeaderInline = () => {
 
     return (
         <div className="grid grid-cols-[102px_1fr] items-center !gap-4">
@@ -292,4 +292,4 @@ const HeaderInline = () => {
             </div>
         </div>
     )
-}
+}*/

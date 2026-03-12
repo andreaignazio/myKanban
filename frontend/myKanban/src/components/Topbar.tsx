@@ -1,13 +1,13 @@
-import { useMatch, useParams } from "react-router"
+import { useMatch, useNavigate, useParams } from "react-router-dom"
 import { useShallow } from "zustand/shallow"
 import { useAuthStore } from "@/stores/auth"
 import { useUiStore } from "@/stores/uiStore"
-import { RectangleGroupIcon } from "@heroicons/react/24/solid"
-import { SquaresPlusIcon, InboxArrowDownIcon } from "@heroicons/react/24/outline"
+import { ChevronRightIcon, InboxArrowDownIcon, RectangleGroupIcon } from "@heroicons/react/24/solid"
+
 import { useWorkspaceStore } from "@/stores/workspaceStore"
 import { useWsMembersStore } from "@/stores/wsMembersStore"
 
-import { useOverlayStore } from "@/overlays/overlayStore"
+
 
 import { useCurrentBoardRole } from "@/hooks/useCurrentBoardRole"
 
@@ -19,78 +19,51 @@ type TopbarProps = {
 }
 
 export default function Topbar({ onClick, isHidden }: TopbarProps) {
-    const isCardDragging = useUiStore((state) => state.isCardDragging)
 
-    const isListDragging = useUiStore((state) => state.isListDragging)
 
     const isCard = useMatch("/workspaces/:workspaceId/boards/:boardId/cards/:cardId")
     const isBoard = useMatch("/workspaces/:workspaceId/boards/:boardId") || isCard
     const isWorkspace = useMatch("/workspaces/:workspaceId/*")
     const isMembersView = useMatch("/workspaces/:workspaceId/members/*")
 
-    const context = isBoard ? "board" : isWorkspace ? isMembersView ? "members" : "workspace" : null;
+    let context = isBoard ? "board" : isWorkspace ? isMembersView ? "members" : "workspace" : null;
 
+    // context = "main"
     return (
         <header style={{ height: isHidden ? 0 : undefined, opacity: isHidden ? 0 : 1, transition: "height 1s ease" }}
             className={`${isBoard ? 'h-12' : 'h-14'} bg-main flex items-between justify-between`}>
-            <header className="flex items-center px-3">
-                {context === "board" && (
+            <header className="flex items-center px-4 gap-2 h-full">
+                {true && (
+                    <MainHeader context={context} />
+                )}
+                <div className="w-px h-6 bg-gray-300/40 rounded self-center" />
+                {context === "board2" && (
                     <BoardHeader />
                 )}
-                {context === "workspace" && (
-                    <WorkspaceHeader />
+                {(context === "workspace" || context === "board") && (
+                    <WorkspaceHeader context={context} />
                 )}
+
             </header>
-
-
-
-            {isCardDragging && <div className="ml-4 text-sm text-gray-500">Dragging Card...</div>}
-            {isListDragging && <div className="ml-4 text-sm text-gray-500">Dragging List...</div>}
-
 
             <UserHeader context={context} />
 
         </header>
     )
 }
-import type { OverlayDescriptor } from "@/overlays/overlayStore"
-import { useRef } from "react"
+
 import { UserNotificationMenuBtn } from "./modals/UserNotificationMenu"
 
 import { MemberRow } from "./common/MemberRow"
 import type { User } from "@/stores/types"
 import { useIsOverlayActive } from "@/hooks/useIsOverlayActive"
-import { CardRow } from "./CardRow"
+
 import { CardRowMenuBtn } from "./cardMenus/cardRowMenus"
 
 function UserHeader({ context }: { context: string | null }) {
     const user = useAuthStore((state) => state.user)
 
-    const open = useOverlayStore((state) => state.open)
-    const close = useOverlayStore((state) => state.close)
 
-    const InboxPanelRef = useRef<HTMLDivElement | null>(null)
-
-    function handleOpenInbox() {
-        //console.log("Open inbox")
-        const descriptor: OverlayDescriptor = {
-            id: "inbox",
-            type: "popover",
-            render: () => <UserOfferManager ref={InboxPanelRef} />,
-            renderType: "virtual",
-            panelRef: InboxPanelRef,
-            opts: {
-                closeOnClickOutside: true,
-                lockBackdrop: true,
-                closeOnEscape: true,
-                closeOnMouseLeave: false
-            },
-            position: {
-                virtual: "viewport-center"
-            }
-        }
-        open(descriptor)
-    }
 
     const inboxMenuId = "user-inbox-menu"
     const notificationMenuId = "user-notification-menu"
@@ -99,7 +72,7 @@ function UserHeader({ context }: { context: string | null }) {
 
     return (
         <div className="flex-1 flex items-center gap-4 justify-end px-5" >
-            <div className="flex flex-row gap-1 items-center justify-center">
+            <div className="flex flex-row gap-2 items-center justify-center">
 
                 <CardRowMenuBtn
                     customId={inboxMenuId}
@@ -110,7 +83,7 @@ function UserHeader({ context }: { context: string | null }) {
                     desiredBackdropOpacity={0.5}
                 >
 
-                    <div className={`bg-transparent text-gray-300
+                    <div className={`bg-transparent text-gray-400
             hover:bg-neutral-400/20 p-2 rounded cursor-pointer transition-all
             ${isInboxMenuActive ? "!bg-neutral-500/20 " : ""}
             `}
@@ -149,10 +122,6 @@ function UserHeader({ context }: { context: string | null }) {
     )
 }
 
-
-
-
-
 function BoardHeader() {
     const { boardId } = useParams<{ boardId: string }>()
     const { workspaceId } = useParams<{ workspaceId: string }>()
@@ -171,19 +140,18 @@ function BoardHeader() {
     )
 }
 
-function WorkspaceHeader() {
+function WorkspaceHeader({ context }: { context: string | null }) {
     const { workspaceId } = useParams<{ workspaceId: string }>()
     const workspace = useWorkspaceStore(
         useShallow((state) => (workspaceId ? state.workspacesById[workspaceId] : undefined))
     )
-    const toggleSidebarHidden = useUiStore((state) => state.toggleSidebarHidden)
+
     return (
-        <div className="flex flex-row items-center justify-center gap-2">
-            <SquaresPlusIcon
-                onClick={() => toggleSidebarHidden()}
-                className="w-6 h-6 text-gray-500 bg-neutral-300 rounded-lg p-1" />
-            <h1 className="font-semibold text-lg">{workspace?.Name}</h1>
-            <UserRoleBadge contextID={workspaceId as string} contextType="workspace" />
+        <div className="flex flex-col text-xs items-start justify-center gap-0 h-full">
+
+            <h1 className="font-medium text-sm">{workspace?.Name}</h1>
+            <UserRoleBadge className={`${context === "workspace" ? "opacity-70 translate-y-0.5 scale-90" : "opacity-0 h-0"}`}
+                contextID={workspaceId as string} contextType="workspace" />
         </div>
     )
 }
@@ -203,12 +171,16 @@ function UserRoleBadge({ contextID, contextType, className, size = "md" }: UserR
     )
     const role = contextType === "board" ? boardRole : workspaceRole;
     const roleBadgeClass = getRoleBadgeClass(role as Role);
+    const formattedRole = role ? role.charAt(0).toUpperCase() + role.slice(1) : "No Role"
 
     return (
         <div className={className}>
-            <span className={`w-fit flex items-center justify-center rounded-full border px-2 py-1 pb-1.5 max-h-6 text-xs font-medium ${roleBadgeClass}`}>
-                {role}
-            </span>
+            <div className={`w-fit flex items-center justify-center rounded-md  py-[1px] px-2 text-[8px] border-none 
+             border ${roleBadgeClass}`}>
+
+
+                {formattedRole}
+            </div>
         </div>
     )
 }
@@ -219,7 +191,7 @@ type Role = "owner" | "admin" | "member" | "viewer" | undefined;
 function getRoleBadgeClass(role: Role) {
     switch (role) {
         case "owner":
-            return "border-amber-500/40 bg-amber-500/15 text-amber-200";
+            return "border-amber-500/40 bg-fuchsia-700/20 text-fuchsia-200";
         case "admin":
             return "border-sky-500/40 bg-sky-500/15 text-sky-200";
         case "member":
@@ -229,4 +201,53 @@ function getRoleBadgeClass(role: Role) {
         default:
             return "border-border/40 bg-surface/40 text-text";
     }
+}
+
+type MainHeaderProps = {
+    context: string | null;
+}
+const MainHeader = ({ context }: MainHeaderProps) => {
+
+    const toggleSidebarHidden = useUiStore((state) => state.toggleSidebarHidden)
+    const navigate = useNavigate()
+
+    const handleClick = () => {
+        if (context === "board") {
+            navigate("/workspaces")
+
+        }
+        else {
+            toggleSidebarHidden()
+
+        }
+    }
+
+    const logo = (className?: string) => {
+        return (
+            <div className={`w-12 h-6 flex-row flex items-center justify-center ${className}`}>
+                <span className="text-sm font-light text-gray-300">My</span>
+                <span className="text-[18px] font-bold text-gray-300">K.</span>
+            </div>
+        )
+    }
+
+
+
+    return (
+        <div onClick={handleClick}
+            className="flex flex-row items-center justify-center gap-0">
+            <div className="group w-14
+            transition-all ease-in-out duration-300 flex flex-row items-center justify-center
+            hover:bg-gray-500 px-2 py-1 bg-gray-500/20 rounded-md cursor-pointer ">
+                {logo(
+                    `transition-all duration-300 ease-in-out group-hover:opacity-0 group-hover:w-0 opacity-100`
+                )}
+                <ChevronRightIcon className={`w-0 group-hover:opacity-100 opacity-0 group-hover:w-4 hover:scale-105
+                     text-gray-300 transition-all ${context === "board" ? "rotate-90" : ""}`} />
+            </div>
+
+
+        </div>
+    )
+
 }

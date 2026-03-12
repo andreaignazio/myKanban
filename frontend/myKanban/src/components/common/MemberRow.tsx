@@ -4,7 +4,7 @@ import { UserRoleBadge, type Role } from "../badges/UserRoleBadge"
 import { UserAvatar } from "../badges/UserAvatar"
 
 type MemberRowProps = {
-    user: User
+    user?: User
     member?: UserWorkspace | UserBoard
     showRole?: boolean
     useDummyAvatar?: boolean
@@ -67,7 +67,7 @@ export const MemberRow = ({ user, member, showRole = true, useDummyAvatar = true
 }
 
 type UserDescriptionProps = {
-    user: User;
+    user?: User;
     nameClassName?: string;
     usernameClassName?: string;
     flip?: boolean;
@@ -75,14 +75,14 @@ type UserDescriptionProps = {
 const UserDescription = ({ user, nameClassName, usernameClassName, flip = false }: UserDescriptionProps) => {
     return (
         <div className={` col-span-1 flex flex-col text-nowrap gap-0  overflow-hidden ${flip ? "text-right col-start-1" : "text-left col-start-2 "}`}>
-            <div className={`text-sm font-medium text-neutral-300 ${nameClassName ?? ""}`}>{user.Name}</div>
-            <div className={`text-xs text-neutral-400/80 ${usernameClassName ?? ""}`}>@{user.Username}</div>
+            <div className={`text-sm font-medium text-neutral-300 ${nameClassName ?? ""}`}>{user?.Name}</div>
+            <div className={`text-xs text-neutral-400/80 ${usernameClassName ?? ""}`}>@{user?.Username}</div>
         </div>
     )
 
 }
 type ResolvedAvatarProps = {
-    user: User;
+    user?: User;
     useDummyAvatar?: boolean;
     avatarSize?: number;
 }

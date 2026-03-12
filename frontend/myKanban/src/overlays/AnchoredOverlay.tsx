@@ -30,12 +30,17 @@ export function AnchoredOverlay(ov: AnchoredOverlayProps) {
     })
 
     useEffect(() => {
+        if (ov.frozenAnchorRect) {
+            refs.setReference({ getBoundingClientRect: () => ov.frozenAnchorRect! })
+            update()
+            return
+        }
         const anchorEl = ov.anchorRef?.current
         if (anchorEl) {
             refs.setReference(anchorEl)
             update()
         }
-    }, [ov.anchorRef, refs, update])
+    }, [ov.anchorRef, ov.frozenAnchorRect, refs, update])
 
     const setFloating = (el: HTMLDivElement | null) => {
         if (ov.panelRef) {

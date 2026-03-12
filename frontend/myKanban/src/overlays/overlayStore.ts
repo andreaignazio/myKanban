@@ -13,6 +13,7 @@ export type OverlayState = {
     setDropdownActiveId: (dropdownId: string, activeId: string | null) => void
     backdropOpacity: number
     closeAll: () => void
+    freezeAnchor: (id: string) => void
 
     // getOpenId: () => string | null
 }
@@ -47,6 +48,7 @@ export type OverlayDescriptor = {
     zIndex?: number
     exclusiveGroup?: OverlayExclusiveGroup  // Only one overlay with the same exclusiveGroup can be open at a time
     desiredBackdropOpacity?: number // 0 to 1, only applicable if lockBackdrop is true
+    frozenAnchorRect?: DOMRect
     // Add more properties as needed, e.g., position, content, etc.
 }
 
@@ -113,4 +115,12 @@ export const useOverlayStore = create<OverlayState>((set, get) => ({
         }))
     },
     closeAll: () => set(() => ({ stack: [] })),
+    freezeAnchor: (id: string) => {
+        const descriptor = get().stack.find((d) => d.id === id)
+        if (!descriptor?.anchorRef?.current) return
+        const rect = descriptor.anchorRef.current.getBoundingClientRect()
+        set((state) => ({
+            stack: state.stack.map((d) => d.id === id ? { ...d, frozenAnchorRect: rect } : d)
+        }))
+    },
 }))

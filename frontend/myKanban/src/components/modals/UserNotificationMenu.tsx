@@ -1,6 +1,6 @@
 import { useOverlayStore, type OverlayDescriptor } from "@/overlays/overlayStore";
 import { BaseBtn } from "@/pages/BoardView";
-import { BellIcon, CheckIcon } from "@heroicons/react/24/outline";
+import { CheckIcon } from "@heroicons/react/24/outline";
 import { forwardRef, useEffect, useRef, useState, type MutableRefObject } from "react";
 import { ActionMenuWrapper } from "./ListActionsMenu";
 import { useUserWatchStore } from "@/stores/userWatchStore";

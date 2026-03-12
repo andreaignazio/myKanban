@@ -143,7 +143,7 @@ const WorkspaceList = ({ isSingleMode }: { isSingleMode?: boolean }) => {
 
     const createWorkspace = useWorkspaceStore((state) => state.createWorkspace)
     const handleCreateWorkspace = () => {
-        createWorkspace(`New Workspace ${workspaceIds.length + 1}`)
+        createWorkspace({ Name: `New Workspace ${workspaceIds.length + 1}` })
     }
 
     const getStatus = useWorkspaceStore((state) => state.getWorkspaceStatus)
