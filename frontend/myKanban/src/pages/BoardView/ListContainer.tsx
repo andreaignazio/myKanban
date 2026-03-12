@@ -3,10 +3,15 @@ import { ListRow } from "@/components/ListRow"
 import { useBoardDetailStore } from "@/stores/boardDetailStore"
 import { useParams } from "react-router"
 import { useShallow } from "zustand/shallow"
+import { AnimatePresence, motion } from "framer-motion"
+import { useAsyncKey } from "@/stores/asyncRequestStore"
+import { useAsyncRequest } from "@/hooks/useAsyncRequest"
 
 import { Droppable } from "@hello-pangea/dnd"
+import { useEffect, useState } from "react"
 
 const EMPTY_LIST_IDS: string[] = []
+const SKELETON_CARD_COUNTS = [3, 4, 2]
 
 type ListContainerProps = {
     draggedCardId?: string | null
@@ -20,6 +25,25 @@ export const ListContainer = ({ draggedCardId = null, draggedSourceBoardListId =
     )))
     const uniqueBoardListIds = Array.from(new Set(boardListIds))
 
+    const fetchKey = useAsyncKey("board:read:detail", boardId ?? "")
+    const listAddKey = "list:create"
+    const { isLoading } = useAsyncRequest(fetchKey)
+    const { isLoading: isCreatingList } = useAsyncRequest(listAddKey)
+
+    const showSkeletons = isLoading && uniqueBoardListIds.length === 0
+
+    const [shouldAnimate, setShouldAnimate] = useState(true);
+
+    useEffect(() => {
+        if (!isLoading) {
+            const timeout = setTimeout(() => {
+                setShouldAnimate(false);
+            }, 2000);
+            return () => clearTimeout(timeout);
+        }
+    }, [isLoading]);
+
+
     return (
 
         <Droppable droppableId="lists" type="list" direction="horizontal">
@@ -30,13 +54,48 @@ export const ListContainer = ({ draggedCardId = null, draggedSourceBoardListId =
                     className="relative flex h-full min-h-0 w-full flex-row items-start pt-2 pb-2 mb-1 !pr-8
                             overflow-x-auto overflow-y-hidden scrollbar-hidden "
                 >
-                    {uniqueBoardListIds.map((boardListId: string, index: number) => (
-                        <ListRow key={boardListId}
-                            index={index}
-                            draggedCardId={draggedCardId}
-                            draggedSourceBoardListId={draggedSourceBoardListId}
-                            boardListID={boardListId} boardID={boardId} />
-                    ))}
+                    <AnimatePresence>
+                        {showSkeletons && SKELETON_CARD_COUNTS.map((cardCount, i) => (
+                            <motion.div
+                                key={`list-skeleton-${i}`}
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1, transition: { duration: 0.2, delay: i * 0.07 } }}
+                                exit={{ opacity: 0, transition: { duration: 0.15 } }}
+                                className="shrink-0 w-[280px] mr-4 animate-pulse"
+                                style={{ height: "clamp(160px, 40%, 340px)" }}
+                            >
+                                <div className="w-full h-full bg-[#101204] rounded-xl p-2 pt-[9px] shadow-md shadow-black/60 flex flex-col gap-2">
+                                    <div className="h-5 w-3/4 rounded-md bg-neutral-700/70" />
+                                    {Array.from({ length: cardCount }).map((_, j) => (
+                                        <div key={j} className="rounded-xl bg-neutral-700/40 p-2.5 flex flex-col gap-1.5">
+                                            <div className="h-2.5 w-full rounded-sm bg-neutral-700/70" />
+                                            <div className="h-2.5 w-3/4 rounded-sm bg-neutral-700/70" />
+                                        </div>
+                                    ))}
+                                </div>
+                            </motion.div>
+                        ))}
+                    </AnimatePresence>
+                    <AnimatePresence mode="popLayout">
+                        {uniqueBoardListIds.map((boardListId: string, index: number) => (
+                            <motion.div
+                                key={boardListId}
+                                initial={shouldAnimate ? { opacity: 0, y: +12, x: 0 } : undefined}
+                                animate={shouldAnimate ? {
+                                    opacity: 1, x: 0, y: 0,
+                                    transition: { duration: 1.5, ease: "easeInOut", delay: Math.min(index * 0.1, 0.5) }
+                                } : { opacity: 1, x: 0, y: 0, transition: { duration: 0, delay: 0, } }}
+                                exit={shouldAnimate ? { opacity: 0, scale: 0.95, transition: { duration: 1.5 } } : undefined}
+                                className="shrink-0"
+                            >
+                                <ListRow
+                                    index={index}
+                                    draggedCardId={draggedCardId}
+                                    draggedSourceBoardListId={draggedSourceBoardListId}
+                                    boardListID={boardListId} boardID={boardId} />
+                            </motion.div>
+                        ))}
+                    </AnimatePresence>
                     {provided.placeholder}
                     <ListAdd key="listAdd" boardID={boardId} />
                 </div>

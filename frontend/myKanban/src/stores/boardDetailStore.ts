@@ -15,7 +15,7 @@ import { useChecklistStore } from "./checklistStore";
 import { useCardCommentsStore } from "./cardCommentsStore";
 import type { ShareOffer } from "./shareOfferTypes";
 import { useUiStore } from "./uiStore";
-import { useAsyncRequestStore } from "./asyncRequestStore";
+import { useAsyncKey, useAsyncRequestStore } from "./asyncRequestStore";
 import type { AxiosResponse } from "axios";
 
 
@@ -288,15 +288,33 @@ export const useBoardDetailStore = create<BoardDetailStore>((set, get) => ({
 
 
     getBoardDetailPatch: async (boardID: string) => {
-        try {
-            const response = await api.get(`/boards/${boardID}`)
-            const data: BoardDetailPatch = response.data
-            // console.log("Fetched board detail patch:", data)
-            get().applyBoardDetailPatch(data)
 
-        } catch (error) {
-            // console.error("Error fetching board detail:", error)
-            throw error
+        const key = useAsyncKey("board:read:detail", boardID)
+
+        await useAsyncRequestStore.getState().execute(key,
+            async () => { await new Promise((r) => setTimeout(r, 1000)); return api.get(`/boards/${boardID}`) },
+            {
+                successResetDelayMs: 2000,
+                onSuccess: (response: AxiosResponse) => {
+                    const data: BoardDetailPatch = response.data
+                    // console.log("Fetched board detail patch:", data)
+                    get().applyBoardDetailPatch(data)
+                },
+
+            }
+        )
+
+        const execFetch = async () => {
+            try {
+                const response = await api.get(`/boards/${boardID}`)
+                const data: BoardDetailPatch = response.data
+                // console.log("Fetched board detail patch:", data)
+                get().applyBoardDetailPatch(data)
+
+            } catch (error) {
+                // console.error("Error fetching board detail:", error)
+                throw error
+            }
         }
     },
     async applyEvent(payload) {
