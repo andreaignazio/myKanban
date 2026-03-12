@@ -198,8 +198,8 @@ func NewRouter(db *gorm.DB,
 			boards.DELETE("/:boardID/members/:memberID", membersHandler.DeleteBoardMember)
 
 			//LISTS IN BOARDS
-			boards.POST("/:boardID/lists/", linksHandler.CreateListInBoard)
-			boards.GET("/:boardID/lists/", linksHandler.GetListsByBoardId)
+			boards.POST("/:boardID/lists", linksHandler.CreateListInBoard)
+			boards.GET("/:boardID/lists", linksHandler.GetListsByBoardId)
 			boards.GET("/:boardID/boardlists/:boardListID/mirrors", linksHandler.GetBoardListMirrors)
 			boards.GET("/:boardID/lists/deleted", linksHandler.GetDeletedBoardLists)
 			boards.GET("/:boardID/listcards/deleted", linksHandler.GetDeletedListCards)
