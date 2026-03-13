@@ -49,32 +49,28 @@ export const ListAdd = ({ boardID, setShouldAnimate }: ListAddProps) => {
     const handleAddList = async (title: string) => {
         if (!boardID) return
         // setShouldAnimate && setShouldAnimate(true)
-        setTimeout(async () => {
-            const tempID = `temp-${Date.now()}`
-            // setTempID(tempID)
-            addListOptimistic(tempID, boardID, title)
-            const key = getRequestKey(tempID)
-            //setRequestKey(key)
+        const tempID = `temp-${Date.now()}`
+        // setTempID(tempID)
+        addListOptimistic(tempID, boardID, title)
+        const key = getRequestKey(tempID)
+        //setRequestKey(key)
 
-            try {
-                await createList({ Title: title, AfterID: null, InsertAt: "end" }, boardID, key).then((res) => {
-                    if (res) {
-                        reconcileAddList(res, tempID, boardID)
-                    } else {
-                        rollbackAddList(tempID, boardID)
-                    }
-                })
-            } catch (error) {
-                console.error("Error creating list:", error)
-                rollbackAddList(tempID, boardID)
-            } finally {
-                //setTempID(null)
-                //setRequestKey(null)
-                // setShouldAnimate && setShouldAnimate(false)
-            }
-
-
-        }, 100)
+        try {
+            await createList({ Title: title, AfterID: null, InsertAt: "end" }, boardID, key).then((res) => {
+                if (res) {
+                    reconcileAddList(res, tempID, boardID)
+                } else {
+                    rollbackAddList(tempID, boardID)
+                }
+            })
+        } catch (error) {
+            console.error("Error creating list:", error)
+            rollbackAddList(tempID, boardID)
+        } finally {
+            //setTempID(null)
+            //setRequestKey(null)
+            // setShouldAnimate && setShouldAnimate(false)
+        }
 
 
     }

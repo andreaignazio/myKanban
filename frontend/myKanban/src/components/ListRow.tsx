@@ -24,6 +24,7 @@ import { useUserWatchStore } from "@/stores/userWatchStore"
 import { useListTheme } from "@/hooks/useListTheme"
 import { useAsyncKey } from "@/stores/asyncRequestStore"
 import { useAsyncRequest } from "@/hooks/useAsyncRequest"
+import { AnimatePresence, motion } from "motion/react"
 
 type ListRowProps = {
     boardID: string
@@ -55,6 +56,18 @@ export function ListRow({ boardID: boardID, boardListID: boardListID, index: ind
     const key = useAsyncKey("list:create", boardListID)
     let { isLoading } = useAsyncRequest(key)
     //isLoading = true
+    const [showPlaceholder, setShowPlaceholder] = useState(true)
+    useEffect(() => {
+        if (!isLoading) {
+            //   setShowPlaceholder(false)
+            const timeout = setTimeout(() => {
+                setShowPlaceholder(false)
+            }, 500)
+            return () => clearTimeout(timeout)
+        } else {
+            setShowPlaceholder(true)
+        }
+    }, [isLoading])
 
 
     if (!boardList || !listID) return null
@@ -66,96 +79,115 @@ export function ListRow({ boardID: boardID, boardListID: boardListID, index: ind
 
 
     //const isCardEditing = true
+    const duration = .5
     return (
+        <AnimatePresence
+            initial={true}
+            mode="popLayout">
+            <motion.div
 
-        <Draggable draggableId={boardListID} index={index}>
-            {(provided) => (
-                <div
-                    {...provided.draggableProps}
-                    ref={provided.innerRef}
-                    className={`relative shrink-0 h-full min-h-0 select-none w-[280px] mr-4`}
-                    style={{
-                        ...provided.draggableProps.style,
-                        color: listTextColor,
-                    }}>
-                    <div className={`absolute flex flex-col items-center justify-center inset-0 z-10  rounded-xl 
-                    pointer-events-none   ${isLoading ? "opacity-100" : "opacity-0"} transition-opacity duration-300
-                       `} >
-                        <div className=" absolute z-10 inset-0 w-full h-full bg-black rounded-xl opacity-100" />
-                        <div className={` absolute z-20 inset-0 w-full h-full animate-pulse
-                            
-                              bg-neutral-200/50 rounded-xl transition-opacity duration-300`} >
+                transition={isLoading ? { duration: duration, ease: "easeOut" } : { duration: 0.0 }}
+                initial={isLoading ? { opacity: 0, scale: 1, y: 20 } : { opacity: 1, scale: 1 }}
+                animate={isLoading ? { opacity: 1, scale: 1, y: 0, transition: { duration: duration, ease: "easeOut" } } : { opacity: 1, scale: 1, y: 0, transition: { duration: 0.0 } }}
+                exit={isLoading ? { opacity: 0, scale: 1, y: 20, transition: { duration: duration, ease: "easeOut" } } : { opacity: 1, scale: 1, y: 0, transition: { duration: 0.0 } }}
+            >
 
-                        </div>
+                <Draggable draggableId={boardListID} index={index}>
 
 
-                    </div>
-                    <div className={`relative group/readonly ${isReadonly
-                        ? `border-2 border-fuchsia-400/50 pt-1 hover:pt-6 ${isCardEditing ? "pt-6" : ""}  bg-fuchsia-500/50`
-                        : " "}
-                     transition-all ease-in-out duration-300
-                     rounded-xl  `}>
-
-                        {isReadonly && (
-                            <div className={`pointer-events-none absolute top-1 left-2 text-xs ${isCardEditing ? "opacity-40" : "opacity-0"} transition-opacity duration-200 group-hover/readonly:opacity-40`}>
-                                READONLY
-                            </div>
-                        )}
-
+                    {(provided) => (
                         <div
-                            {...provided.dragHandleProps}
-                            className={` relative w-full bg-[#101204] max-h-full min-h-0 flex flex-col overflow-hidden
-            rounded-xl p-2 pt-[9px] shadow-md shadow-black/60 ${!isRootBoardList ? "ring-4 ring-neutral-300/55" : ""}`}
+                            {...provided.draggableProps}
+                            ref={provided.innerRef}
+                            className={`relative shrink-0 h-full min-h-0 select-none w-[280px] mr-4`}
                             style={{
-                                ...(listColor ? { backgroundColor: listColor } : {}),
+                                ...provided.draggableProps.style,
                                 color: listTextColor,
                             }}>
 
-                            <div className="relative group/list-header">
-                                <ListHeader
-                                    boardListID={boardListID}
-                                    listID={listID}
-                                    list={list}
-                                    boardID={boardID}
-                                    listTextColor={listTextColor}
-                                    hasListTheme={hasListTheme}
-                                    showRootBadge={isRootBoardList}
-                                    isReadonly={isReadonly}
-                                />
-                            </div>
+                            {false && (<motion.div
+                                initial={{ opacity: 0, scale: 1.02 }}
+                                animate={{ opacity: 1, scale: 1, transition: { duration: 0.3, ease: "easeInOut" } }}
+                                exit={{ opacity: 0, scale: 1.02, transition: { duration: 0.3, ease: "easeInOut" } }}
+                                className={`absolute flex flex-col items-center justify-center inset-0 z-10  rounded-xl 
+                    pointer-events-none 
+                     bg-black  ring-2 ring-white/50 ring-inset
+                       `} >
 
-                            <Droppable droppableId={boardListID} type="card" isDropDisabled={isReadonly || alreadyContainsDraggedCard}>
-                                {(provided) => (
-                                    <div
-                                        ref={provided.innerRef}
-                                        {...provided.droppableProps}
-                                        className="flex flex-1 min-h-0 flex-col pt-2 
-                        overflow-y-auto scrollbar-hidden">
+                            </motion.div>)}
 
-                                        {listCardIds && (
-                                            listCardIds.map((listCardID, cardIndex) => {
-                                                return (
-                                                    <CardRow
-                                                        key={listCardID}
-                                                        index={cardIndex}
-                                                        isDragDisabled={isReadonly}
-                                                        editMenuPrefix={cardEditMenuIdPrefix}
-                                                        boardID={boardID} listId={listID} listCardID={listCardID} />
 
-                                                )
-                                            }))}
-                                        {provided.placeholder}
+                            <div className={`relative group/readonly ${isReadonly
+                                ? `border-2 border-fuchsia-400/50 pt-1 hover:pt-6 ${isCardEditing ? "pt-6" : ""}  bg-fuchsia-500/50`
+                                : " "}
+                     transition-all ease-in-out duration-300
+                     rounded-xl  `}>
+
+                                {isReadonly && (
+                                    <div className={`pointer-events-none absolute top-1 left-2 text-xs ${isCardEditing ? "opacity-40" : "opacity-0"} transition-opacity duration-200 group-hover/readonly:opacity-40`}>
+                                        READONLY
                                     </div>
                                 )}
-                            </Droppable>
-                            <div className="shrink-0 pt-1">
-                                <ListRowFooter boardID={boardID} listID={listID} isReadonly={isReadonly} />
+
+                                <div
+                                    {...provided.dragHandleProps}
+                                    className={` relative w-full bg-[#101204] max-h-full min-h-0 flex flex-col overflow-hidden
+            rounded-xl p-2 pt-[9px] shadow-md shadow-black/60 ${!isRootBoardList ? "ring-4 ring-neutral-300/55" : ""}`}
+                                    style={{
+                                        ...(listColor ? { backgroundColor: listColor } : {}),
+                                        color: listTextColor,
+                                    }}>
+
+                                    <div className="relative group/list-header">
+                                        <ListHeader
+                                            boardListID={boardListID}
+                                            listID={listID}
+                                            list={list}
+                                            boardID={boardID}
+                                            listTextColor={listTextColor}
+                                            hasListTheme={hasListTheme}
+                                            showRootBadge={isRootBoardList}
+                                            isReadonly={isReadonly}
+                                        />
+                                    </div>
+
+                                    <Droppable droppableId={boardListID} type="card" isDropDisabled={isReadonly || alreadyContainsDraggedCard}>
+                                        {(provided) => (
+                                            <div
+                                                ref={provided.innerRef}
+                                                {...provided.droppableProps}
+                                                className="flex flex-1 min-h-0 flex-col pt-2 
+                        overflow-y-auto scrollbar-hidden">
+
+                                                {listCardIds && (
+                                                    listCardIds.map((listCardID, cardIndex) => {
+                                                        return (
+                                                            <CardRow
+                                                                key={listCardID}
+                                                                index={cardIndex}
+                                                                isDragDisabled={isReadonly}
+                                                                editMenuPrefix={cardEditMenuIdPrefix}
+                                                                boardID={boardID} listId={listID} listCardID={listCardID} />
+
+                                                        )
+                                                    }))}
+                                                {provided.placeholder}
+                                            </div>
+                                        )}
+                                    </Droppable>
+                                    <div className="shrink-0 pt-1">
+                                        <ListRowFooter boardID={boardID} listID={listID} isReadonly={isReadonly} />
+                                    </div>
+                                </div>
                             </div>
+
                         </div>
-                    </div>
-                </div>
-            )}
-        </Draggable>
+                    )}
+
+                </Draggable>
+            </motion.div>
+        </AnimatePresence>
+
 
     )
 }

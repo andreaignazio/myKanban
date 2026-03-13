@@ -54,7 +54,7 @@ export const ListContainer = ({ draggedCardId = null, draggedSourceBoardListId =
                     className="relative flex h-full min-h-0 w-full flex-row items-start pt-2 pb-2 mb-1 !pr-8
                             overflow-x-auto overflow-y-hidden scrollbar-hidden "
                 >
-                    <AnimatePresence>
+                    <AnimatePresence mode="popLayout">
                         {showSkeletons && SKELETON_CARD_COUNTS.map((cardCount, i) => (
                             <motion.div
                                 key={`list-skeleton-${i}`}
@@ -75,16 +75,14 @@ export const ListContainer = ({ draggedCardId = null, draggedSourceBoardListId =
                                 </div>
                             </motion.div>
                         ))}
-                    </AnimatePresence>
-                    <AnimatePresence mode="popLayout">
                         {uniqueBoardListIds.map((boardListId: string, index: number) => (
                             <motion.div
                                 key={boardListId}
-                                initial={shouldAnimate ? { opacity: 0, y: +12, x: 0 } : undefined}
+                                initial={shouldAnimate ? { opacity: 0, y: +12, } : undefined}
                                 animate={shouldAnimate ? {
-                                    opacity: 1, x: 0, y: 0,
+                                    opacity: 1, y: 0,
                                     transition: { duration: 1.5, ease: "easeInOut", delay: Math.min(index * 0.1, 0.5) }
-                                } : { opacity: 1, x: 0, y: 0, transition: { duration: 0, delay: 0, } }}
+                                } : { opacity: 1, y: 0, transition: { duration: 0, delay: 0, } }}
                                 exit={shouldAnimate ? { opacity: 0, scale: 0.95, transition: { duration: 1.5 } } : undefined}
                                 className="shrink-0"
                             >
@@ -95,9 +93,17 @@ export const ListContainer = ({ draggedCardId = null, draggedSourceBoardListId =
                                     boardListID={boardListId} boardID={boardId} />
                             </motion.div>
                         ))}
+                        {provided.placeholder}
+                        <motion.div
+                            key="list-add"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1, transition: { duration: 0.2 } }}
+                            exit={{ opacity: 0, transition: { duration: 0.15 } }}
+                            className="shrink-0"
+                        >
+                            <ListAdd boardID={boardId} setShouldAnimate={setShouldAnimate} />
+                        </motion.div>
                     </AnimatePresence>
-                    {provided.placeholder}
-                    <ListAdd key="listAdd" boardID={boardId} setShouldAnimate={setShouldAnimate} />
                 </div>
             )}
         </Droppable>
