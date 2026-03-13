@@ -19,6 +19,7 @@ import { useBuildPublicURL } from "@/hooks/useBuildPublicURL";
 import { useBoardWebSocket } from "@/hooks/ws/useBoardWS";
 import { useUserActivityOverlay } from "@/hooks/useUserActivityOverlay";
 import { useUserWatchStore } from "@/stores/userWatchStore";
+import { useBootstrapUserData } from "@/hooks/useBootstrapUserData";
 import { AsyncRequestToasterController } from "@/components/asyncRequestHandlers/asyncRequestToaster";
 import { useAuth } from "@clerk/react";
 
@@ -78,6 +79,8 @@ export default function AppLayout() {
         fetchUserWatches()
         hydrateWorkspaces()
     }, [userId, fetchUserWatches, hydrateWorkspaces])
+
+    useBootstrapUserData(userId)
 
     const shouldHideSidebar = isBoardView || !isSignedIn
     useEffect(() => {

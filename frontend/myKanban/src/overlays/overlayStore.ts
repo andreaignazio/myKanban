@@ -25,6 +25,7 @@ export type OverlayOptions = {
     passthrough?: boolean
     closeOnAncnhorScroll?: boolean
     closeOnSelection?: boolean
+    enableOwnBackdrop?: boolean  // renders a semi-transparent backdrop between this overlay and the one below it
 
 }
 

@@ -100,7 +100,7 @@ func (s *MembershipService) AddBoardMember(ctx context.Context, userID, boardID 
 	return userBoard, nil
 }
 
-func (s *MembershipService) ChangeBoardMemberRole(ctx context.Context, userID, boardID, targetMemberID uuid.UUID,
+func (s *MembershipService) ChangeBoardMemberRole(ctx context.Context, userID, boardID, workspaceID, targetMemberID, correlationID uuid.UUID,
 	req ChangeBoardMemberRoleRequest) (*models.UserBoard, error) {
 	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Admin, s.IncludeDeleted); err != nil {
 		return nil, err
@@ -118,6 +118,41 @@ func (s *MembershipService) ChangeBoardMemberRole(ctx context.Context, userID, b
 		Role:    req.Role}
 	if err := s.MembershipRepo.UpdateUserBoardRole(ctx, userBoard); err != nil {
 		return nil, domainerr.MapRepoErr(err, false)
+	}
+
+	statePayload := dto.BoardDetailResponse{
+		Boards: map[uuid.UUID]dto.BoardResponse{
+			boardID: {
+				ID:          boardID,
+				WorkspaceID: workspaceID,
+			},
+		},
+		UserBoardRelations: []dto.UserBoardResponse{
+			dto.UserBoardToResponse(userBoard),
+		},
+	}
+
+	envelope := EventRegistry.EventPayloadEnvelope{StatePayload: &statePayload}
+	targets := []EventRegistry.TargetRef{
+		{EntityType: "board", EntityID: boardID},
+		{EntityType: "user", EntityID: targetMemberID},
+	}
+
+	domainEvent := EventRegistry.DomainEvent{
+		Type:          EventRegistry.EventBoardMemberRoleChanged,
+		ActorUserID:   &userID,
+		BoardID:       &boardID,
+		WorkspaceID:   &workspaceID,
+		Payload:       envelope,
+		CorrelationID: &correlationID,
+		Targets:       targets,
+		OccurredAt:    time.Now(),
+	}
+
+	if s.EventRegistry != nil {
+		if err := s.EventRegistry.Emit(ctx, s.db, domainEvent); err != nil {
+			return nil, err
+		}
 	}
 	return userBoard, nil
 }

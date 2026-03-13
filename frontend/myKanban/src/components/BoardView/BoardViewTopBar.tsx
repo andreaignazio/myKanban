@@ -13,6 +13,8 @@ import { BoardOfferManager } from "@/components/OffersLists/BoardOfferManager";
 import { useBoardActionRegistry } from "@/actionRegistry/boardActionRegistry";
 import { useBoardMembersStore } from "@/stores/boardMembersStore";
 import { useIsOverlayActive } from "@/hooks/useIsOverlayActive";
+import { UserRoleBadge } from "../badges/UserRoleBadge";
+import { useCurrentBoardRole } from "@/hooks/useCurrentBoardRole";
 
 
 
@@ -28,6 +30,8 @@ export const BoardViewTopBar = ({ board, backgroundType }: BoardViewTopBarProps)
     const boardMembersCount = useBoardMembersStore((state) => (board?.ID ? (state.membersIdsByBoardId[board.ID]?.length ?? 0) : 0))
     const boardActions = useBoardActionRegistry()
     const isStarred = useBoardsStore((state) => (board?.ID ? !!state.userBoardsById[board.ID]?.Props?.Starred : false))
+
+    const { role } = useCurrentBoardRole(board?.ID ?? "")
 
     function handleOpenBoardOffers() {
         const id = "board-offers"
@@ -57,7 +61,8 @@ export const BoardViewTopBar = ({ board, backgroundType }: BoardViewTopBarProps)
         backdrop-blur-md
          h-[60px] w-full items-center justify-between gap-2 px-4 ">
             <div className="flex items-center gap-2">
-                <span className="text-mb font-manrope font-extrabold tracking-normal text-inherit">{board?.Name}</span>
+                <span className="text-mb font-manrope font-extrabold tracking-normal text-inherit">
+                    {board?.Name}</span>
                 <BaseBtn
                     className="!text-inherit"
                 >
@@ -66,6 +71,9 @@ export const BoardViewTopBar = ({ board, backgroundType }: BoardViewTopBarProps)
                         <ChevronDownIcon className="w-3 h-3 !text-inherit" />
                     </>
                 </BaseBtn>
+                <UserRoleBadge className="opacity-90 !shadow-lg shadow-smoke-900/50 
+                    "
+                    solidBg={true} shadow={true} role={role} />
             </div>
             <div>
                 <BoardPresenceBadge boardId={board?.ID ?? ""} />

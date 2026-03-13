@@ -19,6 +19,7 @@ import { useUserMemberCardsStore } from "@/stores/userMemberCardsStore"
 import { useShareOffersStore } from "@/stores/shareOffersStore"
 import { useBoardsStore } from "@/stores/boardsStore"
 import { useBoardMembersStore } from "@/stores/boardMembersStore"
+import { useUserStore } from "@/stores/userStore"
 import { useUiStore } from "@/stores/uiStore"
 import { getWebSocketOrigin } from "@/config/runtime"
 
@@ -89,6 +90,7 @@ export function useBoardWebSocket(workspaceID: string, boardID: string | null) {
     const applyShareOfferEvent = useShareOffersStore((state) => state.applyShareOfferEvent)
     const removeUserBoardRelation = useBoardsStore((state) => state.removeUserBoardRelation)
     const removeBoardMember = useBoardMembersStore((state) => state.removeBoardMember)
+    const upsertBoardMember = useBoardMembersStore((state) => state.upsertBoardMember)
 
     const dispatchEvent = (evt: BoardEvent | WorkspaceEvent | UserEvent) => {
         //console.log("[ws] dispatch event", evt)
@@ -128,6 +130,20 @@ export function useBoardWebSocket(workspaceID: string, boardID: string | null) {
             return
         }
 
+        if (evt.Type === "board.user.member.role.changed") {
+            const payload = (evt as UserEvent).Payload?.BoardMemberRoleChangedPayload
+            if (payload?.UserBoard) {
+                const boardID = payload.Board?.ID ?? payload.UserBoard.BoardID
+                upsertBoardMember(boardID, payload.UserBoard)
+                useBoardsStore.getState().mergeUserBoardRelation(payload.UserBoard)
+            }
+            if (payload?.User) {
+                useUserStore.getState().mergeUsers([payload.User])
+            }
+            console.debug("[ws] dispatch board user member role changed", evt)
+            return
+        }
+
         if (evt.Type === "board.user.member.removed") {
             const payload = (evt as UserEvent).Payload?.BoardMembershipPayload
             const boardID = payload?.Board?.ID ?? payload?.UserBoard?.BoardID
@@ -149,6 +165,24 @@ export function useBoardWebSocket(workspaceID: string, boardID: string | null) {
             }
 
             console.debug("[ws] dispatch board user membership removed", evt)
+            return
+        }
+
+        if (evt.Type === "board.member.role.changed") {
+            const statePayload = (evt as BoardEvent).Payload?.StatePayload as { UserBoardRelations?: Array<{ UserID: string; BoardID: string; Role: string }>, Users?: Record<string, any> } | undefined
+            const updatedRelation = statePayload?.UserBoardRelations?.[0]
+            if (updatedRelation?.BoardID && updatedRelation?.UserID) {
+                upsertBoardMember(updatedRelation.BoardID, updatedRelation as any)
+                const currentUserID = useAuthStore.getState().userID
+                if (updatedRelation.UserID === currentUserID) {
+                    useBoardsStore.getState().mergeUserBoardRelation(updatedRelation as any)
+                }
+            }
+            const users = statePayload?.Users
+            if (users) {
+                useUserStore.getState().mergeUsers(Object.values(users))
+            }
+            console.debug("[ws] dispatch board member role changed", evt)
             return
         }
 

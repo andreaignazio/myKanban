@@ -67,7 +67,7 @@ export const UserNotificationMenuBtn = forwardRef<HTMLButtonElement, UserNotific
             panelRef: listActionsMenuRef,
             type: "modal",
             renderType: "anchored",
-            exclusiveGroup: "share-action-modal",
+            exclusiveGroup: "user-topbar-modal",
             opts: {
                 closeOnMouseLeave: false,
                 closeOnClickOutside: true,

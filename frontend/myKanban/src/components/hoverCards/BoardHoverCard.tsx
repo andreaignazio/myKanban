@@ -48,11 +48,11 @@ export const BoardHoverCard = forwardRef<HTMLDivElement, BoardHoverCardProps>(({
     const subscriptionsByWorkspaceId = useWorkspaceStore(state => state.wSubscriptionsById)
     const workspace = workspaceById[workspaceId ?? ""]
     const workspacePlan = workspaceId ? subscriptionsByWorkspaceId[workspaceId]?.Plan ?? "free" : undefined
-    const workpaceDateCreated = useDateTimeParser().stringifyDatePretty(new Date(workspace?.CreatedAt) ?? "")?.date
+    const workpaceDateCreated = useDateTimeParser().stringifyDatePretty(workspace?.CreatedAt ? new Date(workspace.CreatedAt) : undefined)?.date
     const { avatarProps } = useWorkspaceDerivedProps("", workspace)
     const iconId = avatarProps.iconId
 
-    const boardCreatedAt = useDateTimeParser().stringifyDatePretty(new Date(board?.CreatedAt) ?? "")?.date
+    const boardCreatedAt = useDateTimeParser().stringifyDatePretty(board?.CreatedAt ? new Date(board.CreatedAt) : undefined)?.date
 
 
     const boardDescription = useBoardDescription({ boardID })

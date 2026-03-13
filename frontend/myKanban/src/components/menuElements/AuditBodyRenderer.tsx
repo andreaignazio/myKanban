@@ -97,7 +97,7 @@ export const AuditBodyRenderer = ({ Body, ActorAsLink = true, hideLeadingActorCh
             panelRef: userHoverRef,
             type: "popover",
             renderType: "virtual",
-            exclusiveGroup: "user-card-hover",
+            exclusiveGroup: "user-hover-card",
             opts: {
                 closeOnMouseLeave: false,
                 closeOnClickOutside: true,

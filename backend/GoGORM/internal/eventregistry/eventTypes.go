@@ -44,6 +44,7 @@ const (
 	EventWorkspaceMemberRoleChanged DomainEventType = "workspace.member.role.changed"
 	EventWorkspaceMemberRemoved     DomainEventType = "workspace.member.removed"
 	EventBoardMemberRemoved         DomainEventType = "board.member.removed"
+	EventBoardMemberRoleChanged     DomainEventType = "board.member.role.changed"
 
 	EventCardsUserMemberAdded               DomainEventType = "cards.user.member.added"
 	EventCardsUserMemberRemoved             DomainEventType = "cards.user.member.removed"
@@ -126,6 +127,7 @@ func (e DomainEventType) IsValidEventType() bool {
 		EventWorkspaceMemberRoleChanged,
 		EventWorkspaceMemberRemoved,
 		EventBoardMemberRemoved,
+		EventBoardMemberRoleChanged,
 		EventCardsUserMemberAdded,
 		EventCardsUserMemberRemoved,
 		EventWorkspaceShareOfferCreated,
@@ -213,6 +215,7 @@ func (e DomainEventType) IsBoardCoreToastEvent() bool {
 		EventBoardShareRequestRevoked,
 		EventBoardAccessClaimed,
 		EventBoardMemberRemoved,
+		EventBoardMemberRoleChanged,
 
 		EventBoardListCreated,
 		EventBoardListDetatched,
@@ -262,6 +265,7 @@ func (e DomainEventType) IsWorkspaceCoreToastEvent() bool {
 		EventBoardShareRequestRevoked,
 		EventBoardAccessClaimed,
 		EventBoardMemberRemoved,
+		EventBoardMemberRoleChanged,
 		EventListPatched:
 		return true
 	default:
@@ -284,6 +288,7 @@ func (e DomainEventType) IsUserFanOutEvent() bool {
 		EventWorkspaceShareOfferRequestRejected,
 		EventWorkspaceShareOfferRequestRevoked,
 		EventBoardMemberRemoved,
+		EventBoardMemberRoleChanged,
 		EventBoardShareInviteCreated,
 		EventBoardShareInviteAccepted,
 		EventBoardShareInviteRejected,

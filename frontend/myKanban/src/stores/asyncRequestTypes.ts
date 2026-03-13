@@ -92,6 +92,8 @@ export const ASYNC_REQUEST_BASE_KEYS = [
     "inbox:card:detatch",
     "workspace:board:create",
     "board:read:detail",
+    "shareoffer:respond",
+    "shareoffer:revoke",
 ] as const;
 
 export type AsyncRequestBaseKey = typeof ASYNC_REQUEST_BASE_KEYS[number];

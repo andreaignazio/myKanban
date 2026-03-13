@@ -465,6 +465,7 @@ export type UserEventPayload = {
     BoardShareRequestRevokedPayload?: BoardShareRequestRevokedPayload;
     WorkspaceMembershipPayload?: WorkspaceMembershipPayload;
     BoardMembershipPayload?: BoardMembershipPayload;
+    BoardMemberRoleChangedPayload?: BoardMemberRoleChangedPayload;
 }
 
 export type WorkspaceMembershipPayload = {
@@ -477,6 +478,13 @@ export type BoardMembershipPayload = {
     UserID: string;
     Board: Board;
     UserBoard: UserBoard;
+}
+
+export type BoardMemberRoleChangedPayload = {
+    UserID: string;
+    Board: Board;
+    UserBoard: UserBoard;
+    User?: User;
 }
 
 export type CardsUserMemberAddedPayload = UserMemberCardsResponse;

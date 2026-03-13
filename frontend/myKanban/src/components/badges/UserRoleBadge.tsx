@@ -8,22 +8,47 @@ type UserRoleBadgeProps = {
     onClick?: () => void;
     interactive?: boolean;
     lightBg?: boolean;
+    solidBg?: boolean;
+    shadow?: boolean;
 }
 
-export function UserRoleBadge({ role, className, children, isLocked = false, onClick, interactive = false, lightBg = false }: UserRoleBadgeProps) {
-    const roleBadgeClass = getRoleBadgeClass(role, lightBg);
+export function UserRoleBadge({ role, className, children, isLocked = false, onClick, interactive = false, lightBg = false, solidBg = false, shadow = false }: UserRoleBadgeProps) {
+    const roleBadgeClass = getRoleBadgeClass(role, lightBg, solidBg, shadow);
+
+    const roleLabel = role ? role.charAt(0).toUpperCase() + role.slice(1) : "No access";
 
     return (
+
         <span
             onClick={onClick}
-            className={`${isLocked ? "opacity-50 cursor-not-allowed" : interactive ? "hover:filter hover:brightness-200" : ""} w-fit flex items-center justify-center rounded-full border px-2 py-1 pb-1.5 max-h-6 text-xs font-medium ${roleBadgeClass} ${className || ""}`}>
-            {role}
+            className={`${isLocked ? "opacity-50 cursor-not-allowed" : interactive ? "hover:filter hover:brightness-200" : ""}
+             w-fit flex items-center justify-center rounded-full border 
+             px-4 py-2 max-h-12 text-xs font-medium
+             border-none
+             ${roleBadgeClass} ${className || ""}`}>
+            {roleLabel}
             {children}
         </span>
+
     )
 }
 
-function getRoleBadgeClass(role: Role, lightBg: boolean) {
+function getRoleBadgeClass(role: Role, lightBg: boolean, solidBg: boolean, shadow: boolean) {
+    const shadowClass = shadow ? " shadow-sm" : "";
+    if (solidBg) {
+        switch (role) {
+            case "owner":
+                return `bg-gradient-to-br from-amber-700 to-amber-500 text-amber-100 border-amber-600/40${shadowClass}`;
+            case "admin":
+                return `bg-gradient-to-br from-sky-700 to-sky-500 text-sky-100 border-sky-600/40${shadowClass}`;
+            case "member":
+                return `bg-gradient-to-br from-teal-700 to-teal-500 text-teal-100 border-teal-600/40${shadowClass}`;
+            case "viewer":
+                return `bg-gradient-to-br from-slate-600 to-slate-500 text-slate-100 border-slate-500/40${shadowClass}`;
+            default:
+                return `bg-gradient-to-br from-slate-700 to-slate-600 text-slate-100 border-slate-600/40${shadowClass}`;
+        }
+    }
     switch (role) {
         case "owner":
             return lightBg

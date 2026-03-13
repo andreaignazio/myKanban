@@ -497,7 +497,7 @@ export const ShareActionModal = forwardRef<HTMLDivElement, ShareActionModalProps
 
 
 
-                {createPortal(<div className="theme-dark bg-[#0a090aea] bg-opacity-60 fixed h-screen w-screen top-0 left-0 z-40" onClick={handleClose}></div>, document.body)}
+                {false && createPortal(<div className="theme-dark bg-[#0a090aea] bg-opacity-60 fixed h-screen w-screen top-0 left-0 z-40" onClick={handleClose}></div>, document.body)}
 
 
 

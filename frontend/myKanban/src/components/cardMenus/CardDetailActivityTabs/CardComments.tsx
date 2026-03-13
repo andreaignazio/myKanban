@@ -53,7 +53,7 @@ export const CardComments = () => {
             render: () => <UserHoverCard userID={userID} />,
             panelRef: mentionCardPanelRef,
             anchorRef,
-            exclusiveGroup: "mention-user-card",
+            exclusiveGroup: "user-hover-card",
             opts: {
                 closeOnClickOutside: true,
                 closeOnEscape: true,

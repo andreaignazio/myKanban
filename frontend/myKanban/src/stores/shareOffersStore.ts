@@ -13,7 +13,7 @@ import { useSortByDate } from "@/hooks/useSortByDate";
 import { useBoardsStore } from "./boardsStore";
 import { useBoardMembersStore } from "./boardMembersStore";
 import { useAuthStore } from "./auth";
-import { useAsyncRequestStore } from "./asyncRequestStore";
+import { useAsyncRequestStore, useAsyncKey } from "./asyncRequestStore";
 import type { AxiosResponse } from "axios";
 export type { ShareOffer } from "./shareOfferTypes";
 
@@ -58,12 +58,20 @@ type ShareOffersState = {
     revokeWorkspaceShareOffer: (offerID: string, message: string) => Promise<void>;
     createBoardAccessRequest: (boardID: string, message: string, role: "owner" | "admin" | "member" | "viewer") => Promise<void>;
     createWorkspaceAccessRequest: (workspaceID: string, message: string, role: "member" | "viewer") => Promise<void>;
+    getPendingIncomingUserInvitesCount: () => number;
+    getPendingIncomingCountUserInvitesByEntity: () => ShareOfferCounts;
+    getMostRecentPendingIncomingUserInvite: () => ShareOffer | null;
 }
 
 export type CreateShareOfferPayload = {
     ToUserIDs: string[];
     OfferedRole: "owner" | "admin" | "member" | "viewer";
     Message: string;
+}
+
+export type ShareOfferCounts = {
+    UserBoardInvites: number;
+    UserWorkspaceInvites: number;
 }
 
 export const useShareOffersStore = create<ShareOffersState>((set, get) => ({
@@ -78,6 +86,79 @@ export const useShareOffersStore = create<ShareOffersState>((set, get) => ({
     boardReceivedRequestsIdsByBoardId: {},
     workspaceReceivedRequestsIdsByWorkspaceId: {},
     boardSentInvitesIdsByBoardId: {},
+
+    getPendingIncomingUserInvitesCount() {
+        const userBoardInvitesIncomingIds = get().userBoardInvitesIncomingIds;
+        const userWsIncomingOfferIds = get().userWsIncomingOfferIds;
+        const offerById = useCacheStore.getState().offerById;
+        const idSet = new Set<string>();
+        userBoardInvitesIncomingIds.forEach((id) => {
+            const offer = offerById[id];
+            if (offer && offer.Status === "pending" && offer.Kind === "invite") {
+                idSet.add(id);
+            }
+        });
+        userWsIncomingOfferIds.forEach((id) => {
+            const offer = offerById[id];
+            if (offer && offer.Status === "pending" && offer.Kind === "invite") {
+                idSet.add(id);
+            }
+        });
+        return idSet.size;
+
+    },
+    getPendingIncomingCountUserInvitesByEntity() {
+        const userBoardInvitesIncomingIds = get().userBoardInvitesIncomingIds;
+        const userWsIncomingOfferIds = get().userWsIncomingOfferIds;
+        const offerById = useCacheStore.getState().offerById;
+
+        const boardIdSet = new Set<string>();
+        const workspaceIdSet = new Set<string>();
+        userBoardInvitesIncomingIds.forEach((id) => {
+            const offer = offerById[id];
+            if (offer && offer.Status === "pending" && offer.Kind === "invite") {
+                if (offer.TargetType === "board") {
+                    boardIdSet.add(offer.TargetID);
+                }
+            }
+        });
+        userWsIncomingOfferIds.forEach((id) => {
+            const offer = offerById[id];
+            if (offer && offer.Status === "pending" && offer.Kind === "invite") {
+                if (offer.TargetType === "workspace") {
+                    workspaceIdSet.add(offer.TargetID);
+                }
+            }
+        });
+        return {
+            UserBoardInvites: boardIdSet.size,
+            UserWorkspaceInvites: workspaceIdSet.size,
+        };
+
+    },
+    getMostRecentPendingIncomingUserInvite() {
+        const userBoardInvitesIncomingIds = get().userBoardInvitesIncomingIds;
+        const userWsIncomingOfferIds = get().userWsIncomingOfferIds;
+        const offerById = useCacheStore.getState().offerById;
+        const pendingInvites: ShareOffer[] = [];
+        userBoardInvitesIncomingIds.forEach((id) => {
+            const offer = offerById[id];
+            if (offer && offer.Status === "pending" && offer.Kind === "invite") {
+                pendingInvites.push(offer);
+            }
+        });
+        userWsIncomingOfferIds.forEach((id) => {
+            const offer = offerById[id];
+            if (offer && offer.Status === "pending" && offer.Kind === "invite") {
+                pendingInvites.push(offer);
+            }
+        });
+        if (pendingInvites.length === 0) {
+            return null;
+        }
+        pendingInvites.sort((a, b) => new Date(b.CreatedAt).getTime() - new Date(a.CreatedAt).getTime());
+        return pendingInvites[0];
+    },
 
     applyShareOfferEvent: (evt: BoardEvent | WorkspaceEvent | UserEvent) => {
         if (evt.Type.includes("workspace.user.shareoffer.") || evt.Type.includes("board.user.shareoffer.")) {
@@ -392,9 +473,10 @@ export const useShareOffersStore = create<ShareOffersState>((set, get) => ({
                     useUserStore.getState().mergeUsers(Object.values(boardShareInviteCreatedPayload?.Users || {}));
 
                     if (boardInviteOffer && inviteBoardID && inviteWorkspaceID) {
-                        const offerDetails: ShareOfferDetailsResponse = {
+                        const offerDetails: UserBoardShareOffersDetails = {
                             ShareOffer: boardInviteOffer,
-                            TargetWorkspaceDetails: boardShareInviteCreatedPayload!.Workspace
+                            TargetWorkspaceDetails: boardShareInviteCreatedPayload!.Workspace,
+                            TargetBoardDetails: { Board: boardShareInviteCreatedPayload!.Board, BoardMembers: [] }
                         }
                         useCacheStore.getState().upsertShareOfferDetails([offerDetails]);
 
@@ -438,7 +520,11 @@ export const useShareOffersStore = create<ShareOffersState>((set, get) => ({
                     useUserStore.getState().mergeUsers(Object.values(boardShareInviteAcceptedPayload?.Users || {}));
 
                     if (acceptedBoardInviteOffer) {
-                        useCacheStore.getState().upsertShareOfferDetails([acceptedBoardInviteOffer]);
+                        useCacheStore.getState().upsertShareOfferDetails([{
+                            ShareOffer: acceptedBoardInviteOffer.ShareOffer,
+                            TargetWorkspaceDetails: acceptedInviteWorkspace ?? acceptedBoardInviteOffer.TargetWorkspaceDetails,
+                            TargetBoardDetails: { Board: acceptedInviteBoard!, BoardMembers: [] }
+                        }]);
 
                         const boardID = acceptedInviteBoard?.ID ?? acceptedBoardInviteOffer.ShareOffer.TargetID;
                         const workspaceID = acceptedInviteWorkspace?.Workspace.ID
@@ -450,6 +536,19 @@ export const useShareOffersStore = create<ShareOffersState>((set, get) => ({
                         }
 
                         if (evt.Type === "board.user.shareoffer.nonadmin.invite.accepted") {
+                            const recipientUserID = (evt as UserEvent).RecipientUserID ?? useAuthStore.getState().userID ?? "";
+                            const derivedUserWorkspace = acceptedInviteWorkspace?.WorkspaceMembers
+                                ?.flatMap((memberGroup) => memberGroup.UserWorkspace || [])
+                                .find((relation) => relation.UserID === recipientUserID);
+
+                            if (acceptedInviteWorkspace?.Workspace) {
+                                const workspaceData: UserWorkspaceData = {
+                                    Workspaces: [acceptedInviteWorkspace.Workspace],
+                                    UserWorkspaces: derivedUserWorkspace ? [derivedUserWorkspace] : [],
+                                    WorkspaceSubscriptions: acceptedInviteWorkspace.WorkspaceSubscription ? [acceptedInviteWorkspace.WorkspaceSubscription] : []
+                                }
+                                useWorkspaceStore.getState().mergeWorkspaceData(workspaceData);
+                            }
                             if (acceptedInviteUserBoard) {
                                 useBoardsStore.getState().mergeUserBoardRelation(acceptedInviteUserBoard);
                             }
@@ -476,7 +575,11 @@ export const useShareOffersStore = create<ShareOffersState>((set, get) => ({
 
                     useUserStore.getState().mergeUsers(Object.values(boardInviteFinalizedPayload?.Users || {}));
                     if (finalizedBoardInviteOffer) {
-                        useCacheStore.getState().upsertShareOfferDetails([finalizedBoardInviteOffer]);
+                        useCacheStore.getState().upsertShareOfferDetails([{
+                            ShareOffer: finalizedBoardInviteOffer.ShareOffer,
+                            TargetWorkspaceDetails: finalizedInviteWorkspace ?? finalizedBoardInviteOffer.TargetWorkspaceDetails,
+                            TargetBoardDetails: { Board: finalizedInviteBoard!, BoardMembers: [] }
+                        }]);
 
                         if (evt.Type === "board.user.shareoffer.nonadmin.invite.rejected" || evt.Type === "board.user.shareoffer.nonadmin.invite.revoked") {
                             const boardID = finalizedInviteBoard?.ID ?? finalizedBoardInviteOffer.ShareOffer.TargetID;
@@ -501,9 +604,10 @@ export const useShareOffersStore = create<ShareOffersState>((set, get) => ({
 
 
                     if (boardShareOffer && boardID && workspaceID) {
-                        const offerDetails: ShareOfferDetailsResponse = {
+                        const offerDetails: UserBoardShareOffersDetails = {
                             ShareOffer: boardShareOffer,
-                            TargetWorkspaceDetails: boardShareRequestPayload!.Workspace
+                            TargetWorkspaceDetails: boardShareRequestPayload!.Workspace,
+                            TargetBoardDetails: { Board: boardShareRequestPayload!.Board, BoardMembers: [] }
                         }
                         useCacheStore.getState().upsertShareOfferDetails([offerDetails]);
                         //console.log("cachestoreste:", useCacheStore.getState().offerById[boardShareOffer.ID]);
@@ -565,7 +669,11 @@ export const useShareOffersStore = create<ShareOffersState>((set, get) => ({
                     });
                     useUserStore.getState().mergeUsers(Object.values(boardShareRequestAcceptedPayload?.Users || {}));
                     if (acceptedBoardShareOffer) {
-                        useCacheStore.getState().upsertShareOfferDetails([boardShareRequestAcceptedPayload!.ShareOffer]);
+                        useCacheStore.getState().upsertShareOfferDetails([{
+                            ShareOffer: boardShareRequestAcceptedPayload!.ShareOffer.ShareOffer,
+                            TargetWorkspaceDetails: workspace ?? boardShareRequestAcceptedPayload!.ShareOffer.TargetWorkspaceDetails,
+                            TargetBoardDetails: { Board: board!, BoardMembers: [] }
+                        }]);
 
                         if (board && userBoard) {
                             useBoardMembersStore.getState().upsertBoardMember(board.ID, userBoard);
@@ -625,7 +733,11 @@ export const useShareOffersStore = create<ShareOffersState>((set, get) => ({
                     useUserStore.getState().mergeUsers(Object.values(boardRequestFinalizedPayload?.Users || {}));
 
                     if (rejectedBoardShareOffer) {
-                        useCacheStore.getState().upsertShareOfferDetails([rejectedBoardShareOffer]);
+                        useCacheStore.getState().upsertShareOfferDetails([{
+                            ShareOffer: rejectedBoardShareOffer.ShareOffer,
+                            TargetWorkspaceDetails: rejectedWorkspace ?? rejectedBoardShareOffer.TargetWorkspaceDetails,
+                            TargetBoardDetails: { Board: rejectedBoard!, BoardMembers: [] }
+                        }]);
 
                         const boardID = rejectedBoard?.ID ?? rejectedBoardShareOffer.ShareOffer.TargetID;
 
@@ -1038,52 +1150,32 @@ export const useShareOffersStore = create<ShareOffersState>((set, get) => ({
     },
 
     revokeWorkspaceShareOffer: async (offerID: string, message: string) => {
-        try {
-
-            set({
-                isSendingShareOffer: true,
-                isRequestSuccessful: false
-            });
-            const res = await api.post(`/shareoffers/${offerID}/revoke`, { "Reason": message });
-            set({ isRequestSuccessful: true });
-
-            const updatedOffer = res.data as ShareOffer;
-            useCacheStore.setState((state) => {
-                const nextOfferById = { ...state.offerById };
-                nextOfferById[updatedOffer.ID] = updatedOffer;
-                return {
-                    offerById: nextOfferById
-                };
-            });
-        } catch (error) {
-            set({ isRequestSuccessful: false });
-            // console.log("Error revoking share offer", error);
-            throw error;
-        } finally {
-            set({ isSendingShareOffer: false });
-        }
+        await useAsyncRequestStore.getState().execute(
+            useAsyncKey("shareoffer:revoke", offerID),
+            async () => {
+                const res = await api.post(`/shareoffers/${offerID}/revoke`, { "Reason": message });
+                const updatedOffer = res.data as ShareOffer;
+                useCacheStore.setState((state) => {
+                    const nextOfferById = { ...state.offerById };
+                    nextOfferById[updatedOffer.ID] = updatedOffer;
+                    return { offerById: nextOfferById };
+                });
+            },
+            { successResetDelayMs: 1500 }
+        );
     },
 
     respondToShareOffer: async (offerID: string, accept: boolean) => {
-        try {
-            set({
-                isSendingShareOffer: true,
-                isRequestSuccessful: false
-            });
-            const payload: RespondToShareOfferPayload = {
-                Decision: accept ? "accepted" : "rejected"
-            }
-            await api.post(`/shareoffers/${offerID}/respond`, payload);
-            set({ isRequestSuccessful: true });
-
-
-        } catch (error) {
-            set({ isRequestSuccessful: false });
-            // console.log("Error responding to share offer", error);
-            throw error;
-        } finally {
-            set({ isSendingShareOffer: false });
-        }
+        await useAsyncRequestStore.getState().execute(
+            useAsyncKey("shareoffer:respond", offerID),
+            async () => {
+                const payload: RespondToShareOfferPayload = {
+                    Decision: accept ? "accepted" : "rejected"
+                };
+                await api.post(`/shareoffers/${offerID}/respond`, payload);
+            },
+            { successResetDelayMs: 1500 }
+        );
     },
     createBoardAccessRequest: async (boardID: string, message: string, role: "owner" | "admin" | "member" | "viewer") => {
         try {

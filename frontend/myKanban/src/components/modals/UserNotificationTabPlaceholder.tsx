@@ -5,7 +5,7 @@ import { ImageColorRenderer } from "../menuElements/ImageColorRenderer";
 
 import { useLookUpInterface } from "@/hooks/useLookUpInterface"
 import type { MainEntityTypeStrict } from "@/hooks/useFeedFromAudit";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useUserStore } from "@/stores/userStore";
 import { UserAvatar } from "../badges/UserAvatar";
 import { AuditActivityItem } from "../activityfeed/AuditActivityItem";
@@ -18,20 +18,6 @@ type UserNotificationTabPlaceholderProps = {
 }
 
 export const UserNotificationTabPlaceholder = ({ onlyShowUnread }: UserNotificationTabPlaceholderProps) => {
-    const fetchUserNotifications = useUserNotificationStore((state) => state.fetchUserNotifications)
-
-    const handleFetchNotifications = async () => {
-        try {
-            await fetchUserNotifications();
-        } catch (error) {
-            console.error("Error fetching user notifications:", error);
-        }
-    };
-
-    useEffect(() => {
-        console.log("Fetching user notifications...");
-        handleFetchNotifications();
-    }, [fetchUserNotifications])
     const RenderIds = useUserNotificationStore(useShallow((state) => state.sortedRenderIDs));
     const filteredRenderIds = onlyShowUnread ? RenderIds.filter((renderId) => renderId.split(":")[1] === "unread") : RenderIds;
     const visibleIds = filteredRenderIds.slice(0, 10)

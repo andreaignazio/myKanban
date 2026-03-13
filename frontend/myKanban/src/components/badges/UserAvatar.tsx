@@ -15,6 +15,7 @@ export function UserAvatar({ user, className, size, overrideMode, colorOverride,
 
         <CardRowMenuBtn
             menuComponent={({ ref, onClose }) => <UserHoverCard ref={ref} userID={user?.ID ?? ""} />}
+            exclusiveGroup="user-hover-card"
             desiredBackdropOpacity={0.1}
             offset={[10, 0]}
         >

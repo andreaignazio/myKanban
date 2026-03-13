@@ -104,6 +104,7 @@ export type UserEventTypes =
     | "workspace.user.member.role.changed"
     | "workspace.user.member.removed"
     | "board.user.member.removed"
+    | "board.user.member.role.changed"
     | "workspace.user.shareoffer.created"
     | "workspace.user.shareoffer.admin.invite.created"
     | "workspace.user.shareoffer.nonadmin.invite.created"

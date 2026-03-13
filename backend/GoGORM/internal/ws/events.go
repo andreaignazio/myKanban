@@ -61,6 +61,7 @@ const (
 	EventUserWorkspaceMemberRoleChanged            UserEventType = "workspace.user.member.role.changed"
 	EventUserWorkspaceMemberRemoved                UserEventType = "workspace.user.member.removed"
 	EventUserBoardMemberRemoved                    UserEventType = "board.user.member.removed"
+	EventUserBoardMemberRoleChanged                UserEventType = "board.user.member.role.changed"
 	EventUserWorkspaceShareOfferCreated            UserEventType = "workspace.user.shareoffer.created"
 	EventUserWorkspaceShareInviteCreatedAdmin      UserEventType = "workspace.user.shareoffer.admin.invite.created"
 	EventUserWorkspaceShareInviteCreatedNonAdmin   UserEventType = "workspace.user.shareoffer.nonadmin.invite.created"
@@ -117,6 +118,7 @@ type UserEventPayload struct {
 	BoardShareRequestRejectedPayload         *BoardShareRequestRejectedPayload         `json:"BoardShareRequestRejectedPayload,omitempty"`
 	BoardShareRequestRevokedPayload          *BoardShareRequestRevokedPayload          `json:"BoardShareRequestRevokedPayload,omitempty"`
 	BoardMembershipPayload                   *BoardMembershipPayload                   `json:"BoardMembershipPayload,omitempty"`
+	BoardMemberRoleChangedPayload            *BoardMemberRoleChangedPayload            `json:"BoardMemberRoleChangedPayload,omitempty"`
 }
 
 type CardsUserMemberAddedPayload struct {
@@ -260,4 +262,11 @@ type BoardMembershipPayload struct {
 	UserID    uuid.UUID             `json:"UserID"`
 	Board     dto.BoardResponse     `json:"Board"`
 	UserBoard dto.UserBoardResponse `json:"UserBoard"`
+}
+
+type BoardMemberRoleChangedPayload struct {
+	UserID    uuid.UUID             `json:"UserID"`
+	Board     dto.BoardResponse     `json:"Board"`
+	UserBoard dto.UserBoardResponse `json:"UserBoard"`
+	User      *dto.UserResponse     `json:"User,omitempty"`
 }

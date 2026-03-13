@@ -60,6 +60,8 @@ import type { User } from "@/stores/types"
 import { useIsOverlayActive } from "@/hooks/useIsOverlayActive"
 
 import { CardRowMenuBtn } from "./cardMenus/cardRowMenus"
+import { useShareOffersStore } from "@/stores/shareOffersStore"
+import { UnreadCounter } from "./common/UnreadCounter"
 
 
 function UserHeader({ context }: { context: string | null }) {
@@ -72,6 +74,7 @@ function UserHeader({ context }: { context: string | null }) {
     const notificationMenuId = "user-notification-menu"
     const { isMenuActive: isNotificationMenuActive } = useIsOverlayActive(notificationMenuId)
     const { isMenuActive: isInboxMenuActive } = useIsOverlayActive(inboxMenuId)
+    const pendingInvitesCount = useShareOffersStore((state) => state.getPendingIncomingUserInvitesCount())
 
     return (
         <motion.div layout className="flex-1
@@ -82,21 +85,21 @@ function UserHeader({ context }: { context: string | null }) {
                 <CardRowMenuBtn
                     customId={inboxMenuId}
                     renderType="virtual"
+                    exclusiveGroup="user-topbar-modal"
                     menuComponent={
-                        ({ onClose, ref }) => <UserOfferManager ref={ref} />
+                        ({ onClose, ref }) => <UserOfferManager ref={ref} onClose={onClose} />
                     }
                     desiredBackdropOpacity={0.5}
                 >
 
-                    <div className={`bg-transparent text-gray-400 items-center justify-center flex aspect-square
+                    <div className={`relative bg-transparent text-gray-400 items-center justify-center flex aspect-square
             hover:bg-neutral-400/20 rounded cursor-pointer transition-all
             ${isInboxMenuActive ? "!bg-neutral-500/20 " : ""}
             ${context === "board" ? "h-7" : "h-8"} 
             `}
                     >
-                        <InboxArrowDownIcon
-
-                            className={iconSizeClass} />
+                        <InboxArrowDownIcon className={iconSizeClass} />
+                        <UnreadCounter count={pendingInvitesCount} />
                     </div>
                 </CardRowMenuBtn>
 

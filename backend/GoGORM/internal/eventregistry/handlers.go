@@ -45,6 +45,7 @@ func buildHandlers(auditRepo auditcontext.Reader) map[DomainEventType]EventHandl
 		EventWorkspaceMemberRoleChanged:         NewWorkspaceMembershipHandlerRoleChanged(auditRepo),
 		EventWorkspaceMemberRemoved:             NewWorkspaceMembershipHandlerRemoved(auditRepo),
 		EventBoardMemberRemoved:                 NewBoardMembershipRemovedHandler(auditRepo),
+		EventBoardMemberRoleChanged:             NewBoardMemberRoleChangedHandler(auditRepo),
 		EventWorkspaceShareOfferCreated:         NewWorkspaceShareOfferCreatedHandler(auditRepo),
 		EventWorkspaceShareOfferInviteAccepted:  NewWorkspaceShareOfferInviteAcceptedHandler(auditRepo),
 		EventWorkspaceShareOfferInviteRejected:  NewWorkspaceShareOfferInviteRejectedHandler(auditRepo),

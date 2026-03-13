@@ -1,12 +1,13 @@
 ﻿import { useCacheStore } from "@/stores/cacheStore";
 import { useShareOffersStore, type ShareOffer } from "@/stores/shareOffersStore";
 import type { Board, PublicShareLink, Workspace } from "@/stores/types";
-import { forwardRef, useEffect, useRef, useState, type JSX, type RefObject } from "react";
+import { forwardRef, useEffect, useMemo, useRef, useState, type JSX, type RefObject } from "react";
 import { useShallow } from "zustand/shallow";
 import { SubscriptionBadge } from "@/components/badges/subscriptionBadge";
 import { ExclamationCircleIcon, PencilIcon, ShieldCheckIcon, XCircleIcon } from "@heroicons/react/24/outline";
 import { useOverlayStore, type OverlayDescriptor } from "@/overlays/overlayStore";
 import { ShareActionModal } from "../modals/ShareActionModal";
+import { ShareOfferRespondModal } from "../modals/ShareOfferRespondModal";
 import { UserHoverCard } from "../modals/UserHoverCard";
 import { CopyLinkText } from "../menuElements/CopyLinkToClipboard";
 import { useShareLinksStore } from "@/stores/shareLinksStore";
@@ -20,8 +21,10 @@ import { CardRowMenuBtn } from "../cardMenus/cardRowMenus";
 import { WorkspaceHoverCard } from "../hoverCards/WorkspaceHoverCard";
 import { BoardHoverCard } from "../hoverCards/BoardHoverCard";
 
+
 type OutgoingRequestsProps = {
     panelRef?: React.RefObject<HTMLDivElement | null>;
+    showOnlyPending?: boolean;
 }
 type TabularData = ShareOffer | PublicShareLink;
 
@@ -41,7 +44,7 @@ export type ColumnDefinition<Row extends TabularData = ShareOffer> = {
     }) => JSX.Element;
 }
 
-export const UserBoardOutgoingRequests = forwardRef<HTMLDivElement, OutgoingRequestsProps>(({ panelRef }: OutgoingRequestsProps, ref) => {
+export const UserBoardOutgoingRequests = forwardRef<HTMLDivElement, OutgoingRequestsProps>(({ panelRef, showOnlyPending }: OutgoingRequestsProps, ref) => {
 
     const fetchUserBoardAccessSentRequests = useShareOffersStore((state) => state.fetchUserBoardAccessSentRequests)
     const offersIds = useShareOffersStore(useShallow((state) => state.userBoardAccessSentRequestsIds))
@@ -74,31 +77,20 @@ export const UserBoardOutgoingRequests = forwardRef<HTMLDivElement, OutgoingRequ
     const columns: ColumnDefinition[] = [
         { name: "Board", key: "board", width: "2fr", align: "start", getValue: (offer: ShareOffer) => getBoardIdFromOffer(offer) },
         { name: "Workspace", key: "workspace", width: "1.5fr", align: "center", getValue: (offer: ShareOffer) => getWorkspaceIdFromOffer(offer) },
-        { name: "Stato", key: "status", width: "0.5fr", align: "center", getValue: (offer: ShareOffer) => offer.Status },
-        { name: "Ruolo", key: "role", width: "0.5fr", align: "center", getValue: (offer: ShareOffer) => offer.OfferedRole },
-        { name: "Data", key: "date", width: "1.2fr", align: "center", getValue: (offer: ShareOffer) => offer.CreatedAt },
-        //{ name: "Mittente", key: "sender", width: "2fr", getValue: (offer: ShareOffer) => offer.FromUserID },
-        { name: "Azione", key: "action", width: "90px", align: "center", getValue: (offer: ShareOffer) => offer.Status === "pending" ? "revoke" : offer.Status },
+        { name: "Status", key: "status", width: "0.5fr", align: "center", getValue: (offer: ShareOffer) => offer.Status },
+        { name: "Role", key: "role", width: "0.5fr", align: "center", getValue: (offer: ShareOffer) => offer.OfferedRole },
+        { name: "Date", key: "date", width: "1.2fr", align: "center", getValue: (offer: ShareOffer) => offer.CreatedAt },
+        { name: "Action", key: "action", width: "90px", align: "center", getValue: (offer: ShareOffer) => offer.Status === "pending" ? "revoke" : offer.Status },
     ]
 
     return (
-        <div
-            ref={ref}
-            className="theme-dark w-fit h-60vh flex bg-main flex-col
-            overflow-hidden 
-            items-center justify-start  
-            font-grotesk text-neutral-200"
-        >
-            <div className="w-full max-w-5xl flex flex-col gap-2 mb-4">
-                <p className="text-2xl font-semibold tracking-tight text-text">Inbox</p>
-                <p className="text-sm text-text/70">Condivisioni ricevute, stato e mittenti in un colpo d'occhio.</p>
-            </div>
-
-            <div className="w-full max-w-5xl flex flex-col gap-3 animate-rise-in">
-
-
-                <GridBuilder columns={columns} data={offersIds} />
-            </div>
+        <div className="w-full flex flex-col gap-3 animate-rise-in">
+            <GridBuilder
+                columns={columns}
+                data={offersIds}
+                emptyMessage="No board access requests sent."
+                shouldShow={showOnlyPending ? (offer) => offer.Status === "pending" : undefined}
+            />
         </div>
     )
 })
@@ -108,38 +100,62 @@ type GridBuilderProps<Row extends TabularData = ShareOffer> = {
     data: string[];
     CustomLookup?: (id: string) => Row | undefined;
     emptyMessage?: string;
+    shouldShow?: (row: Row) => boolean;
 }
 
-export function GridBuilder<Row extends TabularData = ShareOffer>({ columns, data, CustomLookup, emptyMessage }: GridBuilderProps<Row>) {
+type ColRect = { left: number; width: number };
 
-    const [layout, setLayout] = useState("");
+export function GridBuilder<Row extends TabularData = ShareOffer>({ columns, data, CustomLookup, emptyMessage, shouldShow }: GridBuilderProps<Row>) {
+
+    const firstRowRef = useRef<HTMLDivElement>(null);
+    const [colRects, setColRects] = useState<ColRect[]>([]);
+
+    const rowStyle = useMemo(() => ({
+        gridTemplateColumns: columns.map((col) => col.width ?? "1fr").join(" "),
+    }), [columns]);
 
     useEffect(() => {
-        const newLayout = columns.map((col) => col.width ?? "1fr").join(" ");
-        setLayout(newLayout);
-    }, [columns]);
+        const row = firstRowRef.current;
+        if (!row) return;
 
-    const rowStyle = {
-        gridTemplateColumns: layout,
-    };
+        const measure = () => {
+            const containerLeft = row.getBoundingClientRect().left;
+            const cells = Array.from(row.children) as HTMLElement[];
+            setColRects(cells.map(el => {
+                const r = el.getBoundingClientRect();
+                return { left: r.left - containerLeft, width: r.width };
+            }));
+        };
+
+        measure();
+        const ro = new ResizeObserver(measure);
+        ro.observe(row);
+        return () => ro.disconnect();
+    }, [data]);
 
     return (
         <>
             <div className="w-full rounded-xl bg-transparent">
                 <div className="flex flex-col gap-3">
-                    <div
-                        style={rowStyle}
-                        className="hidden md:grid w-full gap-3 items-center px-4 py-2 text-xs uppercase tracking-wide text-text/60">
-                        {data.length > 0 && columns.map((col) => {
-                            const justifyTextClass = col.align === "start" ? "text-left" : col.align === "center" ? "text-center" : "text-center";
-                            const justifyClass = col.align === "start" ? "justify-start" : col.align === "center" ? "justify-center" : "justify-center";
-                            return (
-                                <div className={`flex ${justifyTextClass} ${justifyClass}`} style={col.labelStyle} key={col.key}>
-                                    {col.name}
-                                </div>
-                            );
-                        })}
-                    </div>
+                    {data.length > 0 && (
+                        <div className="hidden md:block relative w-full py-2 text-xs uppercase tracking-wide text-text/60" style={{ minHeight: '2rem' }}>
+                            {colRects.length > 0 && columns.map((col, i) => {
+                                const rect = colRects[i];
+                                if (!rect) return null;
+                                const justifyClass = col.align === "start" ? "justify-start" : "justify-center";
+                                const textClass = col.align === "start" ? "text-left" : "text-center";
+                                return (
+                                    <div
+                                        key={col.key}
+                                        className={`absolute top-1/2 -translate-y-1/2 flex items-center overflow-hidden ${justifyClass} ${textClass}`}
+                                        style={{ left: rect.left, width: rect.width, ...col.labelStyle }}
+                                    >
+                                        {col.name}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
 
                     {data.length === 0 && (
                         <div className="w-full rounded-xl border border-border/40 p-6 text-sm text-text/70">
@@ -147,16 +163,25 @@ export function GridBuilder<Row extends TabularData = ShareOffer>({ columns, dat
                         </div>
                     )}
 
-                    {data.map((ID) => (
-                        <div key={ID} className="grid w-full gap-3 items-center rounded-xl border border-border/40 min-h-24 px-4" style={rowStyle}>
-                            <ShareOfferCustomRow<Row> offerId={ID} items={columns} CustomLookup={CustomLookup} />
-                        </div>
-                    ))}
+                    {data.map((ID, index) => {
+                        const rowData = CustomLookup ? CustomLookup(ID) : useCacheStore.getState().offerById[ID] as Row | undefined;
+                        const visible = !shouldShow || !rowData || shouldShow(rowData);
+                        return (
+                            <div
+                                key={ID}
+                                ref={index === 0 ? firstRowRef : undefined}
+                                className={`grid w-full gap-3 items-center rounded-xl border border-border/40 px-4 transition-all duration-300 ease-in-out
+                                    ${visible ? "min-h-24 opacity-100" : "min-h-0 max-h-0 opacity-0 overflow-hidden border-transparent py-0"}`}
+                                style={rowStyle}
+                            >
+                                <ShareOfferCustomRow<Row> offerId={ID} items={columns} CustomLookup={CustomLookup} />
+                            </div>
+                        );
+                    })}
                 </div>
             </div>
         </>
-
-    )
+    );
 }
 
 
@@ -225,13 +250,11 @@ export function ShareOfferCustomRow<Row extends TabularData = ShareOffer>({ offe
         <>
             {items.map((item) => {
                 const value = data ? item.getValue(data) : null;
-                const justifyClass = item.align === "start" ? "justify-start" : item.align === "center" ? "justify-center" : "justify-end";
-                const justifyTextClass = item.align === "start" ? "text-left" : item.align === "center" ? "text-center" : "text-right";
                 const customCell = item.renderCell?.({ value, shareId: offerId, style: item.style, row: data });
+                const alignClass = item.align === "start" ? "items-start" : item.align === "end" ? "items-end" : "items-center";
                 return (
                     <div key={item.key}
-                        style={{ justifyContent: justifyClass }}
-                        className={`grid col-auto gap-1 py-4 ${justifyTextClass}`}>
+                        className={`flex flex-col col-auto gap-1 py-4 ${alignClass}`}>
                         <span className="md:hidden text-[11px] uppercase tracking-wide text-text/60">{item.name}</span>
                         {customCell ?? (componentsByKey[item.key] ? componentsByKey[item.key].render(value, offerId, item.style) : <div>{value}</div>)}
                     </div>
@@ -262,38 +285,10 @@ type ActionComponentProps = {
     style?: React.CSSProperties;
 }
 export const ActionComponent = ({ action, shareId, style }: ActionComponentProps) => {
-    const [label, setLabel] = useState("");
-    const [justifyClass, setJustifyClass] = useState("justify-start");
-    const [isPending, setIsPending] = useState(false);
+    const label = action === "revoke" ? "Revoke" : action === "respond" ? "Respond" : "";
+    const isPending = action === "revoke" || action === "respond";
     const openOverlay = useOverlayStore((state) => state.open)
     const onMenuClose = useOverlayStore((state) => state.close)
-
-    useEffect(() => {
-        switch (action) {
-            case "revoke":
-                setLabel("Revoke");
-                setJustifyClass("justify-start");
-                setIsPending(true);
-                break;
-            case "respond":
-                setLabel("Respond");
-                setJustifyClass("justify-start");
-                setIsPending(true);
-                break;
-            case "accepted":
-                setLabel("");
-                setJustifyClass("justify-center");
-                setIsPending(false);
-                break;
-            case "rejected":
-                setLabel("");
-                setJustifyClass("justify-center");
-                setIsPending(false);
-                break;
-            default:
-                setLabel("");
-        }
-    }, [action]);
     function onClick() {
         // console.log("Clicked action:", action, "for share offer with id:", shareId);
         if (action === "respond") {
@@ -305,12 +300,34 @@ export const ActionComponent = ({ action, shareId, style }: ActionComponentProps
     }
 
     const shareActionModalRef = useRef<HTMLDivElement>(null)
+    const respondModalRef = useRef<HTMLDivElement>(null)
     function handleOpenRespondModal(shareOfferID: string) {
         if (action !== "respond" && action !== "revoke") {
             return;
         }
-        //  console.log("Opening respond modal for share offer", shareOfferID);
         const id = "respondModal-" + shareOfferID;
+        if (action === "respond") {
+            const descriptor: OverlayDescriptor = {
+                id: id,
+                render: () => <ShareOfferRespondModal ref={respondModalRef} shareOfferID={shareOfferID} onClose={() => onMenuClose(id)} />,
+                panelRef: respondModalRef,
+                type: "modal",
+                renderType: "virtual",
+                exclusiveGroup: "share-action-modal",
+                opts: {
+                    closeOnMouseLeave: false,
+                    closeOnClickOutside: true,
+                    closeOnEscape: true,
+                    lockBackdrop: true,
+                    enableOwnBackdrop: true,
+                },
+                position: {
+                    virtual: "viewport-center"
+                }
+            }
+            openOverlay(descriptor);
+            return;
+        }
         const descriptor: OverlayDescriptor = {
             id: id,
             render: () => <ShareActionModal ref={shareActionModalRef} shareOfferID={shareOfferID} actionType={action} onClose={() => onMenuClose(id)} />,
@@ -329,20 +346,19 @@ export const ActionComponent = ({ action, shareId, style }: ActionComponentProps
             }
         }
         openOverlay(descriptor);
-
     }
 
     return (
         <>
             <div onClick={onClick}
-                className={`relative flex flex-row items-center ${justifyClass}
+                className={`relative flex flex-row items-center justify-center h-16 w-16
            ${isPending ? "hover:filter hover:brightness-110 hover:cursor-pointer" : ""}
          rounded-md py-1 px-2 gap-1`}
                 style={style}
             >
-                <div className=" text-nowrap">{label}</div>
-                <div className=" rounded-sm  p-0.1">
-                    {action === "respond" && <PencilIcon className="ms-2 w-5 h-5" />}
+                <div className="hidden w-0 lg:block lg:w-fit text-nowrap">{label}</div>
+                <div className=" rounded-sm  ">
+                    {action === "respond" && <PencilIcon className="w-5 h-5" />}
                     {action === "revoke" && <ExclamationCircleIcon className="w-5 h-5 text-red-500" />}
                     {action === "accepted" && <ShieldCheckIcon className="w-5 h-5 text-green-500" />}
                     {action === "rejected" && <XCircleIcon className="w-5 h-5 text-red-500" />}
@@ -379,7 +395,7 @@ export const DateComponent = ({ date, style }: { date: string | null, style?: Re
 export const RoleComponent = ({ role, style }: { role: string | null, style?: React.CSSProperties }) => {
     const roleBadgeClass = getRoleBadgeClass(role as ShareOffer["OfferedRole"]);
     return (
-        <span className={`w-fit rounded-full border px-2 py-1 text-xs font-medium ${roleBadgeClass}`} style={style}>
+        <span className={`w-18 rounded-full border px-2 py-1 text-xs font-medium ${roleBadgeClass}`} style={style}>
             {role}
         </span>
     )
@@ -389,7 +405,7 @@ export const RoleComponent = ({ role, style }: { role: string | null, style?: Re
 export const StatusComponent = ({ status, style }: { status: string | null, style?: React.CSSProperties }) => {
     const statusBadgeClass = getStatusBadgeClass(status as ShareOffer["Status"]);
     return (
-        <span className={`w-fit rounded-full border px-2 py-1 text-xs font-medium ${statusBadgeClass}`} style={style}>
+        <span className={`w-18 rounded-full border px-2 py-1 text-xs font-medium ${statusBadgeClass}`} style={style}>
             {status}
         </span>
     )
@@ -430,19 +446,38 @@ export const BoardComponent = ({ ID: boardId, shareId, style }: BoardComponentPr
             {variant === "1" && (
                 <CardRowMenuBtn
                     customId={"board-hover-card-" + shareId}
+                    exclusiveGroup="entity-hover-card"
+                    renderType="virtual"
                     menuComponent={({ onClose, ref }) => <BoardHoverCard boardID={boardId ?? ""} onClose={onClose} ref={ref} />}
                 >
-                    <div className="flex flex-row 
-                items-center overflow-hidden
+                    <div className="flex flex-row  relative group
+                items-center 
                  bg-transparent hover:bg-main/20
-                  hover:cursor-pointer 
-                  rounded-lg w-full h-16 " ref={anchorRef} onClick={onClick} style={style}>
+                  hover:cursor-pointer overflow-hidden 
+                  hover:ring hover:ring-white
+                  transition-all ease-in-out duration-300
+                  rounded-lg w-16 md:w-28 h-16 " ref={anchorRef} onClick={onClick} style={style}>
                         <ImageColorRenderer
                             className="!w-full"
                             backgroundType={backgroundType}
                             bgImage={resolvedBackgroundUrl}
                             bgColor={backgroundColorClassName}
                         />
+                        <div
+                            onClick={() => { }}
+                            className="absolute inset-0 z-10
+                        transition-all ease-in-out duration-300 delay-[50ms]
+                       
+                        group-hover:bg-gradient-to-t group-hover:from-black/20 group-hover:to-transparent
+                         flex items-center justify-center" >
+
+                            <span className=" absolute text-sm font-medium
+                         text-gray-300 opacity-0 delay-[75ms]
+                         group-hover:opacity-100 transition-opacity">
+                                {board ? board.Name : "Caricamento..."}
+                            </span>
+                        </div>
+
                     </div>
                 </CardRowMenuBtn>
             )}
@@ -453,6 +488,31 @@ export const BoardComponent = ({ ID: boardId, shareId, style }: BoardComponentPr
                 style={style}
             />)}
         </>
+
+    )
+}
+type NameOverlayProps = {
+    name: string;
+    className?: string;
+
+}
+
+const NameOverlay = ({ name, className }: NameOverlayProps) => {
+    return (
+        <div
+            onClick={() => { }}
+            className={`absolute inset-0 z-20
+                        transition-all ease-in-out duration-300 delay-[50ms]
+                       group-hover:backdrop-blur-lg
+                        group-hover:bg-gradient-to-t group-hover:from-black/20 group-hover:to-transparent
+                         flex items-center justify-center ${className}`} >
+
+            <span className=" absolute text-sm font-medium
+                         text-gray-300 opacity-0 delay-[75ms]
+                         group-hover:opacity-100 transition-opacity">
+                {name}
+            </span>
+        </div>
 
     )
 }
@@ -497,31 +557,48 @@ export const WorkspaceComponent = ({ ID: workspaceId, shareId, style }: Workspac
     return (
         <>
             {variant === "1" && (
-                <CardRowMenuBtn
-                    customId={"workspace-hover-card-" + shareId}
-                    menuComponent={
-                        ({ onClose, ref }) => <WorkspaceHoverCard workspaceID={workspaceId ?? ""} onClose={onClose} ref={ref} />
-                    }
-                >
-                    <div className="flex flex-row gap-2 justify-center items-center" style={style}>
-                        <CatalogIcon id={iconId ?? "boards"}
-                            className="w-12 h-12
+                <div className=" group relative overflow-hidden justify-center cursor-pointer
+                hover:ring hover:ring-white
+                  transition-all ease-in-out duration-300
+                hover:bg-slate-500/10 w-16 md:w-28 h-16 px-2 flex flex-row items-center rounded-2xl">
+                    <CardRowMenuBtn
+                        customId={"workspace-hover-card-" + shareId}
+                        exclusiveGroup="entity-hover-card"
+                        renderType="virtual"
+                        menuComponent={
+                            ({ onClose, ref }) => <WorkspaceHoverCard workspaceID={workspaceId ?? ""} onClose={onClose} ref={ref} />
+                        }
+                    >
+                        <div className="flex 
+                        opacity-100 group-hover:opacity-10 transition-opacity ease-in-out duration-300
+                        flex-row gap-2 justify-center items-center" style={style}>
+                            <CatalogIcon id={iconId ?? "boards"}
+                                className="w-12 h-12
                      text-neutral-300  
                      border border-neutral-300 rounded-xl p-3"
-                        />
-                        <SubscriptionBadge plan={workspaceId ? getSubscription(workspaceId)?.Plan ?? "free" : "free"} />
-                    </div>
-                </CardRowMenuBtn>
+                            />
+                            <div className="hidden md:flex flex-col items-center">
+                                <SubscriptionBadge plan={workspaceId ? getSubscription(workspaceId)?.Plan ?? "free" : "free"} />
+                            </div>
+                        </div>
+                        <NameOverlay
+                            className="rounded-2xl"
+                            name={workspace?.Name ?? "Caricamento..."} />
+                    </CardRowMenuBtn>
+
+                </div >
             )}
-            {variant === "2" && (<DummyComponent
-                Name={workspace?.Name ?? "Caricamento..."}
-                Type="workspace"
-                onClick={onClick}
-                ref={anchorRef}
-                style={style}
-            >
-                <SubscriptionBadge plan={workspaceId ? getSubscription(workspaceId)?.Plan ?? "free" : "free"} />
-            </DummyComponent>)}
+            {
+                variant === "2" && (<DummyComponent
+                    Name={workspace?.Name ?? "Caricamento..."}
+                    Type="workspace"
+                    onClick={onClick}
+                    ref={anchorRef}
+                    style={style}
+                >
+                    <SubscriptionBadge plan={workspaceId ? getSubscription(workspaceId)?.Plan ?? "free" : "free"} />
+                </DummyComponent>)
+            }
         </>
     )
 }
@@ -558,7 +635,7 @@ export const UserComponent = ({ ID: userId, shareId, style }: UserComponentProps
             anchorRef: anchorRef as RefObject<HTMLElement | null>,
             type: "popover",
             renderType: "anchored",
-            exclusiveGroup: "user-card-hover",
+            exclusiveGroup: "user-hover-card",
             opts: {
                 closeOnMouseLeave: false,
                 closeOnClickOutside: true,
@@ -574,18 +651,21 @@ export const UserComponent = ({ ID: userId, shareId, style }: UserComponentProps
     }
 
     return (
+
         <div
             ref={anchorRef}
-            className="flex flex-row items-center overflow-hidden hover:bg-slate-500/20 rounded-lg w-full px-3 py-2 cursor-pointer"
+            className=" relative flex flex-row items-center justify-center overflow-hidden
+             hover:bg-slate-500/20 rounded-lg w-16 h-16 lg:w-auto  px-3 py-2 cursor-pointer"
             style={style}
             onClick={onClick}
         >
-            <div className="mr-3">
+            <div className="absolute inset-0 z-20 cursor-pointer" />
+            <div className="mr-0 ">
                 <UserAvatarDummy user={user ?? undefined} size={36} disableHoverEffect={true} />
             </div>
-            <div className="flex flex-col min-h-12 items-start">
-                <p className="font-semibold text-text">{user?.Name ?? "Caricamento..."}</p>
-                <p className="text-xs text-text/70">@{user?.Username === "" ? "username" : user?.Username}</p>
+            <div className=" flex-col min-h-12 min-w-0 w-0 items-start lg:ms-2 hidden lg:flex lg:w-auto lg:pe-2">
+                <p className="font-semibold text-text truncate w-full">{user?.Name ?? "Caricamento..."}</p>
+                <p className="text-xs text-text/70 truncate w-full">@{user?.Username === "" ? "username" : user?.Username}</p>
             </div>
         </div>
     )

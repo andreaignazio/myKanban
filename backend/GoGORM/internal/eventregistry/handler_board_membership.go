@@ -119,3 +119,129 @@ func (h *BoardMembershipHandler) Build(ctx context.Context, evt DomainEvent) (Ev
 		UserEventType: &userEventType,
 	}, nil
 }
+
+type BoardMemberRoleChangedHandler struct {
+	auditRepo auditcontext.Reader
+}
+
+func NewBoardMemberRoleChangedHandler(auditRepo auditcontext.Reader) *BoardMemberRoleChangedHandler {
+	return &BoardMemberRoleChangedHandler{auditRepo: auditRepo}
+}
+
+func (h *BoardMemberRoleChangedHandler) Build(ctx context.Context, evt DomainEvent) (EventBuildResult, error) {
+	statePayload := evt.Payload.StatePayload
+	if statePayload == nil || len(statePayload.UserBoardRelations) == 0 || evt.BoardID == nil || evt.WorkspaceID == nil || evt.ActorUserID == nil {
+		return EventBuildResult{}, fmt.Errorf("board.member.role.changed: invalid payload")
+	}
+
+	updatedRelation := statePayload.UserBoardRelations[0]
+	targetUserID := updatedRelation.UserID
+
+	actor, err := h.auditRepo.GetUserLiteWithBoardRoleByID(ctx, *evt.ActorUserID, *evt.WorkspaceID, *evt.BoardID)
+	if err != nil {
+		actor, err = h.auditRepo.GetUserLiteOnlyWorkspaceRoleByID(ctx, *evt.ActorUserID, *evt.WorkspaceID)
+		if err != nil {
+			return EventBuildResult{}, err
+		}
+	}
+
+	targetUserMeta, err := h.auditRepo.GetUserLite(ctx, targetUserID)
+	if err != nil {
+		return EventBuildResult{}, err
+	}
+
+	workspaceMeta, err := h.auditRepo.GetWorkspaceMeta(ctx, *evt.WorkspaceID)
+	if err != nil {
+		return EventBuildResult{}, err
+	}
+
+	boardMeta, err := h.auditRepo.GetBoardMeta(ctx, *evt.BoardID)
+	if err != nil {
+		return EventBuildResult{}, err
+	}
+
+	if statePayload.Boards == nil {
+		statePayload.Boards = make(map[uuid.UUID]dto.BoardResponse)
+	}
+	statePayload.Boards[boardMeta.ID] = dto.BoardToResponse(boardMeta)
+
+	targetUsers, err := h.auditRepo.GetUsersByIDs(ctx, []uuid.UUID{targetUserID})
+	var targetUserResponse *dto.UserResponse
+	if err == nil && len(targetUsers) > 0 {
+		r := dto.UserToResponse(targetUsers[0])
+		targetUserResponse = &r
+	}
+
+	if statePayload.Users == nil {
+		statePayload.Users = make(map[uuid.UUID]dto.UserResponse)
+	}
+	if targetUserResponse != nil {
+		statePayload.Users[targetUserID] = *targetUserResponse
+	}
+
+	links := map[string]AuditEntityLink{
+		"workspace": {
+			EntityType:  "workspace",
+			EntityID:    *evt.WorkspaceID,
+			WorkspaceID: evt.WorkspaceID,
+		},
+		"board": {
+			EntityType:  "board",
+			EntityID:    *evt.BoardID,
+			WorkspaceID: evt.WorkspaceID,
+		},
+		"target_user": {
+			EntityType:  "user",
+			EntityID:    targetUserID,
+			WorkspaceID: evt.WorkspaceID,
+		},
+		"actor": {
+			EntityType:  "user",
+			EntityID:    *evt.ActorUserID,
+			WorkspaceID: evt.WorkspaceID,
+		},
+	}
+
+	templateKey := AuditTemplateBoardMemberRoleChanged
+	if targetUserID == *evt.ActorUserID {
+		templateKey = AuditTemplateBoardMemberRoleChangedSelf
+	}
+
+	feed := AuditRenderPayload{
+		TemplateKey: templateKey,
+		Actor:       *actor,
+		Params: map[string]any{
+			"boardName":          boardMeta.Name,
+			"workspaceName":      workspaceMeta.Name,
+			"targetUserName":     targetUserMeta.Name,
+			"targetUserUsername": targetUserMeta.Username,
+			"newRole":            updatedRelation.Role,
+		},
+		Links: links,
+	}
+
+	userPayloadMap := map[uuid.UUID]ws.UserEventPayload{
+		targetUserID: {
+			BoardMemberRoleChangedPayload: &ws.BoardMemberRoleChangedPayload{
+				UserID:    targetUserID,
+				Board:     dto.BoardToResponse(boardMeta),
+				UserBoard: updatedRelation,
+				User:      targetUserResponse,
+			},
+		},
+	}
+
+	userEventType := ws.EventUserBoardMemberRoleChanged
+
+	return EventBuildResult{
+		StatePayload: statePayload,
+		FeedPayload:  feed,
+		Targets:      evt.Targets,
+		MainEntity: MainEntityRef{
+			EntityType: "board",
+			EntityID:   *evt.BoardID,
+		},
+		UserPayload:   userPayloadMap,
+		UserEventType: &userEventType,
+	}, nil
+}

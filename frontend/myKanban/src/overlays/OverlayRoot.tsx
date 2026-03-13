@@ -2,7 +2,7 @@
 import type { OverlayDescriptor } from "./overlayStore"
 import { createPortal } from "react-dom"
 import React, { useEffect } from "react"
-import { AnimatePresence } from "motion/react"
+import { AnimatePresence, motion } from "motion/react"
 import { PointOverlayLive } from "./PointOverlayLive"
 import { AnchoredOverlay } from "./AnchoredOverlay"
 import { VirtualOverlay } from "./VirtualOverlay"
@@ -90,28 +90,45 @@ export function OverlayRoot() {
     return (createPortal(
         <AnimatePresence>
 
-            {stack.map((descriptor: OverlayDescriptor, index) => {
+            {stack.flatMap((descriptor: OverlayDescriptor, index) => {
                 const zIndex = descriptor.zIndex ?? (baseZIndex + index * zIndexStep)
                 const descriptorWithZ = { ...descriptor, zIndex }
                 const isInteractive = descriptor.id === topInteractiveOverlay?.id
+                const nodes: React.ReactNode[] = []
+
+                if (descriptor.opts?.enableOwnBackdrop) {
+                    nodes.push(
+                        <motion.div
+                            key={`backdrop-${descriptor.id}`}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.15 }}
+                            style={{ position: "fixed", inset: 0, zIndex: zIndex - 1, background: "rgba(0, 0, 0, 0.45)" }}
+                            onClick={() => close(descriptor.id)}
+                        />
+                    )
+                }
+
                 if (descriptor.renderType === "livePoint") {
-                    return <PointOverlayLive key={descriptor.id} {...descriptorWithZ} />
+                    nodes.push(<PointOverlayLive key={descriptor.id} {...descriptorWithZ} />)
+                } else if (descriptor.renderType === "anchored") {
+                    nodes.push(<AnchoredOverlay key={descriptor.id} {...descriptorWithZ} isInteractive={isInteractive} />)
+                } else if (descriptor.renderType === "virtual") {
+                    nodes.push(<VirtualOverlay key={descriptor.id} {...descriptorWithZ} isInteractive={isInteractive} />)
+                } else {
+                    nodes.push(
+                        <div
+                            key={descriptor.id}
+                            style={{ position: "relative", zIndex, pointerEvents: isInteractive ? "auto" : "none" }}
+                            aria-hidden={!isInteractive}
+                        >
+                            {descriptor.render()}
+                        </div>
+                    )
                 }
-                if (descriptor.renderType === "anchored") {
-                    return <AnchoredOverlay key={descriptor.id} {...descriptorWithZ} isInteractive={isInteractive} />
-                }
-                if (descriptor.renderType === "virtual") {
-                    return <VirtualOverlay key={descriptor.id} {...descriptorWithZ} isInteractive={isInteractive} />
-                }
-                return (
-                    <div
-                        key={descriptor.id}
-                        style={{ position: "relative", zIndex, pointerEvents: isInteractive ? "auto" : "none" }}
-                        aria-hidden={!isInteractive}
-                    >
-                        {descriptor.render()}
-                    </div>
-                )
+
+                return nodes
             })}
         </AnimatePresence>,
         document.body

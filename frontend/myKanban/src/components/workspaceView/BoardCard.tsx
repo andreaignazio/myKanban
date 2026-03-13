@@ -131,6 +131,8 @@ export function BoardCard({ boardID: boardID, workspaceId: overrideWorkspaceId }
                         ({ onClose, ref }) => <BoardHoverCard boardID={boardID} />
                     }
                     customId="board-overview-card"
+                    exclusiveGroup="entity-hover-card"
+                    renderType="virtual"
                 >
 
                     <RoundButton className="absolute top-2 right-2 opacity-0 

@@ -95,6 +95,17 @@ func (h *MembershipHandler) ChangeBoardMemberRole(c *gin.Context) {
 	if err != nil {
 		return
 	}
+	workspaceIDValue, ok := c.Get("workspaceID")
+	if !ok {
+		httperr.WriteParamsError(c, errors.New("workspaceID missing in request context"), "memberships.handler.ChangeBoardMemberRole")
+		return
+	}
+	workspaceID, ok := workspaceIDValue.(uuid.UUID)
+	if !ok || workspaceID == uuid.Nil {
+		httperr.WriteParamsError(c, errors.New("invalid workspaceID in request context"), "memberships.handler.ChangeBoardMemberRole")
+		return
+	}
+	correlationID := c.MustGet("correlationID").(uuid.UUID)
 	memberIDStr := c.Param("memberID")
 	memberID, err := uuid.Parse(memberIDStr)
 	if err != nil {
@@ -106,7 +117,7 @@ func (h *MembershipHandler) ChangeBoardMemberRole(c *gin.Context) {
 		httperr.WriteParamsError(c, err, "memberships.handler.ChangeBoardMemberRole")
 		return
 	}
-	userBoard, err := h.service.ChangeBoardMemberRole(ctx, *userID, *boardID, memberID, req)
+	userBoard, err := h.service.ChangeBoardMemberRole(ctx, *userID, *boardID, workspaceID, memberID, correlationID, req)
 	if err != nil {
 		httperr.WriteOp(c, err, "memberships.handler.ChangeBoardMemberRole")
 		return

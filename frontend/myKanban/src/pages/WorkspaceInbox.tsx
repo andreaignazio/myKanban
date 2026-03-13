@@ -6,7 +6,7 @@ import { ExclamationCircleIcon } from "@heroicons/react/24/solid";
 import { useCacheStore } from "@/stores/cacheStore";
 import { LabeledButtonCustom } from "@/components/buttons/labeledButton";
 import { useOverlayStore, type OverlayDescriptor } from "@/overlays/overlayStore";
-import { ShareActionModal } from "@/components/modals/ShareActionModal";
+import { ShareOfferRespondModal } from "@/components/modals/ShareOfferRespondModal";
 import { GridBuilder, type ColumnDefinition } from "@/components/OffersLists/UserBoardOutgoingRequests";
 
 export function WorkspaceInbox() {
@@ -14,7 +14,7 @@ export function WorkspaceInbox() {
     const workspaceRequestIds = useShareOffersStore(useShallow((state) => state.workspaceReceivedRequestsIdsByWorkspaceId[workspaceID] ?? []));
     const offerById = useCacheStore(useShallow((state) => state.offerById));
     const visibleRequestIds = workspaceRequestIds.filter((id) => Boolean(offerById[id]));
-    const shareActionModalRef = useRef<HTMLDivElement>(null);
+    const respondModalRef = useRef<HTMLDivElement>(null);
 
     const openMenu = useOverlayStore((state) => state.open)
     const onMenuClose = useOverlayStore((state) => state.close);
@@ -23,8 +23,8 @@ export function WorkspaceInbox() {
         const id = "respondModal-" + shareOfferID;
         const descriptor: OverlayDescriptor = {
             id: id,
-            render: () => <ShareActionModal ref={shareActionModalRef} shareOfferID={shareOfferID} actionType="respond" onClose={() => onMenuClose(id)} />,
-            panelRef: shareActionModalRef,
+            render: () => <ShareOfferRespondModal ref={respondModalRef} shareOfferID={shareOfferID} onClose={() => onMenuClose(id)} />,
+            panelRef: respondModalRef,
             type: "modal",
             renderType: "virtual",
             exclusiveGroup: "share-action-modal",

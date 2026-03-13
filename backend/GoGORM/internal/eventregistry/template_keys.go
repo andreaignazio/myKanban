@@ -50,6 +50,8 @@ const (
 	AuditTemplateWorkspaceMemberRemovedSelf        AuditTemplateKey = "audit.workspace.member.removed.self"
 	AuditTemplateBoardMemberRemoved                AuditTemplateKey = "audit.board.member.removed"
 	AuditTemplateBoardMemberRemovedSelf            AuditTemplateKey = "audit.board.member.removed.self"
+	AuditTemplateBoardMemberRoleChanged            AuditTemplateKey = "audit.board.member.role.changed"
+	AuditTemplateBoardMemberRoleChangedSelf        AuditTemplateKey = "audit.board.member.role.changed.self"
 	AuditTemplateWorkspaceShareOfferCreated        AuditTemplateKey = "audit.workspace.shareoffer.created"
 	AuditTemplateWorkspaceShareOfferInviteAccepted AuditTemplateKey = "audit.workspace.shareoffer.invite.accepted"
 	AuditTemplateWorkspaceShareOfferInviteRejected AuditTemplateKey = "audit.workspace.shareoffer.invite.rejected"
