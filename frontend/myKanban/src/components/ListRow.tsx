@@ -56,18 +56,18 @@ export function ListRow({ boardID: boardID, boardListID: boardListID, index: ind
     const key = useAsyncKey("list:create", boardListID)
     let { isLoading } = useAsyncRequest(key)
     //isLoading = true
-    const [showPlaceholder, setShowPlaceholder] = useState(true)
-    useEffect(() => {
-        if (!isLoading) {
-            //   setShowPlaceholder(false)
-            const timeout = setTimeout(() => {
-                setShowPlaceholder(false)
-            }, 500)
-            return () => clearTimeout(timeout)
-        } else {
-            setShowPlaceholder(true)
-        }
-    }, [isLoading])
+    /*  const [showPlaceholder, setShowPlaceholder] = useState(true)
+      useEffect(() => {
+          if (!isLoading) {
+              //   setShowPlaceholder(false)
+              const timeout = setTimeout(() => {
+                  setShowPlaceholder(false)
+              }, 500)
+              return () => clearTimeout(timeout)
+          } else {
+              setShowPlaceholder(true)
+          }
+      }, [isLoading])*/
 
 
     if (!boardList || !listID) return null

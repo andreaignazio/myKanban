@@ -1063,3 +1063,9 @@ export type CreateListInBoardResponse = {
     List: List;
     Relation: BoardList;
 }
+
+export type CreateCardInListResponse = {
+    Entity: Card;
+    Relation: ListCard;
+    CorrelationID: string;
+}

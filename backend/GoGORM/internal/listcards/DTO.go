@@ -16,8 +16,9 @@ type CreateCardRequest struct {
 }
 
 type CreateCardResponse struct {
-	Card     dto.CardResponse
-	ListCard dto.ListCardResponse
+	Card          dto.CardResponse     `json:"Entity"`
+	ListCard      dto.ListCardResponse `json:"Relation"`
+	CorrelationID uuid.UUID            `json:"CorrelationID"`
 }
 
 type ListMetaResponse struct {

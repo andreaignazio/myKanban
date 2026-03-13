@@ -123,6 +123,10 @@ type BoardDetailStore = {
     rootListCardDataByListCardId: Record<string, RootData>
     invalidatedRootBoardListCardIds: Record<string, true>
 
+    getListCardById: () => Record<string, ListCard>
+    setListCardById: (listCardById: Record<string, ListCard>) => void
+    getListCardIdsByListId: () => Record<string, string[]>
+    setStateListCardIdsByListId: (listCardIdsByListId: Record<string, string[]>) => void
 
     setCurrentBoardId: (boardID: string | null) => void
     getListCardIds: (listID: string) => string[]
@@ -195,6 +199,12 @@ export const useBoardDetailStore = create<BoardDetailStore>((set, get) => ({
     rootListCardDataByListCardId: {},
     rootBoardIdByListCardId: {},
     invalidatedRootBoardListCardIds: {},
+
+    getListCardById: () => get().listCardById,
+    setListCardById: (listCardById) => set(() => ({ listCardById })),
+
+    getListCardIdsByListId: () => get().listCardIdsByListId,
+    setStateListCardIdsByListId: (listCardIdsByListId) => set(() => ({ listCardIdsByListId })),
 
     getRootListIdForCardId: (cardID) => {
         const listCardById = get().listCardById

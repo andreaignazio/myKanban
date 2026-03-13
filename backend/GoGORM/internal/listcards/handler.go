@@ -102,8 +102,9 @@ func (h *ListCardsHandler) CreateCardInList(c *gin.Context) {
 		return
 	}
 	createCardResponse := CreateCardResponse{
-		Card:     dto.CardToResponse(newCard),
-		ListCard: dto.ListCardToResponse(newListcard),
+		Card:          dto.CardToResponse(newCard),
+		ListCard:      dto.ListCardToResponse(newListcard),
+		CorrelationID: correlationID,
 	}
 	hydratedCreated, err := h.ListCardsService.HydrateListCardResponseMirrors(ctx, []dto.ListCardResponse{createCardResponse.ListCard})
 	if err == nil && len(hydratedCreated) > 0 {

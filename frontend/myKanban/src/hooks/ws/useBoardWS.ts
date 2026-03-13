@@ -91,14 +91,17 @@ export function useBoardWebSocket(workspaceID: string, boardID: string | null) {
     const removeBoardMember = useBoardMembersStore((state) => state.removeBoardMember)
 
     const dispatchEvent = (evt: BoardEvent | WorkspaceEvent | UserEvent) => {
-        console.log("[ws] dispatch event", evt)
+        //console.log("[ws] dispatch event", evt)
         const correlationID = (evt as { CorrelationID?: string | null }).CorrelationID
         const dedupeKey = (typeof correlationID === "string" && correlationID.trim() !== "")
             ? correlationID
             : `id::${evt.ID}`
 
-        if (isAlreadyProcessed(dedupeKey, evt.Type)) {
-            console.debug("[ws] already processed event, skipping", evt)
+        const isProcessed = isAlreadyProcessed(dedupeKey, evt.Type)
+        console.log("[ws] dedupe check", { dedupeKey, eventType: evt.Type, isProcessed })
+
+        if (isProcessed) {
+            console.log("[ws] DEDUPED — optimistic reconcile already applied, skipping WS event", { type: evt.Type, dedupeKey, eventID: evt.ID })
             return
         } addEvent(dedupeKey, evt.Type)
 

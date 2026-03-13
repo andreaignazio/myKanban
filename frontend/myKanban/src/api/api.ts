@@ -21,5 +21,10 @@ api.interceptors.request.use(async (config) => {
         delete config.headers.Authorization
     }
 
+    // Pass through caller-provided correlation ID; backend generates one if absent
+    if (!config.headers["x-correlation-id"]) {
+        delete config.headers["x-correlation-id"]
+    }
+
     return config
 })

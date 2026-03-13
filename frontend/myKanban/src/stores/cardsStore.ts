@@ -3,7 +3,7 @@ import { create } from 'zustand'
 import { useAsyncRequestStore, useAsyncKey } from '@/stores/asyncRequestStore'
 import type { AsyncRequestKey } from '@/stores/asyncRequestTypes'
 
-import type { BulkDetatchListCardsResponse, BulkMoveListCardsInBoardRequest, BulkMoveListCardsInBoardResponse, Card, CardProps, CopyCardToListRequest, MirrorCardToListRequest, MoveCardToBoardRequest, PatchCardDetailsRequest, PatchCardPropsRequest } from './types'
+import type { BulkDetatchListCardsResponse, BulkMoveListCardsInBoardRequest, BulkMoveListCardsInBoardResponse, Card, CardProps, CopyCardToListRequest, CreateCardInListResponse, MirrorCardToListRequest, MoveCardToBoardRequest, PatchCardDetailsRequest, PatchCardPropsRequest } from './types'
 
 type cardsById = Record<string, Card>
 
@@ -37,8 +37,10 @@ export type MoveCardPayload = {
 }
 type CardsStore = {
     cardsById: cardsById
+    getCardsById: () => cardsById
+    setCardsById: (cardsById: cardsById) => void
     // fetchCards: () => Promise<void>
-    addCardToList: (boardID: string, listID: string, payload: CreateCardPayload) => Promise<Card | null>
+    addCardToList: (boardID: string, listID: string, payload: CreateCardPayload, key?: AsyncRequestKey, correlationID?: string) => Promise<CreateCardInListResponse | null>
     mergeCardsPatch: (payload: Record<string, Card>) => void
     mergeCards: (cards: Card[]) => void
     removeCards: (cardIDs: string[]) => void
@@ -69,6 +71,8 @@ export const useCardsStore = create<CardsStore>((set, get) => ({
         }
 
     },*/
+    getCardsById: () => get().cardsById,
+    setCardsById: (cardsById) => set(() => ({ cardsById })),
     mergeCardsPatch: (payload: Record<string, Card>) => {
         set((state) => ({
             cardsById: {
@@ -99,12 +103,14 @@ export const useCardsStore = create<CardsStore>((set, get) => ({
         set({ cardsById: next })
     },
 
-    addCardToList: async (boardID: string, listID: string, payload: CreateCardPayload) => {
-        return useAsyncRequestStore.getState().execute<Card>(
-            useAsyncKey("card:create", listID),
+    addCardToList: async (boardID: string, listID: string, payload: CreateCardPayload, key?: AsyncRequestKey, correlationID?: string) => {
+        return useAsyncRequestStore.getState().execute<CreateCardInListResponse>(
+            key ?? useAsyncKey("card:create", listID),
             async () => {
-                const response = await api.post(`/boards/${boardID}/lists/${listID}/cards`, payload)
-                return response.data as Card
+                //await new Promise((resolve) => setTimeout(resolve, 1000));
+                const headers = correlationID ? { "x-correlation-id": correlationID } : undefined
+                const response = await api.post(`/boards/${boardID}/lists/${listID}/cards`, payload, { headers })
+                return response.data as CreateCardInListResponse
             },
             { successResetDelayMs: 2000 }
         )

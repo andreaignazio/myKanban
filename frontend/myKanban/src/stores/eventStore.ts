@@ -9,6 +9,7 @@ type EventStore = {
 export const useEventStore = create<EventStore>((set, get) => ({
     eventsTypesByCorrelationId: {},
     addEvent: (correlationId, eventType) => {
+        console.log("[EventStore] Adding event", { correlationId, eventType })
         set((state) => ({
             eventsTypesByCorrelationId: {
                 ...state.eventsTypesByCorrelationId,
@@ -17,6 +18,7 @@ export const useEventStore = create<EventStore>((set, get) => ({
         }))
     },
     isAlreadyProcessed: (correlationId, eventType) => {
+        console.log("[EventStore] Checking if event is already processed", { correlationId, eventType })
         const eventsForCorrelation = get().eventsTypesByCorrelationId[correlationId] || [];
         return eventsForCorrelation.includes(eventType);
     },
