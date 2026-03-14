@@ -3,6 +3,7 @@ import { useBoardDetailStore } from "@/stores/boardDetailStore";
 import { Outlet, useParams } from "react-router-dom";
 import { useShallow } from "zustand/shallow"
 import { useBoardsStore } from "@/stores/boardsStore";
+import { useAsyncRequestStore, useAsyncKey } from "@/stores/asyncRequestStore";
 
 import type { InboxCard, MoveInboxToListRequest } from "@/stores/types";
 import { useOverlayStore, type OverlayDescriptor } from "@/overlays/overlayStore";
@@ -54,6 +55,18 @@ export default function BoardView() {
             setCurrentBoardId(null)
         }
     }, [boardId, setCurrentBoardId])
+
+    // Re-hydrate user-board relation when the store has been cleared (e.g. Vite HMR reloads the
+    // boardsStore module). The main effect above won't re-run because boardId hasn't changed, so
+    // userBoardsById[boardId] stays empty and useCurrentBoardRole returns undefined until we
+    // explicitly re-fetch. Guard against double-fetching with the in-flight loading check.
+    const hasUserRelation = useBoardsStore((state) => !!boardId && !!state.userBoardsById[boardId])
+    useEffect(() => {
+        if (!boardId || hasUserRelation) return
+        const detailKey = useAsyncKey("board:read:detail", boardId)
+        if (useAsyncRequestStore.getState().getRequestState(detailKey)?.isLoading) return
+        void useBoardDetailStore.getState().getBoardDetailPatch(boardId)
+    }, [boardId, hasUserRelation])
 
 
     const { backgroundType, backgroundColorToken, backgroundColorClassName, resolvedBackgroundUrl } = useBoardBackground({ board })

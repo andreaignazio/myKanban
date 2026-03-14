@@ -2,6 +2,7 @@ import { EntityDescriptionEditor } from "@/components/common/EntityDescriptionEd
 import { MemberRow } from "@/components/common/MemberRow";
 import { useBoardActionRegistry } from "@/actionRegistry/boardActionRegistry";
 import { useBoardMembersStore } from "@/stores/boardMembersStore";
+import { boardMemberKey } from "@/stores/boardMembersStore";
 import { useBoardsStore } from "@/stores/boardsStore";
 import type { User } from "@/stores/types";
 import { useUserStore } from "@/stores/userStore";
@@ -21,7 +22,7 @@ export const BoardAbout = ({ boardId }: BoardAboutProps) => {
 
     const memberById = useBoardMembersStore(state => state.membersById)
     const filterFn = (id: string) => {
-        const member = memberById[id]
+        const member = memberById[boardMemberKey(boardId, id)]
         if (!member) return false
         return member.Role === "admin" || member.Role === "owner"
     }

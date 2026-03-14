@@ -1,6 +1,7 @@
 ﻿import { useShareOffersStore, type ShareOffer } from "@/stores/shareOffersStore";
 import { useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
+import { useOutletContext } from "react-router-dom";
 import { useShallow } from "zustand/react/shallow";
 import { ExclamationCircleIcon } from "@heroicons/react/24/solid";
 import { LabeledButtonCustom } from "@/components/buttons/labeledButton";
@@ -8,9 +9,13 @@ import { useOverlayStore, type OverlayDescriptor } from "@/overlays/overlayStore
 import { ShareActionModal } from "@/components/modals/ShareActionModal";
 import { GridBuilder, type ColumnDefinition } from "@/components/OffersLists/UserBoardOutgoingRequests";
 
+type OutletCtx = { showOnlyFiltered: boolean }
+
 export function WorkspaceOutbox() {
     const workspaceID = useParams().workspaceId ?? "";
-    const shareOffers = useShareOffersStore(useShallow((state) => state.getWorkspaceShareOffers(workspaceID))) ?? [];
+    const { showOnlyFiltered } = useOutletContext<OutletCtx>();
+    const allShareOffers = useShareOffersStore(useShallow((state) => state.getWorkspaceShareOffers(workspaceID))) ?? [];
+    const shareOffers = showOnlyFiltered ? allShareOffers.filter(o => o.Status === "pending") : allShareOffers;
     const shareActionModalRef = useRef<HTMLDivElement>(null);
 
     const openMenu = useOverlayStore((state) => state.open)

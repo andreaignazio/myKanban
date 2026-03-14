@@ -10,6 +10,8 @@ import { useCurrentWorkspaceRole } from "@/hooks/useCurrentWorkspaceRole";
 import { type AsideTabs } from "@/components/workspacePages/asideTabs";
 import { SettingsPageWrapper } from "@/components/workspacePages/SettingsPageWrapper";
 import { useSyncTabRouter } from "@/hooks/useSyncTabRouter";
+import { useState, useEffect } from "react";
+import { Switcher } from "@/components/OffersLists/OfferManagerShell";
 
 
 
@@ -35,43 +37,61 @@ export function WorkspaceMembers() {
     }
 
     const { activeTab } = useSyncTabRouter(asideLinks);
+    const [showOnlyFiltered, setShowOnlyFiltered] = useState(false);
+
+    useEffect(() => { setShowOnlyFiltered(false); }, [activeTab]);
+
+    const showSwitcher = activeTab === "links" || activeTab === "outbox" || activeTab === "inbox";
+    const switcherLabel = activeTab === "links" ? "Show only active" : "Show only pending";
 
 
     return (
-        <SettingsPageWrapper
+        <div className="h-screen w-full overflow-hidden">
+            <SettingsPageWrapper
 
-            asideLinks={asideLinks}
-            activeTab={activeTab}
-            handleNavigate={handleNavigate}
-            asideHeader=
-            {<>
-                <span className="text-lg font-bold text-neutral-300">Collaborators</span>
-                <div className="flex items-center justify-center w-8 h-6 rounded-full bg-neutral-400 text-neutral-900 text-sm font-bold">
-                    {membersIds.length}
-                </div>
-            </>}
-            mainHeader={
-                <>
-                    <div className="flex flex-row w-full justify-end ">
-                        <CardRowMenuBtn
-                            renderType="virtual"
-                            menuComponent={({ onClose, ref }) => <ShareActionModal ref={ref}
-                                actionType="create"
-                                onClose={() => onClose()}
-                                targetID={workspaceID}
-                                targetType="workspace"
-                            />}
-                        >
-                            {isAdminOrOwner && <LabeledButtonPresetA label="Invite Workspace Members" onClick={() => { }}
-                                className="w-fit px-4 mb-4 !bg-accent !text-neutral-900" >
-                                <UserPlusIcon className="h-4 aspect-square" />
-                            </LabeledButtonPresetA>}
-                        </CardRowMenuBtn>
+                asideLinks={asideLinks}
+                activeTab={activeTab}
+                handleNavigate={handleNavigate}
+                asideHeader=
+                {<>
+                    <span className="text-lg font-bold text-neutral-300">Collaborators</span>
+                    <div className="flex items-center justify-center w-8 h-6 rounded-full bg-neutral-400 text-neutral-900 text-sm font-bold">
+                        {membersIds.length}
                     </div>
-                    <Outlet />
-                </>
-            }
+                </>}
+                mainHeader={
+                    <>
+                        <div className="flex flex-row w-full justify-between items-center flex-shrink-0">
+                            <div className="flex items-center gap-3">
+                                {showSwitcher && (
+                                    <>
+                                        <span className="text-sm text-gray-400 whitespace-nowrap">{switcherLabel}</span>
+                                        <Switcher isOn={showOnlyFiltered} onToggle={() => setShowOnlyFiltered(v => !v)} />
+                                    </>
+                                )}
+                            </div>
+                            {isAdminOrOwner && <CardRowMenuBtn
+                                renderType="virtual"
+                                menuComponent={({ onClose, ref }) => <ShareActionModal ref={ref}
+                                    actionType="create"
+                                    onClose={() => onClose()}
+                                    targetID={workspaceID}
+                                    targetType="workspace"
+                                />}
+                            >
+                                <LabeledButtonPresetA label="Invite Workspace Members" onClick={() => { }}
+                                    className="w-fit px-4 mb-4 !bg-accent !text-neutral-900" >
+                                    <UserPlusIcon className="h-4 aspect-square" />
+                                </LabeledButtonPresetA>
+                            </CardRowMenuBtn>}
+                        </div>
+                        <div className="flex-1 min-h-0 overflow-y-auto scrollbar-hidden">
+                            <Outlet context={{ showOnlyFiltered }} />
+                        </div>
+                    </>
+                }
 
-        />
+            />
+        </div>
     )
 }

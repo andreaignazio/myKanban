@@ -17,6 +17,7 @@ import { useWorkspaceStore } from "@/stores/workspaceStore"
 import { useEventStore } from "@/stores/eventStore"
 import { useUserMemberCardsStore } from "@/stores/userMemberCardsStore"
 import { useShareOffersStore } from "@/stores/shareOffersStore"
+import { useShareLinksStore } from "@/stores/shareLinksStore"
 import { useBoardsStore } from "@/stores/boardsStore"
 import { useBoardMembersStore } from "@/stores/boardMembersStore"
 import { useUserStore } from "@/stores/userStore"
@@ -88,6 +89,7 @@ export function useBoardWebSocket(workspaceID: string, boardID: string | null) {
     const addEvent = useEventStore((state) => state.addEvent)
     const isAlreadyProcessed = useEventStore((state) => state.isAlreadyProcessed)
     const applyShareOfferEvent = useShareOffersStore((state) => state.applyShareOfferEvent)
+    const applyShareLinkEvent = useShareLinksStore((state) => state.applyShareLinkEvent)
     const removeUserBoardRelation = useBoardsStore((state) => state.removeUserBoardRelation)
     const removeBoardMember = useBoardMembersStore((state) => state.removeBoardMember)
     const upsertBoardMember = useBoardMembersStore((state) => state.upsertBoardMember)
@@ -118,6 +120,13 @@ export function useBoardWebSocket(workspaceID: string, boardID: string | null) {
             return
         }
 
+        if (evt.Type === "workspace.sharelink.created" || evt.Type === "workspace.sharelink.revoked" ||
+            evt.Type === "board.sharelink.created" || evt.Type === "board.sharelink.revoked") {
+            applyShareLinkEvent(evt as WorkspaceEvent | BoardEvent)
+            console.debug("[ws] dispatch share link event", evt)
+            return
+        }
+
         if (evt.Type.includes("workspace.user.shareoffer.") || evt.Type.includes("board.user.shareoffer.")) {
             applyShareOfferEvent(evt as UserEvent)
             console.debug("[ws] dispatch user share offer event", evt)
@@ -135,7 +144,9 @@ export function useBoardWebSocket(workspaceID: string, boardID: string | null) {
             if (payload?.UserBoard) {
                 const boardID = payload.Board?.ID ?? payload.UserBoard.BoardID
                 upsertBoardMember(boardID, payload.UserBoard)
-                useBoardsStore.getState().mergeUserBoardRelation(payload.UserBoard)
+                if (payload.UserBoard.UserID === useAuthStore.getState().userID) {
+                    useBoardsStore.getState().mergeUserBoardRelation(payload.UserBoard)
+                }
             }
             if (payload?.User) {
                 useUserStore.getState().mergeUsers([payload.User])

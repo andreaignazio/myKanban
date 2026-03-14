@@ -83,43 +83,44 @@ export const useWsMembersStore = create<WsMembersState>((set, get) => ({
         }
     },
     mergeMembersData: (data: WorkspaceMemberData) => {
-        const usersByID: Record<string, User> = data.User.reduce((acc, user) => {
-            acc[user.ID] = user;
-            return acc;
-        }, {} as Record<string, User>);
-        const userWorkspacesById: Record<string, UserWorkspace> = data.UserWorkspace.reduce((acc, userWorkspace) => {
-            acc[userWorkspace.UserID] = userWorkspace;
-            return acc;
-        }, {} as Record<string, UserWorkspace>);
 
-        const userIdsByWorkspaceId: Record<string, string[]> = {};
-        data.UserWorkspace.forEach((userWorkspace) => {
-            if (!userIdsByWorkspaceId[userWorkspace.WorkspaceID]) {
-                userIdsByWorkspaceId[userWorkspace.WorkspaceID] = [];
-            }
-            userIdsByWorkspaceId[userWorkspace.WorkspaceID].push(userWorkspace.UserID);
-        });
 
-        useUserStore.setState((state) => ({
-            usersById: { ...state.usersById, ...usersByID }
-        }));
-        set((state) => {
-            const nextUserWorkspacesByWorkspaceId = { ...state.userWorkspacesByWorkspaceId };
-            Object.entries(userIdsByWorkspaceId).forEach(([workspaceId, userIds]) => {
-                nextUserWorkspacesByWorkspaceId[workspaceId] = {
-                    ...(nextUserWorkspacesByWorkspaceId[workspaceId] ?? {})
-                };
-                userIds.forEach((userId) => {
-                    if (userWorkspacesById[userId]) {
-                        nextUserWorkspacesByWorkspaceId[workspaceId][userId] = userWorkspacesById[userId];
-                    }
-                });
-            });
-            return {
-                userWorkspacesByWorkspaceId: nextUserWorkspacesByWorkspaceId,
-                userIdsByWorkspaceId: { ...state.userIdsByWorkspaceId, ...userIdsByWorkspaceId }
-            };
-        });
+        useUserStore.getState().mergeUsers(data.User);
+        get().mergeUserWorkspaceRelation(data.UserWorkspace);
+
+        /* const userWorkspacesById: Record<string, UserWorkspace> = data.UserWorkspace.reduce((acc, userWorkspace) => {
+             acc[userWorkspace.UserID] = userWorkspace;
+             return acc;
+         }, {} as Record<string, UserWorkspace>);
+ 
+         const userIdsByWorkspaceId: Record<string, string[]> = {};
+         data.UserWorkspace.forEach((userWorkspace) => {
+             if (!userIdsByWorkspaceId[userWorkspace.WorkspaceID]) {
+                 userIdsByWorkspaceId[userWorkspace.WorkspaceID] = [];
+             }
+             userIdsByWorkspaceId[userWorkspace.WorkspaceID].push(userWorkspace.UserID);
+         });
+ 
+         useUserStore.setState((state) => ({
+             usersById: { ...state.usersById, ...usersByID }
+         }));
+         set((state) => {
+             const nextUserWorkspacesByWorkspaceId = { ...state.userWorkspacesByWorkspaceId };
+             Object.entries(userIdsByWorkspaceId).forEach(([workspaceId, userIds]) => {
+                 nextUserWorkspacesByWorkspaceId[workspaceId] = {
+                     ...(nextUserWorkspacesByWorkspaceId[workspaceId] ?? {})
+                 };
+                 userIds.forEach((userId) => {
+                     if (userWorkspacesById[userId]) {
+                         nextUserWorkspacesByWorkspaceId[workspaceId][userId] = userWorkspacesById[userId];
+                     }
+                 });
+             });
+             return {
+                 userWorkspacesByWorkspaceId: nextUserWorkspacesByWorkspaceId,
+                 userIdsByWorkspaceId: { ...state.userIdsByWorkspaceId, ...userIdsByWorkspaceId }
+             };
+         });*/
     },
     mergeUserWorkspaceRelation: (userWorkspaces: UserWorkspace[]) => {
         set((state) => {

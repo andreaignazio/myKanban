@@ -6,11 +6,11 @@ import { useShallow } from "zustand/shallow";
 import { SubscriptionBadge } from "@/components/badges/subscriptionBadge";
 import { ExclamationCircleIcon, PencilIcon, ShieldCheckIcon, XCircleIcon } from "@heroicons/react/24/outline";
 import { useOverlayStore, type OverlayDescriptor } from "@/overlays/overlayStore";
-import { ShareActionModal } from "../modals/ShareActionModal";
 import { ShareOfferRespondModal } from "../modals/ShareOfferRespondModal";
 import { UserHoverCard } from "../modals/UserHoverCard";
-import { CopyLinkText } from "../menuElements/CopyLinkToClipboard";
 import { useShareLinksStore } from "@/stores/shareLinksStore";
+import { LabeledButtonCustom } from "@/components/buttons/labeledButton";
+import { Link } from "lucide-react";
 import { useUserStore } from "@/stores/userStore";
 import { UserAvatarDummy } from "../badges/UserAvatarDummy";
 import { useBoardBackground } from "@/hooks/useBoardBackground";
@@ -239,7 +239,7 @@ export function ShareOfferCustomRow<Row extends TabularData = ShareOffer>({ offe
         },
         link: {
             render: (value: string | null, shareId: string, style?: React.CSSProperties) =>
-                <LinkComponent token={value ?? ""} style={style} />
+                <LinkComponent token={value ?? ""} shareId={shareId} style={style} />
 
         }
 
@@ -267,12 +267,30 @@ export function ShareOfferCustomRow<Row extends TabularData = ShareOffer>({ offe
     )
 }
 
-export const LinkComponent = ({ token, style }: { token: string, style?: React.CSSProperties }) => {
-    const link = useShareLinksStore((state) => state.buildUrlFromToken(token));
+export const LinkComponent = ({ token, shareId, style }: { token: string, shareId?: string, style?: React.CSSProperties }) => {
+    const url = useShareLinksStore((state) => state.buildUrlFromToken(token));
+    const shareLink = useShareLinksStore((state) => shareId ? state.shareLinksById[shareId] : undefined);
+    const isRevoked = Boolean(shareLink?.RevokedAt);
+
+    const handleCopy = async () => {
+        try { await navigator.clipboard.writeText(url); } catch { /* silent */ }
+    };
 
     return (
-        <CopyLinkText link={link} label="Copy link" />
-    )
+        <LabeledButtonCustom
+            label="Copy link"
+            onClick={handleCopy}
+            disabled={isRevoked}
+            iconAtLeft
+            style={style}
+            className={`text-sm font-medium h-8 ${isRevoked
+                    ? "text-neutral-500 opacity-50"
+                    : "bg-menubtn text-neutral-200"
+                }`}
+        >
+            <Link className="w-3.5 h-3.5" />
+        </LabeledButtonCustom>
+    );
 }
 
 
@@ -294,44 +312,42 @@ export const ActionComponent = ({ action, shareId, style }: ActionComponentProps
         if (action === "respond") {
             handleOpenRespondModal(shareId);
         } else if (action === "revoke") {
-            handleOpenRespondModal(shareId);
+            handleOpenRevokeModal(shareId);
         }
 
     }
 
-    const shareActionModalRef = useRef<HTMLDivElement>(null)
     const respondModalRef = useRef<HTMLDivElement>(null)
     function handleOpenRespondModal(shareOfferID: string) {
-        if (action !== "respond" && action !== "revoke") {
-            return;
-        }
+        if (action !== "respond") return;
         const id = "respondModal-" + shareOfferID;
-        if (action === "respond") {
-            const descriptor: OverlayDescriptor = {
-                id: id,
-                render: () => <ShareOfferRespondModal ref={respondModalRef} shareOfferID={shareOfferID} onClose={() => onMenuClose(id)} />,
-                panelRef: respondModalRef,
-                type: "modal",
-                renderType: "virtual",
-                exclusiveGroup: "share-action-modal",
-                opts: {
-                    closeOnMouseLeave: false,
-                    closeOnClickOutside: true,
-                    closeOnEscape: true,
-                    lockBackdrop: true,
-                    enableOwnBackdrop: true,
-                },
-                position: {
-                    virtual: "viewport-center"
-                }
-            }
-            openOverlay(descriptor);
-            return;
-        }
         const descriptor: OverlayDescriptor = {
             id: id,
-            render: () => <ShareActionModal ref={shareActionModalRef} shareOfferID={shareOfferID} actionType={action} onClose={() => onMenuClose(id)} />,
-            panelRef: shareActionModalRef,
+            render: () => <ShareOfferRespondModal ref={respondModalRef} shareOfferID={shareOfferID} onClose={() => onMenuClose(id)} />,
+            panelRef: respondModalRef,
+            type: "modal",
+            renderType: "virtual",
+            exclusiveGroup: "share-action-modal",
+            opts: {
+                closeOnMouseLeave: false,
+                closeOnClickOutside: true,
+                closeOnEscape: true,
+                lockBackdrop: true,
+                enableOwnBackdrop: true,
+            },
+            position: {
+                virtual: "viewport-center"
+            }
+        }
+        openOverlay(descriptor);
+    }
+    function handleOpenRevokeModal(shareOfferID: string) {
+        if (action !== "revoke") return;
+        const id = "revokeModal-" + shareOfferID;
+        const descriptor: OverlayDescriptor = {
+            id: id,
+            render: () => <ShareOfferRespondModal ref={respondModalRef} mode="revoke" shareOfferID={shareOfferID} onClose={() => onMenuClose(id)} />,
+            panelRef: respondModalRef,
             type: "modal",
             renderType: "virtual",
             exclusiveGroup: "share-action-modal",

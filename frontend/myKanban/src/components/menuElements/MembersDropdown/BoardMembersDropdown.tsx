@@ -2,7 +2,7 @@ import { useBoardActionRegistry } from "@/actionRegistry/boardActionRegistry";
 import { UniversalMembershipDropdown } from "./UniversalMembershipDropdown";
 import type { CustomDropDownHandle } from "../CustomDropDown";
 import { useEffect, useRef } from "react";
-import { useBoardMembersStore } from "@/stores/boardMembersStore";
+import { useBoardMembersStore, boardMemberKey } from "@/stores/boardMembersStore";
 
 type BoardMembersDropdownProps = {
     userId: string;
@@ -18,7 +18,7 @@ export const BoardMembersDropdown = ({ userId, boardID, isAdminOrOwner, isCurren
 
     const boardActions = useBoardActionRegistry();
     const roleDropdownRef = useRef<CustomDropDownHandle>(null);
-    const member = useBoardMembersStore((state) => state.membersById[userId]);
+    const member = useBoardMembersStore((state) => state.membersById[boardMemberKey(boardID, userId)]);
     const setMemberRole = (role: string) => {
         roleDropdownRef.current?.setActiveId(role.toLowerCase());
         boardActions.setBoardMemberRole(boardID, userId, role.toLowerCase());

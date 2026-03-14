@@ -33,7 +33,7 @@ export function UserRoleBadge({ role, className, children, isLocked = false, onC
     )
 }
 
-function getRoleBadgeClass(role: Role, lightBg: boolean, solidBg: boolean, shadow: boolean) {
+export function getRoleBadgeClass(role: Role, lightBg: boolean, solidBg: boolean, shadow: boolean) {
     const shadowClass = shadow ? " shadow-sm" : "";
     if (solidBg) {
         switch (role) {

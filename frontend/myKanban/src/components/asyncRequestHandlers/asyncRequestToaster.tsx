@@ -53,6 +53,13 @@ const AsyncRequestToaster = forwardRef<HTMLDivElement, AsyncRequestToasterProps>
             minSuccessMs: 3000,
             maxErrorMs: 3000,
             show: ["error", "loading", "success"],
+        },
+        {
+            requestKey: ["board:sharelink:revoke", "workspace:sharelink:revoke", "workspace:shareoffer:create"],
+            minLoadingMs: 0,
+            minSuccessMs: 3000,
+            maxErrorMs: 3000,
+            show: ["error", "loading", "success"],
         }
     ]
 
@@ -114,6 +121,7 @@ export const AsyncRequestToasterController = () => {
     const keysCardB: AsyncRequestKey[] = ["card:create", "workspace:create"]
     const keysArchive: AsyncRequestKey[] = ["card:delete", "list:detach", "board:archive:list:purge", "board:archive:card:purge"]
     const keysWatchBoardList: AsyncRequestKey[] = ["watch:add:board", "watch:add:list", "watch:patch:board", "watch:patch:list"]
+    const keysShareLink: AsyncRequestKey[] = ["board:sharelink:revoke", "workspace:sharelink:revoke", "workspace:shareoffer:create"]
 
 
 
@@ -126,6 +134,7 @@ export const AsyncRequestToasterController = () => {
     const { isLoading: isLoadingCardB, isSuccessful: isSuccessfulCardB, errorMessage: errorMessageCardB } = useAsyncRequestGroup(keysCardB)
     const { isLoading: isLoadingArchive, isSuccessful: isSuccessfulArchive, errorMessage: errorMessageArchive } = useAsyncRequestGroup(keysArchive)
     const { isLoading: isLoadingWatchBoardList, isSuccessful: isSuccessfulWatchBoardList, errorMessage: errorMessageWatchBoardList } = useAsyncRequestGroup(keysWatchBoardList)
+    const { isLoading: isLoadingShareLink, isSuccessful: isSuccessfulShareLink, errorMessage: errorMessageShareLink } = useAsyncRequestGroup(keysShareLink)
 
 
 
@@ -207,6 +216,15 @@ export const AsyncRequestToasterController = () => {
             }
         }
     }, [isLoadingWatchBoardList, isSuccessfulWatchBoardList, errorMessageWatchBoardList]);
+
+    useEffect(() => {
+        if (isLoadingShareLink || isSuccessfulShareLink || errorMessageShareLink) {
+            handleOpenToastNotification(keysShareLink);
+            if (isSuccessfulShareLink || errorMessageShareLink) {
+                scheduleCloseOverlay();
+            }
+        }
+    }, [isLoadingShareLink, isSuccessfulShareLink, errorMessageShareLink]);
 
     const scheduleCloseOverlay = () => {
         if (timeOutRef.current) {

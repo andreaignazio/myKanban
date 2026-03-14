@@ -15,6 +15,8 @@ import { useBoardMembersStore } from "@/stores/boardMembersStore";
 import { useIsOverlayActive } from "@/hooks/useIsOverlayActive";
 import { UserRoleBadge } from "../badges/UserRoleBadge";
 import { useCurrentBoardRole } from "@/hooks/useCurrentBoardRole";
+import { useShareOffersStore } from "@/stores/shareOffersStore";
+import { useShallow } from "zustand/shallow";
 
 
 
@@ -55,6 +57,8 @@ export const BoardViewTopBar = ({ board, backgroundType }: BoardViewTopBarProps)
     }
     const boardActionMenuId = "board-action-menu"
     const { isMenuActive: isBoardActionsMenuActive } = useIsOverlayActive(boardActionMenuId)
+
+    const pendingOfferCount = useShareOffersStore(useShallow((state) => state.getBoardPendingIncomingRequests(board?.ID ?? "")))
 
     return (
         <div className="flex shrink-0 text-white bg-black/20 
@@ -98,8 +102,11 @@ export const BoardViewTopBar = ({ board, backgroundType }: BoardViewTopBarProps)
                         {boardMembersCount}
                     </span>
                 </BaseBtn>
-                <BaseBtn onClick={handleOpenBoardOffers} className="!text-inherit">
+                <BaseBtn onClick={handleOpenBoardOffers} className="relative !text-inherit">
                     <EnvelopeIcon className="w-4 h-4 !text-inherit" />
+                    {pendingOfferCount > 0 && <span className="absolute -top-1 -right-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-blue-500 px-1 text-[10px] font-semibold leading-none text-white">
+                        {pendingOfferCount > 9 ? "9+" : pendingOfferCount}
+                    </span>}
                 </BaseBtn>
                 <BoardShareMenu
                     className="!bg-slate-50 !text-slate-900 !font-semibold"

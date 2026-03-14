@@ -4,8 +4,9 @@ import { create } from "zustand";
 
 import type { Board, CreateBoardRequest, PatchUserBoardPropsRequest, UserBoard, UserWorkspacesBoardsResponse, WorkspaceEvent } from "./types";
 import type { BoardDetailPatch } from "./boardDetailStore";
-import type { ShareOffer } from "./shareOfferTypes";
+import type { ShareOffer, BoardShareOfferWithUserDetails } from "./shareOfferTypes";
 import { useCacheStore } from "./cacheStore";
+import { useShareOffersStore } from "./shareOffersStore";
 import { useAsyncKey, useAsyncRequestStore } from "./asyncRequestStore";
 import type { AsyncRequestKey } from "./asyncRequestTypes";
 import { useWorkspaceStore, type UserWorkspaceData } from "./workspaceStore";
@@ -27,13 +28,6 @@ type PendingWorkspaceBoardTargetsResponse = {
     ShareOffers: ShareOffer[];
 }
 
-type PendingWorkspaceBoardAccessRequestsResponse = {
-    BoardRequests: {
-        Board: Board;
-        PendingRequestsCount: number;
-    }[];
-}
-
 export type BoardStatus = "locked" | "offered" | "requested" | null;
 
 export type BoardsStore = {
@@ -44,7 +38,6 @@ export type BoardsStore = {
     offerIdByBoardId: Record<string, string>;
     pendingOfferedBoardIdsByWorkspaceId: Record<string, string[]>;
     pendingRequestedBoardIdsByWorkspaceId: Record<string, string[]>;
-    pendingAccessRequestCountByBoardId: Record<string, number>;
     userBoardsById: Record<string, UserBoard>;
     canModifyByBoardIDByWorkspaceId: Record<string, Record<string, boolean>>;
 
@@ -60,13 +53,13 @@ export type BoardsStore = {
     fetchUserBoardsAndWorkspaces: () => Promise<void>;
 
     fetchPendingOfferTargetBoardsForWorkspace: (workspaceId: string) => Promise<void>;
-    addPendingOfferedBoardId: (workspaceId: string, boardId: string) => void;
-    addPendingRequestedBoardId: (workspaceId: string, boardId: string) => void;
+    addPendingOfferedBoardId: (workspaceId: string, boardId: string, offerId?: string) => void;
+    addPendingRequestedBoardId: (workspaceId: string, boardId: string, offerId?: string) => void;
     removePendingOfferedBoardId: (workspaceId: string, boardId: string) => void;
     removePendingRequestedBoardId: (workspaceId: string, boardId: string) => void;
     getBoardStatus: (boardId: string, workspaceId?: string) => BoardStatus;
-    getPendingAccessRequestCountByBoardId: (boardId: string) => number;
-    updatePendingAccessRequestCountByBoardId: (boardId: string, count: number, mode: "increment" | "decrement" | "set") => void;
+    getPendingAccessRequestCountByBoardId?: never;
+    updatePendingAccessRequestCountByBoardId?: never;
     createBoardInWorkspace: (workspaceId: string, payload: CreateBoardRequest) => Promise<void>;
     patchBoard: (boardId: string, payload: { Name?: string; Visibility?: string; Props?: Record<string, unknown> }, asyncKey?: AsyncRequestKey) => Promise<void>;
     patchMyUserBoardProps: (boardId: string, payload: PatchUserBoardPropsRequest, asyncKey?: AsyncRequestKey) => Promise<void>;
@@ -98,7 +91,6 @@ export const useBoardsStore = create<BoardsStore>((set, get) => ({
     offerIdByBoardId: {},
     pendingOfferedBoardIdsByWorkspaceId: {},
     pendingRequestedBoardIdsByWorkspaceId: {},
-    pendingAccessRequestCountByBoardId: {},
     userBoardsById: {},
     canModifyByBoardIDByWorkspaceId: {},
 
@@ -151,17 +143,18 @@ export const useBoardsStore = create<BoardsStore>((set, get) => ({
         const key = useAsyncKey("workspace:boards:fetch", workspaceId);
         await useAsyncRequestStore.getState().execute(key, async () => {
             try {
-                const [boardsResponse, pendingBoardsResponse] = await Promise.all([
+                const [boardsResponse, pendingBoardsResponse, pendingAccessRequestsResponse] = await Promise.all([
                     api.get(`/workspaces/${workspaceId}/boards`),
                     api.get(`/shareoffers/workspaces/${workspaceId}/pending/boards`),
+                    api.get(`/shareoffers/workspaces/${workspaceId}/pending/board-access-requests`),
                 ]);
-                const pendingAccessRequestsResponse = await api.get(`/shareoffers/workspaces/${workspaceId}/pending/board-access-requests`);
 
                 const data: UserBoardData = boardsResponse.data;
                 const pendingData: PendingWorkspaceBoardTargetsResponse = pendingBoardsResponse.data;
-                const pendingAccessRequestsData: PendingWorkspaceBoardAccessRequestsResponse = pendingAccessRequestsResponse.data;
+                const pendingBoardAccessRequests: BoardShareOfferWithUserDetails[] = pendingAccessRequestsResponse.data ?? [];
                 const pendingShareOffers = pendingData.ShareOffers || [];
 
+                useShareOffersStore.getState().setBoardReceivedRequestsForBoards(pendingBoardAccessRequests);
                 useCacheStore.getState().upsertShareOffers(pendingShareOffers);
 
                 const latestOfferByBoardId: Record<string, ShareOffer> = {};
@@ -191,18 +184,6 @@ export const useBoardsStore = create<BoardsStore>((set, get) => ({
                 }, {} as Record<string, Board>);
                 const pendingBoardIds = pendingBoards.map((board) => board.ID);
 
-                const pendingRequestBoards = (pendingAccessRequestsData.BoardRequests || []).map((entry) => entry.Board);
-                const pendingRequestBoardsById: Record<string, Board> = pendingRequestBoards.reduce((acc, board) => {
-                    acc[board.ID] = board;
-                    return acc;
-                }, {} as Record<string, Board>);
-                const pendingRequestBoardIds = pendingRequestBoards.map((board) => board.ID);
-
-                const pendingAccessRequestCountByBoardIdFromApi: Record<string, number> = (pendingAccessRequestsData.BoardRequests || []).reduce((acc, entry) => {
-                    acc[entry.Board.ID] = entry.PendingRequestsCount;
-                    return acc;
-                }, {} as Record<string, number>);
-
                 const offeredBoardIds = Array.from(new Set((pendingData.OfferedBoards || []).map((board) => board.ID)));
                 const requestedBoardIds = Array.from(new Set((pendingData.RequestedBoards || []).map((board) => board.ID)));
 
@@ -214,10 +195,10 @@ export const useBoardsStore = create<BoardsStore>((set, get) => ({
                 const canModifyByBoardIDFromApi: Record<string, boolean> = data.CanModifyByBoardID ?? {};
 
                 set((state) => ({
-                    boardsById: { ...state.boardsById, ...pendingBoardsById, ...pendingRequestBoardsById, ...boardsById },
+                    boardsById: { ...state.boardsById, ...pendingBoardsById, ...boardsById },
                     boardIdsByWorkspaceId: {
                         ...state.boardIdsByWorkspaceId,
-                        [workspaceId]: Array.from(new Set([...(state.boardIdsByWorkspaceId[workspaceId] || []), ...pendingBoardIds, ...pendingRequestBoardIds, ...boardIds]))
+                        [workspaceId]: Array.from(new Set([...(state.boardIdsByWorkspaceId[workspaceId] || []), ...pendingBoardIds, ...boardIds]))
                     },
                     pendingOfferedBoardIdsByWorkspaceId: {
                         ...state.pendingOfferedBoardIdsByWorkspaceId,
@@ -232,7 +213,6 @@ export const useBoardsStore = create<BoardsStore>((set, get) => ({
                         const workspaceBoardIds = Array.from(new Set([
                             ...(state.boardIdsByWorkspaceId[workspaceId] || []),
                             ...pendingBoardIds,
-                            ...pendingRequestBoardIds,
                             ...boardIds,
                         ]));
                         workspaceBoardIds.forEach((id) => {
@@ -240,15 +220,6 @@ export const useBoardsStore = create<BoardsStore>((set, get) => ({
                         });
                         Object.assign(nextOfferIdByBoardId, offerIdByBoardIdFromApi);
                         return nextOfferIdByBoardId;
-                    })(),
-                    pendingAccessRequestCountByBoardId: (() => {
-                        const nextCounts = { ...state.pendingAccessRequestCountByBoardId };
-                        const workspaceBoardIds = Array.from(new Set([...boardIds, ...pendingBoardIds, ...pendingRequestBoardIds]));
-                        workspaceBoardIds.forEach((id) => {
-                            delete nextCounts[id];
-                        });
-                        Object.assign(nextCounts, pendingAccessRequestCountByBoardIdFromApi);
-                        return nextCounts;
                     })(),
                     userBoardsById: { ...state.userBoardsById, ...userBoardsById },
                     canModifyByBoardIDByWorkspaceId: {
@@ -341,9 +312,8 @@ export const useBoardsStore = create<BoardsStore>((set, get) => ({
         if (requested) return "requested";
         return "locked";
     },
-    getPendingAccessRequestCountByBoardId: (boardId: string) => {
-        return get().pendingAccessRequestCountByBoardId[boardId] || 0;
-    },
+    getPendingAccessRequestCountByBoardId: undefined,
+    updatePendingAccessRequestCountByBoardId: undefined,
     createBoardInWorkspace: async (workspaceId: string, payload: CreateBoardRequest) => {
         const key = useAsyncKey("workspace:board:create", workspaceId);
         await useAsyncRequestStore.getState().execute(key, () => api.post(`/workspaces/${workspaceId}/boards`, payload), {
@@ -653,71 +623,68 @@ export const useBoardsStore = create<BoardsStore>((set, get) => ({
             OpCounter: state.OpCounter + 1,
         }))
     },
-    addPendingOfferedBoardId: (workspaceId, boardId) => {
+    addPendingOfferedBoardId: (workspaceId, boardId, offerId?) => {
         set((state) => {
             const existingIds = state.pendingOfferedBoardIdsByWorkspaceId[workspaceId] || [];
-            if (existingIds.includes(boardId)) return state;
-            return {
-                pendingOfferedBoardIdsByWorkspaceId: {
+            const nextState: Partial<typeof state> = {};
+            if (!existingIds.includes(boardId)) {
+                nextState.pendingOfferedBoardIdsByWorkspaceId = {
                     ...state.pendingOfferedBoardIdsByWorkspaceId,
                     [workspaceId]: [...existingIds, boardId],
-                },
-            };
+                };
+            }
+            if (offerId) {
+                nextState.offerIdByBoardId = { ...state.offerIdByBoardId, [boardId]: offerId };
+            }
+            return nextState as typeof state;
         });
     },
-    addPendingRequestedBoardId: (workspaceId, boardId) => {
+    addPendingRequestedBoardId: (workspaceId, boardId, offerId?) => {
         set((state) => {
             const existingIds = state.pendingRequestedBoardIdsByWorkspaceId[workspaceId] || [];
-            if (existingIds.includes(boardId)) return state;
-            return {
-                pendingRequestedBoardIdsByWorkspaceId: {
+            const nextState: Partial<typeof state> = {};
+            if (!existingIds.includes(boardId)) {
+                nextState.pendingRequestedBoardIdsByWorkspaceId = {
                     ...state.pendingRequestedBoardIdsByWorkspaceId,
                     [workspaceId]: [...existingIds, boardId],
-                },
-            };
+                };
+            }
+            if (offerId) {
+                nextState.offerIdByBoardId = { ...state.offerIdByBoardId, [boardId]: offerId };
+            }
+            return nextState as typeof state;
         });
     },
     removePendingRequestedBoardId: (workspaceId, boardId) => {
         set((state) => {
             const existingIds = state.pendingRequestedBoardIdsByWorkspaceId[workspaceId] || [];
+            const nextOfferIdByBoardId = { ...state.offerIdByBoardId };
+            delete nextOfferIdByBoardId[boardId];
             return {
                 pendingRequestedBoardIdsByWorkspaceId: {
                     ...state.pendingRequestedBoardIdsByWorkspaceId,
                     [workspaceId]: existingIds.filter(id => id !== boardId),
                 },
+                offerIdByBoardId: nextOfferIdByBoardId,
             };
-        }
-        );
+        });
     },
 
     removePendingOfferedBoardId: (workspaceId, boardId) => {
         set((state) => {
             const existingIds = state.pendingOfferedBoardIdsByWorkspaceId[workspaceId] || [];
+            const nextOfferIdByBoardId = { ...state.offerIdByBoardId };
+            delete nextOfferIdByBoardId[boardId];
             return {
                 pendingOfferedBoardIdsByWorkspaceId: {
                     ...state.pendingOfferedBoardIdsByWorkspaceId,
                     [workspaceId]: existingIds.filter(id => id !== boardId),
                 },
+                offerIdByBoardId: nextOfferIdByBoardId,
             };
         });
     },
-    updatePendingAccessRequestCountByBoardId: (boardId, count, mode) => set((state) => {
-        const existingCount = state.pendingAccessRequestCountByBoardId[boardId] || 0;
-        let nextCount = existingCount;
-        if (mode === "increment") {
-            nextCount = existingCount + count;
-        } else if (mode === "decrement") {
-            nextCount = Math.max(existingCount - count, 0);
-        } else if (mode === "set") {
-            nextCount = count;
-        }
-        return {
-            pendingAccessRequestCountByBoardId: {
-                ...state.pendingAccessRequestCountByBoardId,
-                [boardId]: nextCount,
-            },
-        };
-    }),
+
 
 
 

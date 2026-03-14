@@ -191,7 +191,9 @@ const WorkspaceList = ({ isSingleMode }: { isSingleMode?: boolean }) => {
                             <Filter className={`h-4 w-4 ${hasActiveFilters ? "fill-current" : ""}`} />
                         </div>
                     </CardRowMenuBtn>
-                    <div className="h-7 w-7 rounded-md flex items-center justify-center text-neutral-400 cursor-pointer hover:text-neutral-200 hover:bg-white/10 transition-colors" onClick={handleCreateWorkspace}>
+                    <div className="h-7 w-7 rounded-md flex items-center justify-center
+                     text-neutral-400 cursor-pointer hover:text-neutral-200
+                      hover:bg-white/10 transition-colors" onClick={handleCreateWorkspace}>
                         <Plus className="h-5 w-5" />
                     </div>
                 </div>
@@ -206,7 +208,7 @@ const WorkspaceList = ({ isSingleMode }: { isSingleMode?: boolean }) => {
 
                     const isActive = activeWorkspaceId === id
                     const disableRowMenuClick = status === "accessible" && !isMembersView
-
+                    const isOffered = status === "offered"
                     return (
                         <div className=" relative w-full h-fit">
 
@@ -220,9 +222,13 @@ const WorkspaceList = ({ isSingleMode }: { isSingleMode?: boolean }) => {
                                     }
                            ${isActive ? "bg-gradient-to-tr  from-slate-500/10 to-slate-500/20 rounded-[18px] mb-2 mt-1 shadow-lg shadow-black/10 p-2" : ""}`}
                             >
-                                <div className={` ${isActive ? "opacity-100" : "opacity-0"}
+                                <div className={` ${(isActive) ? "opacity-100" : "opacity-0"}
                             absolute -left-2 top-0  h-full  w-1 rounded flex flex-row items-center `} >
                                     <div className="bg-gray-300 h-[90%] w-full rounded-full" />
+                                </div>
+                                <div className={` ${(isOffered) ? "opacity-100" : "opacity-0"}
+                            absolute -left-2 top-0  h-full  w-1 rounded flex flex-row items-center `} >
+                                    <div className="bg-amber-500 h-1 w-full rounded-full" />
                                 </div>
 
 

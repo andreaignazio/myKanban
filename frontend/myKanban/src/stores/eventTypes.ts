@@ -55,7 +55,9 @@ export type WorkspaceEventTypes =
     | "workspace.shareoffer.invite.revoked"
     | "workspace.shareoffer.request.accepted"
     | "workspace.shareoffer.request.rejected"
-    | "workspace.shareoffer.request.revoked";
+    | "workspace.shareoffer.request.revoked"
+    | "workspace.sharelink.created"
+    | "workspace.sharelink.revoked";
 
 
 
@@ -70,6 +72,8 @@ export type BoradEventTypes =
     | "board.shareoffer.request.accepted"
     | "board.shareoffer.request.rejected"
     | "board.shareoffer.request.revoked"
+    | "board.sharelink.created"
+    | "board.sharelink.revoked"
     | "board.listcards.detached";
 
 

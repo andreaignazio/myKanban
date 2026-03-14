@@ -317,18 +317,13 @@ func (r *GormShareRepo) GetPendingBoardShareOffersByWorkspaceForUser(ctx context
 	return shareOffers, nil
 }
 
-func (r *GormShareRepo) GetPendingBoardAccessRequestCountsByWorkspaceForAdminOwner(ctx context.Context, workspaceID, userID uuid.UUID, includeDeleted bool) (map[uuid.UUID]int, error) {
-	type boardCountRow struct {
-		BoardID      uuid.UUID `gorm:"column:board_id"`
-		PendingCount int       `gorm:"column:pending_count"`
-	}
-
-	rows := make([]boardCountRow, 0)
+func (r *GormShareRepo) GetBoardRequestShareOffersByWorkspaceForAdminOwner(ctx context.Context, workspaceID, userID uuid.UUID, includeDeleted bool) ([]models.ShareOffer, error) {
+	shareOffers := []models.ShareOffer{}
 	query := r.db.WithContext(ctx).
 		Table("share_offers so").
 		Joins("JOIN boards b ON b.id = so.target_id").
 		Joins("JOIN user_boards ub ON ub.board_id = so.target_id AND ub.user_id = ?", userID).
-		Select("so.target_id AS board_id, COUNT(*) AS pending_count")
+		Select("so.*")
 
 	if includeDeleted {
 		query = query.Unscoped()
@@ -342,16 +337,10 @@ func (r *GormShareRepo) GetPendingBoardAccessRequestCountsByWorkspaceForAdminOwn
 		Where("so.kind = ?", models.ShareOfferKindRequest).
 		Where("so.status = ?", models.Pending).
 		Where("ub.role IN ?", []string{"admin", "owner"}).
-		Group("so.target_id").
-		Order("so.target_id").
-		Scan(&rows).Error; err != nil {
-		return nil, dbx.WrapDBErr(err, "error getting pending board access request counts by workspace for admin/owner")
+		Order("so.created_at DESC").
+		Find(&shareOffers).Error; err != nil {
+		return nil, dbx.WrapDBErr(err, "error getting pending board access request share offers by workspace for admin/owner")
 	}
 
-	countByBoardID := make(map[uuid.UUID]int, len(rows))
-	for i := range rows {
-		countByBoardID[rows[i].BoardID] = rows[i].PendingCount
-	}
-
-	return countByBoardID, nil
+	return shareOffers, nil
 }

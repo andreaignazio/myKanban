@@ -11,6 +11,7 @@ import { useCurrentWorkspaceRole } from "@/hooks/useCurrentWorkspaceRole";
 import { useSortByPosition } from "@/hooks/useSortByPosition";
 import { useAsyncRequest } from "@/hooks/useAsyncRequest";
 import { useAsyncKey } from "@/stores/asyncRequestStore";
+import { BoardCardViewer } from "./BoardCardViewer";
 
 type BoardGridProps = {
     overrideWorkspaceId?: string;
@@ -28,7 +29,7 @@ export const BoardGrid = forwardRef<HTMLDivElement, BoardGridProps>(({ overrideW
     const boardsById = useBoardsStore((state) => state.boardsById);
 
     const userBoardsById = useBoardsStore((state) => state.userBoardsById);
-    const { isMember } = useCurrentWorkspaceRole(workspaceId ?? null);
+    const { isMember, isViewer } = useCurrentWorkspaceRole(workspaceId ?? null);
 
     const fetchKey = useAsyncKey("workspace:boards:fetch", workspaceId ?? "");
     const { isLoading: isFetching } = useAsyncRequest(fetchKey);
@@ -96,6 +97,7 @@ export const BoardGrid = forwardRef<HTMLDivElement, BoardGridProps>(({ overrideW
                 ))}
             </AnimatePresence>
             {isMember && <BoardCardAdd workspaceId={workspaceId} />}
+            {isViewer && <BoardCardViewer workspaceId={workspaceId} />}
 
         </div>
     )

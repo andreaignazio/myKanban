@@ -1,39 +1,39 @@
-import { forwardRef, useState } from "react"
+import { forwardRef } from "react"
 import { BoardReceivedRequests } from "./BoardReceivedRequests"
 import { BoardSentInvites } from "./BoardSentInvites"
+import { OfferManagerShell, type TabDef } from "./OfferManagerShell"
+import { useShareOffersStore } from "@/stores/shareOffersStore"
+import { useParams } from "react-router-dom"
+import type { AsyncRequestKey } from "@/stores/asyncRequestTypes"
 
-type BoardOfferManagerProps = {}
+type BoardOfferManagerProps = {
+    onClose?: () => void;
+    requestKey?: AsyncRequestKey | AsyncRequestKey[];
+}
 
-export const BoardOfferManager = forwardRef<HTMLDivElement, BoardOfferManagerProps>(({ }: BoardOfferManagerProps, ref) => {
-    const boardTabs = [
-        { id: "b-requests-received", label: "Received Requests", render: () => <BoardReceivedRequests /> },
-        { id: "b-invites-sent", label: "Sent Invites", render: () => <BoardSentInvites /> },
+export const BoardOfferManager = forwardRef<HTMLDivElement, BoardOfferManagerProps>(({ onClose, requestKey }, ref) => {
+    const boardId = useParams().boardId ?? ""
+    const pendingCount = useShareOffersStore((state) => state.getBoardPendingIncomingRequests(boardId))
+
+    const boardTabs: TabDef[] = [
+        {
+            id: "b-requests-received",
+            label: "Received Requests",
+            title: "Board Access Requests",
+            description: "Manage access requests from users who want to join this board.",
+            counter: pendingCount,
+            render: (p) => <BoardReceivedRequests showOnlyPending={p} />,
+        },
+        {
+            id: "b-invites-sent",
+            label: "Sent Invites",
+            title: "Sent Board Invites",
+            description: "Invites you've sent to users to join this board and their current status.",
+            render: (p) => <BoardSentInvites showOnlyPending={p} />,
+        },
     ]
 
-    const [activeBoardTabIdx, setActiveBoardTabIdx] = useState(0)
-
-    return (
-        <>
-            <div
-                ref={ref}
-                className="theme-dark w-full max-h-[80vh] min-h-0 flex bg-main flex-col
-            overflow-hidden rounded-xl shadow-lg 
-            items-center justify-start p-16 
-            font-grotesk text-neutral-200"
-            >
-                <div className="w-full max-w-5xl flex flex-col gap-2 mb-4">
-                    <div className="flex w-full flex-row items-center justify-center gap-6 ">
-                        {boardTabs.map((tab, idx) => (
-                            <button key={tab.id} className={`text-sm text-text/70 hover:text-text transition-colors${activeBoardTabIdx === idx ? " text-text font-bold" : ""}`} onClick={() => setActiveBoardTabIdx(idx)}>
-                                {tab.label}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-                <div className="w-full flex-1 min-h-0 overflow-y-auto scrollbar-hidden">
-                    {boardTabs[activeBoardTabIdx].render && boardTabs[activeBoardTabIdx].render!()}
-                </div>
-            </div>
-        </>
-    )
+    return <OfferManagerShell
+        className="!w-[clamp(300px,750px,80vw)]"
+        ref={ref} onClose={onClose} requestKey={requestKey} tabs={boardTabs} />
 })

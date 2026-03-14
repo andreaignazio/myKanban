@@ -5,7 +5,7 @@ import { useShareOffersStore } from "@/stores/shareOffersStore"
 import { useShallow } from "zustand/shallow"
 import { useParams } from "react-router-dom"
 
-export const BoardReceivedRequests = forwardRef<HTMLDivElement, {}>((props, ref) => {
+export const BoardReceivedRequests = forwardRef<HTMLDivElement, { showOnlyPending?: boolean }>(({ showOnlyPending }, ref) => {
 
 
     //const fetchUserBoardAccessSentRequests = useShareOffersStore((state) => state.fetchUserBoardAccessSentRequests)
@@ -53,23 +53,8 @@ export const BoardReceivedRequests = forwardRef<HTMLDivElement, {}>((props, ref)
     ]
 
     return (
-        <div
-            ref={ref}
-            className="theme-dark w-fit h-60vh flex bg-main flex-col
-            overflow-hidden 
-            items-center justify-start  
-            font-grotesk text-neutral-200"
-        >
-            <div className="w-full max-w-5xl flex flex-col gap-2 mb-4">
-                <p className="text-2xl font-semibold tracking-tight text-text">Inbox</p>
-                <p className="text-sm text-text/70">Condivisioni ricevute, stato e mittenti in un colpo d'occhio.</p>
-            </div>
-
-            <div className="w-full max-w-5xl flex flex-col gap-3 animate-rise-in">
-
-
-                <GridBuilder columns={columns} data={offersIds} />
-            </div>
+        <div ref={ref} className="w-full flex flex-col gap-3 animate-rise-in">
+            <GridBuilder columns={columns} data={offersIds} shouldShow={showOnlyPending ? (offer) => offer.Status === "pending" : undefined} />
         </div>
     )
 })

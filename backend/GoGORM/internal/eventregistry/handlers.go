@@ -79,6 +79,10 @@ func buildHandlers(auditRepo auditcontext.Reader) map[DomainEventType]EventHandl
 		EventBoardListCardPurged:                NewBoardListCardPurgedHandler(auditRepo),
 		EventBoardListCardDetatched:             NewBoardListCardDetatchedHandler(auditRepo),
 		EventBoardListCardsDetatched:            NewBoardListCardDetatchedHandler(auditRepo),
+		EventBoardShareLinkCreated:              NewBoardShareLinkCreatedHandler(auditRepo),
+		EventWorkspaceShareLinkCreated:          NewWorkspaceShareLinkCreatedHandler(auditRepo),
+		EventBoardShareLinkRevoked:              NewBoardShareLinkRevokedHandler(auditRepo),
+		EventWorkspaceShareLinkRevoked:          NewWorkspaceShareLinkRevokedHandler(auditRepo),
 	}
 }
 

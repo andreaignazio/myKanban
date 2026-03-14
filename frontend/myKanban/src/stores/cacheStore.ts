@@ -1,5 +1,6 @@
 ﻿import { create } from "zustand";
 import { useUserStore } from "./userStore";
+import { useBoardsStore } from "./boardsStore";
 
 import type { Board, UserBoard, UserWorkspace, Workspace, WorkspaceSubscription } from "./types";
 import type { UserBoardShareOffersDetails, ShareOffer, ShareOfferDetailsByIDResponse, ShareOfferDetailsResponse, WorkspaceOutgoingShareOfferResponse, BoardShareOfferWithUserDetails } from "./shareOfferTypes";
@@ -274,7 +275,7 @@ export const useCacheStore = create<CacheState>((set, get) => ({
         });
     },
     getBoardById: (boardId) => {
-        return get().offerBoardById[boardId];
+        return get().offerBoardById[boardId] ?? useBoardsStore.getState().boardsById[boardId];
     },
     getWorkspaceById: (workspaceId) => {
         // console.log("Retrieving workspace from cache for ID:", workspaceId);

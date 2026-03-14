@@ -27,6 +27,8 @@ type ShareOfferDetailsProps = {
 
 }
 
+const HEIGHT = 400
+
 type WorkspaceOverviewPanelProps = {
     onClose: () => void;
     onClick: () => void;
@@ -53,6 +55,7 @@ const WorkspaceOverviewPanel = ({ onClick, onClose, wrapperRef, iconId, coverTyp
 
     return (
         <EntityOverviewPanel
+            height={HEIGHT}
             onClick={onClick}
             onClose={onClose}
             wrapperRef={wrapperRef}
@@ -107,17 +110,25 @@ const ShareRequestPanel = ({ onClose, wrapperRef, members, entityLabel = "worksp
     const padding = 20
     const radius = 32
 
+    const windowWidth = typeof window !== "undefined" ? window.innerWidth : 0
+    const isColumnLayout = windowWidth < 940
+
     return (
         <CommonMenuWrapper ref={wrapperRef} onClose={onClose}
-            style={{ borderRadius: `${radius}px`, padding: `${0}px` }}
+            style={{
+                borderRadius: `${radius}px`, padding: `${0}px`, height: `${HEIGHT}px`,
+
+            }}
             className=" rounded-none
-        w-fit h-full !bg-menu !flex !flex-row">
-            <div className={` h-full flex flex-row justify-between transition-all duration-300 ease-in-out
-                 ${isOpen ? 'opacity-100 w-[800px]' : 'opacity-0 w-0'}`}>
+        w-fit !bg-menu !flex !flex-row">
+            <div style={{ width: isOpen ? isColumnLayout ? "clamp(300px,20vw,600px)" : "clamp(560px,40vw,820px)" : "0px" }}
+                className={` h-full flex ${isColumnLayout ? "flex-col" : "flex-row "}
+                    justify-between transition-all duration-300 ease-in-out
+                 ${isOpen ? 'opacity-100 ' : 'opacity-0 '}`}>
 
                 <div
                     style={{ borderRadius: `${radius}px`, paddingTop: `${padding}px` }}
-                    className=" w-[300px] h-full flex flex-col gap-2 bg-fuchsia-500/10
+                    className=" min-w-[300px] h-full  flex flex-col gap-2 bg-fuchsia-500/10
                         shadow-md shadow-black/60 border-[1.5px] border-fuchsia-500/40
                          rounded-md p-4">
                     <div className="text-md font-normal font-grotesk text-neutral-200">Members</div>
@@ -126,7 +137,7 @@ const ShareRequestPanel = ({ onClose, wrapperRef, members, entityLabel = "worksp
 
                 </div>
                 <div style={{ padding: padding, paddingBottom: 48 }}
-                    className="flex flex-col items-end justify-between gap-4 w-[400px] h-full  pr-8">
+                    className="flex flex-col flex-1 min-w-0  items-end justify-between gap-4 h-full  pr-8">
                     <RevokeButton
                         ref={revokeRef}
                         label={isOffered ? "Respond" : "Revoke"}
@@ -135,7 +146,7 @@ const ShareRequestPanel = ({ onClose, wrapperRef, members, entityLabel = "worksp
                     <div className="flex flex-col gap-4 items-end">
                         <div className="h-px bg-neutral-400/20 w-full" />
                         <div className="text-sm text-neutral-400/80">
-                            {isOffered ? `You received an invite to join this ${entityLabel} with the role` : `You sent a request to join this ${entityLabel} with the role`}
+                            {isOffered ? `You received an invite to join this ${entityLabel} with the role ` : `You sent a request to join this ${entityLabel} with the role `}
                             of <span className="">{requestedRole}
                             </span> on {formattedSentDate}.
                         </div>
@@ -333,6 +344,7 @@ export const ShareOfferDetails = forwardRef<HTMLDivElement, ShareOfferDetailsPro
 
     return (
         <CommonMenuWrapper ref={ref} onClose={onClose}
+            style={{ width: "clamp(300px,60vw,800px)", }}
             className="relative !h-[400px]
             !bg-transparent !w-fit !shadow-none flex-row gap-4 overflow-visible">
 

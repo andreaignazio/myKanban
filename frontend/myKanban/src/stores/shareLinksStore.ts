@@ -7,7 +7,9 @@ import type {
     ShareLinkPublicPreviewResponse,
     ShareLinkTokenEntityData,
     Board,
-    Workspace
+    Workspace,
+    WorkspaceEvent,
+    BoardEvent
 } from "./types";
 import { api } from "@/api/api";
 import { useBoardsStore } from "./boardsStore";
@@ -29,6 +31,7 @@ type ShareLinksState = {
     createShareLink: (payload: CreateShareLinkRequest) => Promise<string>;
     fetchShareLinksByTargetId: (targetId: string) => Promise<void>;
     revokeShareLink: (shareLinkID: string) => Promise<void>;
+    revokeWorkspaceShareLink: (shareLinkID: string) => Promise<void>;
     getTokenById: (ID: string) => string | null;
     buildUrlFromToken: (token: string) => string;
     fetchShareLinkPublicPreviewByToken: (token: string) => Promise<ShareLinkPublicPreviewResponse | null>;
@@ -37,6 +40,7 @@ type ShareLinksState = {
     getEntityDataByToken: (token: string) => ShareLinkTokenEntityData | Board | Workspace | null;
     getPublicEntityDataByToken: (token: string) => ShareLinkTokenEntityData | null;
     getShareLinkByToken: (token: string) => PublicShareLink | null;
+    applyShareLinkEvent: (evt: WorkspaceEvent | BoardEvent) => void;
 }
 
 function buildUrlFromToken(token: string) {
@@ -120,7 +124,7 @@ export const useShareLinksStore = create<ShareLinksState>((set, get) => ({
         const handleRevoke = async () => {
             const token = get().getTokenById(shareLinkID);
             if (!token) throw new Error("Share link not found");
-            await api.post(`/sharelinks/${token}/revoke`);
+            return api.post(`/sharelinks/${token}/revoke`);
         }
 
         await useAsyncRequestStore.getState().execute(
@@ -128,9 +132,41 @@ export const useShareLinksStore = create<ShareLinksState>((set, get) => ({
             () => handleRevoke(),
             {
                 successResetDelayMs: 2000,
+                onSuccess(response) {
+                    const updatedLink = response.data as PublicShareLink;
+                    set((state) => ({
+                        shareLinksById: {
+                            ...state.shareLinksById,
+                            [updatedLink.ID]: updatedLink,
+                        },
+                    }));
+                },
             }
         );
+    },
+    revokeWorkspaceShareLink: async (shareLinkID) => {
+        const handleRevoke = async () => {
+            const token = get().getTokenById(shareLinkID);
+            if (!token) throw new Error("Share link not found");
+            return api.post(`/sharelinks/${token}/revoke`);
+        }
 
+        await useAsyncRequestStore.getState().execute(
+            useAsyncKey("workspace:sharelink:revoke", shareLinkID),
+            () => handleRevoke(),
+            {
+                successResetDelayMs: 2000,
+                onSuccess(response) {
+                    const updatedLink = response.data as PublicShareLink;
+                    set((state) => ({
+                        shareLinksById: {
+                            ...state.shareLinksById,
+                            [updatedLink.ID]: updatedLink,
+                        },
+                    }));
+                },
+            }
+        );
     },
     fetchShareLinkPublicPreviewByToken: async (token) => {
         try {
@@ -294,6 +330,23 @@ export const useShareLinksStore = create<ShareLinksState>((set, get) => ({
         const shareLinksByToken = get().shareLinksById;
         const shareLink = Object.values(shareLinksByToken).find(link => link.Token === token);
         return shareLink ?? null;
+    },
+    applyShareLinkEvent: (evt) => {
+        const statePayload = (evt as any)?.Payload?.StatePayload as { ShareLinks?: PublicShareLink[] } | undefined;
+        const shareLinks = statePayload?.ShareLinks;
+        if (!shareLinks || shareLinks.length === 0) return;
+        set((state) => {
+            const updatedById: Record<string, PublicShareLink> = { ...state.shareLinksById };
+            const updatedIdsByTarget: Record<string, string[]> = { ...state.shareLinkIdsByTargetId };
+            for (const link of shareLinks) {
+                updatedById[link.ID] = link;
+                const existing = updatedIdsByTarget[link.TargetID] ?? [];
+                if (!existing.includes(link.ID)) {
+                    updatedIdsByTarget[link.TargetID] = [...existing, link.ID];
+                }
+            }
+            return { shareLinksById: updatedById, shareLinkIdsByTargetId: updatedIdsByTarget };
+        });
     },
 
 }))

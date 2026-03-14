@@ -14,7 +14,7 @@ import { HomeIcon } from "@heroicons/react/24/solid";
 
 import { useWorkspaceStore } from "@/stores/workspaceStore";
 import { forwardRef, useEffect, useState } from "react";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, MailOpen } from "lucide-react";
 
 export const WorkspaceRow = forwardRef<HTMLDivElement, WorkspaceRowProps>(({ workspaceId, activeSubRowId, onSubRowToggle, className, isActive, status }, ref) => {
     const workspace = useWorkspaceStore((state) => state.workspacesById[workspaceId]);
@@ -56,8 +56,8 @@ export const WorkspaceRow = forwardRef<HTMLDivElement, WorkspaceRowProps>(({ wor
                     ${className}
         p-1 items-center relative ${resolvedActive ? "bg-active " : "hover:bg-surface"}
         ${isCompact ? "h-[36px]" : "h-[44px]"}
-         rounded-xl text-text hover:bg-active 
-         ${isWorkspaceAccessible ? "cursor-pointer" : "cursor-default opacity-50"}
+         rounded-xl text-text hover:bg-active cursor-pointer
+         ${isWorkspaceAccessible ? "" : isStatusOffered ? "opacity-80" : "opacity-50"}
           transition-[padding,height,border-color,background-color] duration-300 ease-in-out`}>
                 <div className={`col-span-1   h-full w-full
              rounded-lg 
@@ -71,6 +71,9 @@ export const WorkspaceRow = forwardRef<HTMLDivElement, WorkspaceRowProps>(({ wor
                     <div className={`
                         ${isCompact ? "h-0 opacity-0" : "h-auto opacity-100"}
                         text-xs font-extralight`}>{subscriptionLabel}</div>
+                </div>
+                <div className={`absolute end-12 ${isStatusOffered ? "opacity-100" : "opacity-0"} transition-opacity`}>
+                    <MailOpen className="w-4 h-4 text-white" />
                 </div>
                 <div className="absolute end-2">
                     <ChevronDown className={`

@@ -6,7 +6,7 @@ import { api } from "@/api/api";
 import { useListsStore } from "./listsStore";
 import { useCardsStore, type CrossMoveCardRequest } from "./cardsStore";
 import { useBoardsStore } from "./boardsStore";
-import type { Board, BoardEvent, BoardLabel, BoardListAccessMode, Card, CardChecklist, CardComment, CardLabelLink, Checklist, ChecklistEntry, CrossBoardMoveBoardPayload, Entry, EntryMember, List, ListCardMovedPayload, ListCardRelation, RootBoardListResponse, User, UserBoard, UserWorkspace } from "./types";
+import type { Board, BoardEvent, BoardLabel, BoardListAccessMode, Card, CardChecklist, CardComment, CardLabelLink, Checklist, ChecklistEntry, CrossBoardMoveBoardPayload, Entry, EntryMember, List, ListCardMovedPayload, ListCardRelation, PublicShareLink, RootBoardListResponse, User, UserBoard, UserWorkspace } from "./types";
 import { useLabelsStore } from "./labelsStore";
 import { useBoardMembersStore } from "./boardMembersStore";
 import { useUserStore } from "./userStore";
@@ -62,6 +62,7 @@ export type BoardDetailPatch = {
     CardComments?: CardComment[]
     UserWorkspaceRelations?: UserWorkspace[]
     ShareOffers?: ShareOffer[]
+    ShareLinks?: PublicShareLink[]
     BoardListIdsByBoardID?: Record<string, string[]>
 
 

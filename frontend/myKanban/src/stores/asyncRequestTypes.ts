@@ -94,6 +94,8 @@ export const ASYNC_REQUEST_BASE_KEYS = [
     "board:read:detail",
     "shareoffer:respond",
     "shareoffer:revoke",
+    "workspace:shareoffer:create",
+    "workspace:sharelink:revoke",
 ] as const;
 
 export type AsyncRequestBaseKey = typeof ASYNC_REQUEST_BASE_KEYS[number];

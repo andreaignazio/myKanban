@@ -123,6 +123,7 @@ type BoardDetailResponse struct {
 	CardComments                       []CardCommentResponse                  `json:"CardComments"`
 	UserWorkspaceRelations             []UserWorkspaceResponse                `json:"UserWorkspaceRelations"`
 	ShareOffers                        []ShareOfferResponse                   `json:"ShareOffers"`
+	ShareLinks                         []PublicShareLinkResponse              `json:"ShareLinks"`
 }
 
 type BoardsAccrossWorkspacesResponse struct {

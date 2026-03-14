@@ -4,7 +4,9 @@ type BoardRowProps = {
     workspaceId?: string
 }
 import { useNavigate, useParams } from "react-router";
-import { useBoardsStore } from "@/stores/boardsStore";
+import { useBoardsStore } from "@/stores/boardsStore"
+import { useShareOffersStore } from "@/stores/shareOffersStore"
+import { useCacheStore } from "@/stores/cacheStore";
 import { BoardCardWrapper } from "@/components/workspaceView/BoardCardWrapper";
 import { useRef } from "react";
 import { StarIcon } from "@heroicons/react/24/outline";
@@ -36,7 +38,11 @@ export function BoardCard({ boardID: boardID, workspaceId: overrideWorkspaceId }
     const offerIdByBoardId = useBoardsStore((state) => state.offerIdByBoardId);
     const isRequested = boardStatus === "requested"
     const isOffered = boardStatus === "offered"
-    const pendingAccessRequestsCount = useBoardsStore((state) => state.getPendingAccessRequestCountByBoardId(boardID));
+    const pendingAccessRequestsCount = useShareOffersStore((state) => {
+        const ids = state.boardReceivedRequestsIdsByBoardId[boardID] ?? [];
+        const offerById = useCacheStore.getState().offerById;
+        return ids.filter((id) => offerById[id]?.Status === "pending").length;
+    });
 
     const isLocked = boardStatus !== null;
     const navigate = useNavigate()
@@ -116,6 +122,9 @@ export function BoardCard({ boardID: boardID, workspaceId: overrideWorkspaceId }
     }
     const gradientIndex = getStableIndexFromString(boardID, gradientColorTokens.length);
     const fallbackGradient = gradientColorTokens[gradientIndex];
+
+    const userMembership = useBoardsStore((state) => state.userBoardsById[boardID])
+    const isOwnerOrAdmin = userMembership?.Role === "owner" || userMembership?.Role === "admin"
 
     return (
         <>
@@ -197,7 +206,7 @@ export function BoardCard({ boardID: boardID, workspaceId: overrideWorkspaceId }
                     <div className="flex items-center  justify-start pt-0.5 pb-0.5 px-3">
                         <h3 className="text-sm font-normal"> {name}</h3>
                         <div className="ml-auto flex items-center gap-2">
-                            {pendingAccessRequestsCount > 0 && (
+                            {(pendingAccessRequestsCount > 0 && isOwnerOrAdmin) && (
                                 <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-[11px] font-semibold leading-none text-white">
                                     {pendingAccessRequestsCount}
                                 </span>

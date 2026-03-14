@@ -26,12 +26,13 @@ export type CardRowMenuBtnProps = {
     desiredBackdropOpacity?: number;
     exclusiveGroup?: string;
     wrapperClassName?: string;
+    enableOwnBackdrop?: boolean;
 }
 
 export const CardRowMenuBtn = forwardRef<HTMLDivElement, CardRowMenuBtnProps>(({ cardID, menuComponent, renderType = "anchored",
     label, icon, showLabelWhenCompact, customId, btnVariant = "default", className, style,
     shouldHideBtn, children, onButtonClick, placement,
-    customAnchorRef, offset, disableClick, desiredBackdropOpacity, exclusiveGroup, wrapperClassName }, ref) => {
+    customAnchorRef, offset, disableClick, desiredBackdropOpacity, exclusiveGroup, wrapperClassName, enableOwnBackdrop }, ref) => {
     const openOverlay = useOverlayStore((state) => state.open);
     const onMenuClose = useOverlayStore((state) => state.close);
 
@@ -63,6 +64,7 @@ export const CardRowMenuBtn = forwardRef<HTMLDivElement, CardRowMenuBtnProps>(({
                 closeOnClickOutside: true,
                 closeOnEscape: true,
                 lockBackdrop: true,
+                enableOwnBackdrop: enableOwnBackdrop
             },
             position: {
                 virtual: "viewport-center",

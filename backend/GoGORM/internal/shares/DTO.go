@@ -101,12 +101,3 @@ type PendingWorkspaceBoardTargetsResponse struct {
 	RequestedBoards []dto.BoardResponse      `json:"RequestedBoards"`
 	ShareOffers     []dto.ShareOfferResponse `json:"ShareOffers"`
 }
-
-type BoardPendingAccessRequestCountResponse struct {
-	Board                dto.BoardResponse `json:"Board"`
-	PendingRequestsCount int               `json:"PendingRequestsCount"`
-}
-
-type PendingWorkspaceBoardAccessRequestsResponse struct {
-	BoardRequests []BoardPendingAccessRequestCountResponse `json:"BoardRequests"`
-}

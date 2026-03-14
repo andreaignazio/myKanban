@@ -83,6 +83,11 @@ const (
 	EventBoardListCardDetatched  DomainEventType = "board.listcard.detatched"
 
 	EventBoardListCardsDetatched DomainEventType = "board.listcards.detatched"
+
+	EventBoardShareLinkCreated     DomainEventType = "board.sharelink.created"
+	EventWorkspaceShareLinkCreated DomainEventType = "workspace.sharelink.created"
+	EventBoardShareLinkRevoked     DomainEventType = "board.sharelink.revoked"
+	EventWorkspaceShareLinkRevoked DomainEventType = "workspace.sharelink.revoked"
 )
 
 func (e DomainEventType) IsValidEventType() bool {
@@ -160,7 +165,11 @@ func (e DomainEventType) IsValidEventType() bool {
 		EventBoardListCardRestored,
 		EventBoardListCardPurged,
 		EventBoardListCardDetatched,
-		EventBoardListCardsDetatched:
+		EventBoardListCardsDetatched,
+		EventBoardShareLinkCreated,
+		EventWorkspaceShareLinkCreated,
+		EventBoardShareLinkRevoked,
+		EventWorkspaceShareLinkRevoked:
 
 		return true
 	default:
@@ -230,7 +239,9 @@ func (e DomainEventType) IsBoardCoreToastEvent() bool {
 		EventBoardListCardRestored,
 		EventBoardListCardPurged,
 		EventBoardListCardDetatched,
-		EventBoardListCardsDetatched:
+		EventBoardListCardsDetatched,
+		EventBoardShareLinkCreated,
+		EventBoardShareLinkRevoked:
 
 		return true
 	default:
@@ -266,7 +277,9 @@ func (e DomainEventType) IsWorkspaceCoreToastEvent() bool {
 		EventBoardAccessClaimed,
 		EventBoardMemberRemoved,
 		EventBoardMemberRoleChanged,
-		EventListPatched:
+		EventListPatched,
+		EventWorkspaceShareLinkCreated,
+		EventWorkspaceShareLinkRevoked:
 		return true
 	default:
 		return false

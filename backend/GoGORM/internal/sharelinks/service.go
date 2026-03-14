@@ -149,6 +149,9 @@ func (s *ShareLinkService) CreateShareLink(ctx context.Context, userID uuid.UUID
 			}
 			return nil, err
 		}
+		if err := s.emitShareLinkCreatedEvent(ctx, userID, shareLink); err != nil {
+			fmt.Println("failed to emit sharelink created event:", err)
+		}
 		return shareLink, nil
 	}
 	return nil, domainerr.ErrConflict
@@ -388,8 +391,76 @@ func (s *ShareLinkService) RevokeShareLink(ctx context.Context, userID uuid.UUID
 	if err := s.repo.RevokeShareLink(ctx, shareLink); err != nil {
 		return nil, domainerr.MapRepoErr(err, false)
 	}
-
+	if err := s.emitShareLinkRevokedEvent(ctx, userID, shareLink); err != nil {
+		fmt.Println("failed to emit sharelink revoked event:", err)
+	}
 	return shareLink, nil
+}
+
+func (s *ShareLinkService) emitShareLinkCreatedEvent(ctx context.Context, userID uuid.UUID, shareLink *models.PublicShareLink) error {
+	if s.EventRegistry == nil {
+		return nil
+	}
+	return s.emitShareLinkEvent(ctx, userID, shareLink, false)
+}
+
+func (s *ShareLinkService) emitShareLinkRevokedEvent(ctx context.Context, userID uuid.UUID, shareLink *models.PublicShareLink) error {
+	if s.EventRegistry == nil {
+		return nil
+	}
+	return s.emitShareLinkEvent(ctx, userID, shareLink, true)
+}
+
+func (s *ShareLinkService) emitShareLinkEvent(ctx context.Context, userID uuid.UUID, shareLink *models.PublicShareLink, revoked bool) error {
+	shareLinkRes := dto.PublicShareLinkToResponse(shareLink)
+	state := &dto.BoardDetailResponse{
+		ShareLinks: []dto.PublicShareLinkResponse{shareLinkRes},
+	}
+
+	var eventType EventRegistry.DomainEventType
+	var boardID, workspaceID *uuid.UUID
+	var targets []EventRegistry.TargetRef
+
+	switch shareLink.TargetType {
+	case "board":
+		if revoked {
+			eventType = EventRegistry.EventBoardShareLinkRevoked
+		} else {
+			eventType = EventRegistry.EventBoardShareLinkCreated
+		}
+		tid := shareLink.TargetID
+		boardID = &tid
+		targets = []EventRegistry.TargetRef{
+			{EntityType: "board", EntityID: tid, BoardID: &tid},
+		}
+	case "workspace":
+		if revoked {
+			eventType = EventRegistry.EventWorkspaceShareLinkRevoked
+		} else {
+			eventType = EventRegistry.EventWorkspaceShareLinkCreated
+		}
+		tid := shareLink.TargetID
+		workspaceID = &tid
+		targets = []EventRegistry.TargetRef{
+			{EntityType: "workspace", EntityID: tid, WorkspaceID: &tid},
+		}
+	default:
+		return nil
+	}
+
+	evt := EventRegistry.DomainEvent{
+		Type:        eventType,
+		WorkspaceID: workspaceID,
+		BoardID:     boardID,
+		ActorUserID: &userID,
+		Payload: EventRegistry.EventPayloadEnvelope{
+			StatePayload: state,
+		},
+		Targets:    targets,
+		OccurredAt: time.Now(),
+	}
+
+	return s.EventRegistry.Emit(ctx, s.db, evt)
 }
 
 func extractDescription(props []byte) string {
@@ -399,9 +470,6 @@ func extractDescription(props []byte) string {
 	var payload map[string]any
 	if err := json.Unmarshal(props, &payload); err != nil {
 		return ""
-	}
-	if value, ok := payload["Description"].(string); ok {
-		return value
 	}
 	if value, ok := payload["description"].(string); ok {
 		return value

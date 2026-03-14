@@ -66,7 +66,7 @@ type ShareRepo interface {
 	GetPendingBoardShareOffersByWorkspaceForUser(ctx context.Context, workspaceID, userID uuid.UUID, includeDeleted bool) ([]models.ShareOffer, error)
 	GetPendingOfferedBoardIDsByWorkspaceForUser(ctx context.Context, workspaceID, userID uuid.UUID, includeDeleted bool) ([]uuid.UUID, error)
 	GetPendingRequestedBoardIDsByWorkspaceForUser(ctx context.Context, workspaceID, userID uuid.UUID, includeDeleted bool) ([]uuid.UUID, error)
-	GetPendingBoardAccessRequestCountsByWorkspaceForAdminOwner(ctx context.Context, workspaceID, userID uuid.UUID, includeDeleted bool) (map[uuid.UUID]int, error)
+	GetBoardRequestShareOffersByWorkspaceForAdminOwner(ctx context.Context, workspaceID, userID uuid.UUID, includeDeleted bool) ([]models.ShareOffer, error)
 }
 
 type MembershipRepo interface {
@@ -2169,44 +2169,16 @@ func (s *ShareService) GetPendingOfferTargetBoardsByWorkspaceForUser(ctx context
 	}, nil
 }
 
-func (s *ShareService) GetPendingBoardAccessRequestCountsByWorkspaceForAdminOwner(ctx context.Context, userID, workspaceID uuid.UUID) (PendingWorkspaceBoardAccessRequestsResponse, error) {
+func (s *ShareService) GetBoardRequestsByWorkspaceForAdminOwner(ctx context.Context, userID, workspaceID uuid.UUID) ([]dto.BoardShareOffersResponse, error) {
 	if err := guard.CheckUserMinWorkspaceRole(ctx, s.MembershipRepo, userID, workspaceID, rbac.Viewer, s.IncludeDeleted); err != nil {
-		return PendingWorkspaceBoardAccessRequestsResponse{}, err
+		return nil, err
 	}
 
-	countByBoardID, err := s.ShareRepo.GetPendingBoardAccessRequestCountsByWorkspaceForAdminOwner(ctx, workspaceID, userID, s.IncludeDeleted)
+	shareOffers, err := s.ShareRepo.GetBoardRequestShareOffersByWorkspaceForAdminOwner(ctx, workspaceID, userID, s.IncludeDeleted)
 	if err != nil {
-		return PendingWorkspaceBoardAccessRequestsResponse{}, domainerr.MapRepoErr(err, false)
+		return nil, domainerr.MapRepoErr(err, false)
 	}
-
-	if len(countByBoardID) == 0 {
-		return PendingWorkspaceBoardAccessRequestsResponse{BoardRequests: []BoardPendingAccessRequestCountResponse{}}, nil
-	}
-
-	boardIDs := make([]uuid.UUID, 0, len(countByBoardID))
-	for boardID := range countByBoardID {
-		boardIDs = append(boardIDs, boardID)
-	}
-
-	boardModels, err := s.BoardRepo.GetBoardsByIDs(ctx, boardIDs, s.IncludeDeleted)
-	if err != nil {
-		return PendingWorkspaceBoardAccessRequestsResponse{}, domainerr.MapRepoErr(err, false)
-	}
-
-	responses := make([]BoardPendingAccessRequestCountResponse, 0, len(boardModels))
-	for i := range boardModels {
-		boardID := boardModels[i].ID
-		pendingCount, ok := countByBoardID[boardID]
-		if !ok {
-			continue
-		}
-		responses = append(responses, BoardPendingAccessRequestCountResponse{
-			Board:                dto.BoardToResponse(&boardModels[i]),
-			PendingRequestsCount: pendingCount,
-		})
-	}
-
-	return PendingWorkspaceBoardAccessRequestsResponse{BoardRequests: responses}, nil
+	return s.buildBoardShareOffersResponse(ctx, shareOffers)
 }
 
 func (s *ShareService) buildBoardShareOfferDetails(ctx context.Context, shareOffers []models.ShareOffer) ([]BoardShareOffersDetails, error) {

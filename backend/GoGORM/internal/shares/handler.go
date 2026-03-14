@@ -644,7 +644,7 @@ func (h *ShareHandler) GetPendingBoardAccessRequestCountsByWorkspaceForAdminOwne
 		return
 	}
 
-	response, err := h.ShareService.GetPendingBoardAccessRequestCountsByWorkspaceForAdminOwner(ctx, userID, workspaceID)
+	response, err := h.ShareService.GetBoardRequestsByWorkspaceForAdminOwner(ctx, userID, workspaceID)
 	if err != nil {
 		httperr.WriteOp(c, err, "shares.handler.GetPendingBoardAccessRequestCountsByWorkspaceForAdminOwner")
 		return

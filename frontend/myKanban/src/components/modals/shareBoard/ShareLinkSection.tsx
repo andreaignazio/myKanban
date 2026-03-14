@@ -150,7 +150,9 @@ export const ShareLinkSection = ({
                             exclusiveGroup="board-share-submenu"
                             placement="top-end"
                             offset={[0, -6]}
-                            desiredBackdropOpacity={0}
+                            enableOwnBackdrop={true}
+
+                            //desiredBackdropOpacity={0}
                             menuComponent={({ onClose, ref }) => (
                                 <div ref={ref}>
                                     <ShareLinkExpiryMenu

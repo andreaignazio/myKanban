@@ -1,5 +1,5 @@
 ﻿import { useEffect, useLayoutEffect, useState, useRef, type RefObject, type ReactNode } from "react";
-import { useBoardMembersStore } from "@/stores/boardMembersStore";
+import { useBoardMembersStore, boardMemberKey } from "@/stores/boardMembersStore";
 import { useUserStore } from "@/stores/userStore";
 import { useShallow } from "zustand/shallow";
 import { UserAvatar } from "../badges/UserAvatar";
@@ -204,13 +204,11 @@ type BoardMemberRowProps = {
 
 export const BoardMemberRow = ({ userId, isAdminOrOwner }: BoardMemberRowProps) => {
     const user = useUserStore((state) => state.usersById[userId]);
-
-    const workspaceMember = useBoardMembersStore((state) => state.membersById[userId]);
+    const boardID = useParams().boardId as string;
+    const workspaceMember = useBoardMembersStore((state) => state.membersById[boardMemberKey(boardID, userId)]);
     const currentUserId = useAuthStore((state) => state.userID);
     const isCurrentUser = userId === currentUserId;
     const boardActions = useBoardActionRegistry();
-
-    const boardID = useParams().boardId as string;
 
     const roleStr = workspaceMember?.Role ?? "member"
     const roleLabel = roleStr.charAt(0).toUpperCase() + roleStr.slice(1);

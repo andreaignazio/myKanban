@@ -113,7 +113,11 @@ export const router = createBrowserRouter([
     },
     {
         path: "/sharelinks/join/:shareID", element: <JoinPageMain />, children: [
-            { path: "", element: <JoinPageMain /> }
+
+
+            { path: "login", element: <Navigate to="/sign-in" replace /> },
+
+
 
 
         ]

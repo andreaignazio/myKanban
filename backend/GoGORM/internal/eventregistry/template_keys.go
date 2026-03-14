@@ -78,4 +78,9 @@ const (
 	AuditTemplateBoardListCardDetached      AuditTemplateKey = "audit.board.listcard.detached"
 	AuditTemplateBoardListCardsBulkDetached AuditTemplateKey = "audit.board.listcards.bulkdetached"
 	AuditTemplateBoardListCardDetatched     AuditTemplateKey = "audit.board.listcard.detatched"
+
+	AuditTemplateBoardShareLinkCreated     AuditTemplateKey = "audit.board.sharelink.created"
+	AuditTemplateBoardShareLinkRevoked     AuditTemplateKey = "audit.board.sharelink.revoked"
+	AuditTemplateWorkspaceShareLinkCreated AuditTemplateKey = "audit.workspace.sharelink.created"
+	AuditTemplateWorkspaceShareLinkRevoked AuditTemplateKey = "audit.workspace.sharelink.revoked"
 )

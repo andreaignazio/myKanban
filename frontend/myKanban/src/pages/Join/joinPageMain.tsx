@@ -13,6 +13,8 @@ import { useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { AsyncRequestHandler, type AsyncRequestHandle } from "@/components/asyncRequestHandlers/asyncRequestHandler";
 
+import { SignIn } from "@clerk/react";
+
 
 
 
@@ -72,6 +74,8 @@ const JoinTab = ({ User, shareLink, token }: JoinTabProps) => {
     const entityType = shareLink?.TargetType;
     const requestSuccessLabel = entityType === "workspace" ? "Request sent to workspace admins" : "Request sent to board admins";
 
+    const shareLinkRole = shareLink?.Role as "viewer" | "member" | "admin" | undefined;
+
     const handleClaimAccess = async () => {
         if (!token) return;
         setIsClaiming(true);
@@ -105,9 +109,9 @@ const JoinTab = ({ User, shareLink, token }: JoinTabProps) => {
         if (!shareLink?.TargetID || !shareLink?.TargetType) return;
 
         if (shareLink.TargetType === "board") {
-            await createBoardAccessRequest(shareLink.TargetID, "", "viewer");
+            await createBoardAccessRequest(shareLink.TargetID, "", shareLinkRole ?? "viewer");
         } else if (shareLink.TargetType === "workspace") {
-            await createWorkspaceAccessRequest(shareLink.TargetID, "", "viewer");
+            await createWorkspaceAccessRequest(shareLink.TargetID, "", shareLinkRole ?? "viewer");
         }
     }
 
@@ -296,15 +300,22 @@ type LoginTabProps = {
 }
 const LoginTab = ({ setActiveTab }: LoginTabProps) => {
 
+    const redirectUrl = `${window.location.origin}/sharelinks/join/${useParams().shareID}`;
 
 
 
 
     return (
         <div className="flex flex-col items-center gap-4 rounded-2xl bg-menusec shadow-lg shadow-black/20 p-6">
-            <LoginForm onLoginSuccess={() => setActiveTab("welcome")} />
-            <div className="h-px w-full bg-neutral-700" />
-            <Footer setActiveTab={setActiveTab} />
+            <SignIn
+                routing={"virtual" as "hash"}
+                signUpUrl={import.meta.env.VITE_CLERK_SIGN_UP_URL ?? "/sign-up"}
+                fallbackRedirectUrl={redirectUrl}
+            />
+
+            {false && <><LoginForm onLoginSuccess={() => setActiveTab("welcome")} />
+                <div className="h-px w-full bg-neutral-700" />
+                <Footer setActiveTab={setActiveTab} /></>}
         </div>
     )
 }

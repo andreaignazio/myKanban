@@ -5,6 +5,10 @@ import { useUserStore } from "@/stores/userStore";
 import { useWsMembersStore } from "./wsMembersStore";
 import { useAsyncKey, useAsyncRequestStore } from "./asyncRequestStore";
 
+export function boardMemberKey(boardID: string, userID: string): string {
+    return `${boardID}:${userID}`;
+}
+
 type BoardMembersState = {
     membersIdsByBoardId: Record<string, string[]>;
     membersById: Record<string, UserBoard>;
@@ -41,7 +45,7 @@ export const useBoardMembersStore = create<BoardMembersState>((set) => ({
 
             const membersIds = data.map(ub => ub.Relation.UserID);
             const membersById = data.reduce((acc, ub) => {
-                acc[ub.Relation.UserID] = ub.Relation;
+                acc[boardMemberKey(boardID, ub.Relation.UserID)] = ub.Relation;
                 return acc;
             }, {} as Record<string, UserBoard>);
 
@@ -86,7 +90,7 @@ export const useBoardMembersStore = create<BoardMembersState>((set) => ({
     mergeBoardMembers: (boardID: string, members: UserBoard[]) => {
         const membersIds = members.map(ub => ub.UserID);
         const membersById = members.reduce((acc, ub) => {
-            acc[ub.UserID] = ub;
+            acc[boardMemberKey(boardID, ub.UserID)] = ub;
             return acc;
         }, {} as Record<string, UserBoard>);
 
@@ -114,7 +118,7 @@ export const useBoardMembersStore = create<BoardMembersState>((set) => ({
                 },
                 membersById: {
                     ...state.membersById,
-                    [member.UserID]: member,
+                    [boardMemberKey(boardID, member.UserID)]: member,
                 }
             };
         });
@@ -123,7 +127,8 @@ export const useBoardMembersStore = create<BoardMembersState>((set) => ({
         set((state) => {
             const currentIds = state.membersIdsByBoardId[boardID] || [];
             const nextIds = currentIds.filter((id) => id !== userID);
-            const { [userID]: _removed, ...nextMembersById } = state.membersById;
+            const key = boardMemberKey(boardID, userID);
+            const { [key]: _removed, ...nextMembersById } = state.membersById;
 
             return {
                 membersIdsByBoardId: {

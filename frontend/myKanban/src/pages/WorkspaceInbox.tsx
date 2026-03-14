@@ -1,6 +1,7 @@
 import { useShareOffersStore, type ShareOffer } from "@/stores/shareOffersStore";
 import { useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
+import { useOutletContext } from "react-router-dom";
 import { useShallow } from "zustand/react/shallow";
 import { ExclamationCircleIcon } from "@heroicons/react/24/solid";
 import { useCacheStore } from "@/stores/cacheStore";
@@ -9,11 +10,19 @@ import { useOverlayStore, type OverlayDescriptor } from "@/overlays/overlayStore
 import { ShareOfferRespondModal } from "@/components/modals/ShareOfferRespondModal";
 import { GridBuilder, type ColumnDefinition } from "@/components/OffersLists/UserBoardOutgoingRequests";
 
+type OutletCtx = { showOnlyFiltered: boolean }
+
 export function WorkspaceInbox() {
     const workspaceID = useParams().workspaceId ?? "";
+    const { showOnlyFiltered } = useOutletContext<OutletCtx>();
     const workspaceRequestIds = useShareOffersStore(useShallow((state) => state.workspaceReceivedRequestsIdsByWorkspaceId[workspaceID] ?? []));
     const offerById = useCacheStore(useShallow((state) => state.offerById));
-    const visibleRequestIds = workspaceRequestIds.filter((id) => Boolean(offerById[id]));
+    const visibleRequestIds = workspaceRequestIds.filter((id) => {
+        const offer = offerById[id];
+        if (!offer) return false;
+        if (showOnlyFiltered && offer.Status !== "pending") return false;
+        return true;
+    });
     const respondModalRef = useRef<HTMLDivElement>(null);
 
     const openMenu = useOverlayStore((state) => state.open)

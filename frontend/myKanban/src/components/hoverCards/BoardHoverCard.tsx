@@ -1,7 +1,7 @@
 import { forwardRef, useEffect } from "react";
 import { useBoardsStore } from "@/stores/boardsStore";
 import { useBoardBackground } from "@/hooks/useBoardBackground";
-import { useBoardMembersStore } from "@/stores/boardMembersStore";
+import { useBoardMembersStore, boardMemberKey } from "@/stores/boardMembersStore";
 import { MembersList } from "../common/MemberList";
 import { useWorkspaceStore } from "@/stores/workspaceStore";
 import { useDateTimeParser } from "@/hooks/useDateTimeParser";
@@ -41,7 +41,7 @@ export const BoardHoverCard = forwardRef<HTMLDivElement, BoardHoverCardProps>(({
     const membersById = useBoardMembersStore(state => state.membersById)
     const membersIds = useBoardMembersStore(useShallow(state => state.membersIdsByBoardId[boardID])) || []
 
-    const members = cachedMembers ?? (membersIds?.map(memberId => membersById[memberId]) || [])
+    const members = cachedMembers ?? (membersIds?.map(memberId => membersById[boardMemberKey(boardID, memberId)]) || [])
 
     const workspaceId = board?.WorkspaceID
     const workspaceById = useWorkspaceStore(state => state.workspacesById)

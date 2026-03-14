@@ -37,7 +37,7 @@ export const WorkspaceMembersDropdown = ({ userId, workspaceID, isAdminOrOwner, 
 
     return (
         <UniversalMembershipDropdown ref={roleDropdownRef} userId={userId} isAdminOrOwner={isAdminOrOwner}
-            isCurrentUser={isCurrentUser} setMemberRole={setMemberRole} style={style} className={className}
+            isCurrentUser={isCurrentUser} currentRole={member?.Role} setMemberRole={setMemberRole} style={style} className={className}
             showChevron={showChevron} chevronClassName={chevronClassName} />
     )
 }
