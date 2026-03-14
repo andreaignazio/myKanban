@@ -41,7 +41,8 @@ func shouldAttachRootBoardInvalidations(eventType DomainEventType) bool {
 		EventWorkspaceBoardPurged,
 		EventBoardListCardMoved,
 		EventBoardListCardPurged,
-		EventListCardCrossBoardMoved:
+		EventListCardCrossBoardMoved,
+		EventBoardListPatched:
 		return true
 	default:
 		return false
@@ -55,7 +56,8 @@ func shouldResolveAdditionalFanoutBoards(eventType DomainEventType) bool {
 		EventWorkspaceBoardPurged,
 		EventBoardListCardMoved,
 		EventBoardListCardPurged,
-		EventListCardCrossBoardMoved:
+		EventListCardCrossBoardMoved,
+		EventBoardListPatched:
 		return true
 	default:
 		return false
@@ -243,6 +245,25 @@ func (s *EventRegistryService) resolveAdditionalFanoutBoardIDs(ctx context.Conte
 				boardIDs = appendUniqueUUID(boardIDs, consumers...)
 			}
 		}
+
+	case EventBoardListPatched:
+		// Fan-out to all boards that mirror any list from the source board.
+		// This covers the access-mode change: consumers of mirror lists need to
+		// invalidate their rootboard cache and re-evaluate canEdit.
+		if sourceBoardID == uuid.Nil {
+			return []uuid.UUID{}, nil
+		}
+		listMirrorConsumers, err := s.repo.ResolveBoardConsumersForSourceBoardMirrors(ctx, sourceBoardID)
+		if err != nil {
+			return nil, err
+		}
+		boardIDs = appendUniqueUUID(boardIDs, listMirrorConsumers...)
+
+		cardMirrorConsumers, err := s.repo.ResolveBoardConsumersForSourceBoardCardMirrors(ctx, sourceBoardID)
+		if err != nil {
+			return nil, err
+		}
+		boardIDs = appendUniqueUUID(boardIDs, cardMirrorConsumers...)
 	}
 
 	return boardIDs, nil

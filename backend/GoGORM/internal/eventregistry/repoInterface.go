@@ -33,6 +33,7 @@ type EventRepository interface {
 	ResolveRootListCardIDsByBoardID(ctx context.Context, boardID uuid.UUID) ([]uuid.UUID, error)
 	ResolveListCardIDsByBoardID(ctx context.Context, boardID uuid.UUID) ([]uuid.UUID, error)
 	ResolveListCardIDsByRootID(ctx context.Context, rootListCardID uuid.UUID) ([]uuid.UUID, error)
+	ResolveRootListCardIDsByListID(ctx context.Context, listID uuid.UUID) ([]uuid.UUID, error)
 	GetExternalRootRefsByIDs(ctx context.Context, rootIDs []uuid.UUID) ([]models.ExternalRootRefRow, error)
 	GetUsersToBeNotifiedSingleQuery(ctx context.Context, targetIDsByEntity map[string][]uuid.UUID) (map[string][]uuid.UUID, error)
 	GetUsersToBeNotifiedFlatSingleQuery(ctx context.Context, targetIDsByEntity map[string][]uuid.UUID) ([]uuid.UUID, error)

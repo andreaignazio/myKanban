@@ -64,6 +64,7 @@ export const CardDetailMenu = forwardRef<HTMLDivElement, CardDetailMenuProps>(({
     const listCard = useBoardDetailStore((state) => listCardId ? state.listCardById[listCardId] : undefined);
 
     const {
+        effectiveRootBoard,
         isMirrorCard,
         rootListCardData,
         rootBoardBackgroundType,
@@ -109,7 +110,7 @@ export const CardDetailMenu = forwardRef<HTMLDivElement, CardDetailMenuProps>(({
         patchCardWatchActive(cardId, !isCardWatched);
     };
 
-    const { canEdit } = useCardEditableContext({ cardContext, boardId })
+    const { canEdit, userBoardRoot, rootBoardId } = useCardEditableContext({ cardContext, boardId, effectiveRootBoard });
 
     const [asideActiveTab, setAsideActiveTab] = useState("activity");
     const isAsideCollapsedByWindow = useMediaQuery(`(max-width: ${ACTIVITY_COLUMN_COLLAPSE_WIDTH - 1}px)`);
@@ -235,7 +236,6 @@ export const CardDetailMenu = forwardRef<HTMLDivElement, CardDetailMenuProps>(({
                 onOverlayClick={(e) => handleOverlayClick(e)}
                 onClose={onClose} ref={ref}>
 
-
                 <div className="flex w-full flex-col justify-start h-full min-h-0">
                     <div
                         style={{
@@ -253,7 +253,7 @@ export const CardDetailMenu = forwardRef<HTMLDivElement, CardDetailMenuProps>(({
                                 </RoundButton>
                             )}
 
-
+                            {canEdit.toString()} {userBoardRoot?.Role} {cardContext?.rootListCardId}
                             <CardRowMenuBtn
                                 disableClick={!canEdit}
 
@@ -267,6 +267,7 @@ export const CardDetailMenu = forwardRef<HTMLDivElement, CardDetailMenuProps>(({
                                     <PhotoIcon className={iconBtnClass} />
                                 </RoundButton>
                             </CardRowMenuBtn>
+
 
                             <CardRowMenuBtn
                                 disableClick={!canEdit}

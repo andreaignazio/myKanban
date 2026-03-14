@@ -91,6 +91,7 @@ export const CardRow = ({ boardID, listId, listCardID: listCardID, cardId, index
         isInbox,
         isInboxMode,
         isMirrorCard,
+        effectiveRootBoard,
         rootBoardBackgroundType,
         rootBoardBgImage,
         rootBoardBgColorClass,
@@ -107,7 +108,7 @@ export const CardRow = ({ boardID, listId, listCardID: listCardID, cardId, index
 
     const done = card?.Done
 
-    const { canEdit } = useCardEditableContext({ cardContext, boardId })
+    const { canEdit } = useCardEditableContext({ cardContext, boardId, effectiveRootBoard })
     const isPendingCopy = (listCardID?.startsWith("copy-temp-") ?? false)
 
 

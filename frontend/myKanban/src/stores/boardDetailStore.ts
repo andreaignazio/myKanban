@@ -101,6 +101,7 @@ function extractInvalidatedRootBoardListCardIds(payloadData: any): string[] {
 
 type RootData = {
     rootListID?: string
+    rootBoardListID?: string
     isUserBoardPurged?: boolean
     isUserBoardSoftDeleted?: boolean
     isMainListCardPurged?: boolean
@@ -529,12 +530,20 @@ export const useBoardDetailStore = create<BoardDetailStore>((set, get) => ({
             case "board.list.patched": {
                 const relations = patch?.BoardListRelations ?? []
                 if (relations.length > 0) {
+                    const patchedIds = new Set(relations.map((r) => r.ID))
                     const nextBoardListById = { ...get().boardListById }
                     relations.forEach((rel) => {
                         nextBoardListById[rel.ID] = rel as unknown as BoardList
                     })
+                    // Invalidate rootboard cache for mirror cards whose root board list was patched
+                    const affectedListCardIds = Object.entries(get().rootListCardDataByListCardId)
+                        .filter(([, data]) => data.rootBoardListID && patchedIds.has(data.rootBoardListID))
+                        .map(([id]) => id)
+                    const nextInvalidated = { ...get().invalidatedRootBoardListCardIds }
+                    affectedListCardIds.forEach((id) => { nextInvalidated[id] = true })
                     set((state) => ({
                         boardListById: nextBoardListById,
+                        invalidatedRootBoardListCardIds: nextInvalidated,
                         OpCounter: state.OpCounter + 1,
                     }))
                 }
@@ -1257,6 +1266,7 @@ export const useBoardDetailStore = create<BoardDetailStore>((set, get) => ({
                     const board = payload?.Board ?? null
                     const rootData = {
                         rootListID: payload?.List?.ID,
+                        rootBoardListID: payload?.BoardList?.ID ?? undefined,
                         isUserBoardPurged: payload?.IsUserBoardPurged ?? false,
                         isUserBoardSoftDeleted: payload?.IsUserBoardSoftDeleted ?? false,
                         isMainListCardPurged: payload?.IsMainListCardPurged ?? false,

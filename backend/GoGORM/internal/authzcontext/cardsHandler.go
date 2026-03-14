@@ -128,7 +128,7 @@ func (h *AuthzCardsHandler) resolveBoardListContext(ctx context.Context, authzRe
 			return uuid.Nil, uuid.Nil, uuid.Nil, nil, domainerr.ErrValidation
 		}
 
-		boardList, err := h.authzRepo.GetBoardListByListCardIDAndBoardID(ctx, payload.ListCardID, payload.BoardID)
+		/*boardList, err := h.authzRepo.GetBoardListByListCardIDAndBoardID(ctx, payload.ListCardID, payload.BoardID)
 		if err != nil {
 			return uuid.Nil, uuid.Nil, uuid.Nil, nil, err
 		}
@@ -136,7 +136,12 @@ func (h *AuthzCardsHandler) resolveBoardListContext(ctx context.Context, authzRe
 			return uuid.Nil, uuid.Nil, uuid.Nil, nil, domainerr.ErrNotFound
 		}
 
-		return payload.CardID, boardList.ID, boardList.ID, boardList, nil
+		return payload.CardID, boardList.ID, boardList.ID, boardList, nil*/
+		rootBoardList, err := h.ResolveRootBoardListFromCardID(ctx, payload.CardID)
+		if err != nil {
+			return uuid.Nil, uuid.Nil, uuid.Nil, nil, err
+		}
+		return payload.CardID, rootBoardList.ID, rootBoardList.ID, rootBoardList, nil
 
 	case AuthzCardsHandlerModePatchInboxMirrorCard:
 		payload := authzRequest.Payload.InboxMirrorCardPatchPayload
@@ -164,4 +169,23 @@ func (h *AuthzCardsHandler) resolveBoardListContext(ctx context.Context, authzRe
 	default:
 		return uuid.Nil, uuid.Nil, uuid.Nil, nil, domainerr.ErrUnsupportedAction
 	}
+}
+
+func (h *AuthzCardsHandler) ResolveRootBoardListFromCardID(ctx context.Context, cardID uuid.UUID) (*models.BoardList, error) {
+
+	rootListCard, err := h.authzRepo.GetRootListCardByCardID(ctx, cardID)
+	if err != nil {
+		return nil, err
+	}
+	if rootListCard == nil {
+		return nil, domainerr.ErrNotFound
+	}
+	rootBoardList, err := h.authzRepo.GetRootBoardListByListID(ctx, rootListCard.ListID)
+	if err != nil {
+		return nil, err
+	}
+	if rootBoardList == nil {
+		return nil, domainerr.ErrNotFound
+	}
+	return rootBoardList, nil
 }

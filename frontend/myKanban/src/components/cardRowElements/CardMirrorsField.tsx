@@ -36,7 +36,8 @@ export const Mirrors = ({ rootBoardContext, mode, placement = "default", cardId,
         : "bg-transparent text-white pt-3 px-3"
 
     const boardCreatedAt = board ? new Date(board.CreatedAt) : null
-    const boardCreatedAtFormatted = boardCreatedAt ? useDateTimeParser().stringifyDatePretty(boardCreatedAt, true)?.date : undefined
+    const dateParser = useDateTimeParser()
+    const boardCreatedAtFormatted = boardCreatedAt ? dateParser.stringifyDatePretty(boardCreatedAt, true)?.date : undefined
     const detailLabel = showAccessWarning
         ? "you have lost access to this resource"
         : isMainListCardPurged

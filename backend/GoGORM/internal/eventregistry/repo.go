@@ -646,6 +646,25 @@ func (r *GormEventRepository) ResolveListCardIDsByRootID(ctx context.Context, ro
 	return result, nil
 }
 
+func (r *GormEventRepository) ResolveRootListCardIDsByListID(ctx context.Context, listID uuid.UUID) ([]uuid.UUID, error) {
+	if listID == uuid.Nil {
+		return []uuid.UUID{}, nil
+	}
+
+	result := make([]uuid.UUID, 0)
+	if err := r.db.WithContext(ctx).
+		Table("list_cards lc").
+		Distinct("lc.root_id").
+		Where("lc.list_id = ?", listID).
+		Where("lc.deleted_at IS NULL").
+		Where("lc.root_id IS NOT NULL").
+		Find(&result).Error; err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
 func (r *GormEventRepository) GetBoardsByIDs(ctx context.Context, boardIDs []uuid.UUID) ([]models.Board, error) {
 	if len(boardIDs) == 0 {
 		return []models.Board{}, nil

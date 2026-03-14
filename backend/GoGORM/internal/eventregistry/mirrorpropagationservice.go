@@ -104,6 +104,8 @@ func (s *MirrorPropagationService) getRootIDsResolver(eventType DomainEventType)
 		return purgedCardsRootIDsResolver{}, nil
 	case EventListCardCrossBoardMoved:
 		return crossBoardMoveRootIDsResolver{}, nil
+	case EventBoardListPatched:
+		return &listPatchedRootIDsResolver{repo: s.repo}, nil
 	default:
 		return nil, domainerr.ErrUnsupportedEvent
 	}
@@ -113,7 +115,7 @@ func (s *MirrorPropagationService) getBoardTargetsResolver(eventType DomainEvent
 	switch eventType {
 	case EventBoardPatched, EventWorkspaceBoardClosed, EventWorkspaceBoardPurged:
 		return &boardEventBoardTargetsResolver{repo: s.repo}, nil
-	case EventBoardListCardMoved, EventBoardListCardPurged:
+	case EventBoardListCardMoved, EventBoardListCardPurged, EventBoardListPatched:
 		return &rootScopedBoardTargetsResolver{repo: s.repo}, nil
 	case EventListCardCrossBoardMoved:
 		return &crossBoardMoveBoardTargetsResolver{repo: s.repo}, nil
@@ -150,6 +152,28 @@ func (r *boardRootIDsResolver) Resolve(ctx context.Context, input MirrorPropagat
 		return []uuid.UUID{}, nil
 	}
 	return r.repo.ResolveRootListCardIDsByBoardID(ctx, boardID)
+}
+
+type listPatchedRootIDsResolver struct {
+	repo EventRepository
+}
+
+func (r *listPatchedRootIDsResolver) Resolve(ctx context.Context, input MirrorPropagationInput) ([]uuid.UUID, error) {
+	// Extract listID from the patched board list in the state payload
+	if input.BuildResult.StatePayload != nil {
+		for _, bl := range input.BuildResult.StatePayload.BoardListRelations {
+			if bl.ListID != uuid.Nil {
+				return r.repo.ResolveRootListCardIDsByListID(ctx, bl.ListID)
+			}
+		}
+	}
+	// Fallback: extract from targets
+	for _, target := range input.Event.Targets {
+		if target.EntityType == "list" && target.EntityID != uuid.Nil {
+			return r.repo.ResolveRootListCardIDsByListID(ctx, target.EntityID)
+		}
+	}
+	return []uuid.UUID{}, nil
 }
 
 type moveCardRootIDsResolver struct{}
