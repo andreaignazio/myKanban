@@ -15,6 +15,7 @@ import { UserAvatar } from "../badges/UserAvatar";
 import { UserNotificationTabPlaceholder } from "./UserNotificationTabPlaceholder";
 import { FloatingTabSelector } from "../menuElements/floatingTabSelector";
 import { Bell, XIcon } from "lucide-react";
+import { UnreadCounter } from "../common/UnreadCounter";
 
 type UserNotificationMenuBtnProps = {
     className?: string;
@@ -90,14 +91,11 @@ export const UserNotificationMenuBtn = forwardRef<HTMLButtonElement, UserNotific
             style={style}
             overrideClassName={overrideClassName}
             onClick={handleOpenUserNotificationMenu} ref={setAnchorRefs} className={className}>
-            <div className="relative">
-                <Bell className={iconClassName}></Bell>
-                {unreadCount > 0 && (
-                    <div className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">
-                        {unreadCount > 9 ? "9+" : unreadCount}
-                    </div>
-                )}
-            </div>
+
+            <Bell className={iconClassName}></Bell>
+            <UnreadCounter count={unreadCount} />
+
+
         </BaseBtn>
     )
 });
@@ -108,7 +106,7 @@ type UserNotificationMenuProps = {
 type NotificationTabs = "watched" | "notifications"
 export const UserNotificationMenu = forwardRef<HTMLDivElement, UserNotificationMenuProps>(({ onClose }, ref) => {
 
-    const [activeTab, setActiveTab] = useState<NotificationTabs>("watched")
+    const [activeTab, setActiveTab] = useState<NotificationTabs>("notifications")
     const Title = { notifications: "Notifications", watched: "Watched Items" }[activeTab]
     const tabs: { id: NotificationTabs; label: string }[] = [
         { id: "watched", label: "Watched Items" },
@@ -124,14 +122,18 @@ export const UserNotificationMenu = forwardRef<HTMLDivElement, UserNotificationM
                 style={{ padding: 0, }}
                 ref={ref} Title={""} onClose={onClose} width={480}>
 
-                <div className="relative flex justify-between items-center min-h-[60px] ">
-                    <div className="font-grotesk tracking-wide font-bold text-lg px-4">{Title}</div>
+                <div className="pt-4 pb-2 relative flex flex-row items-start justify-between  min-h-[60px] ">
+                    <div className="flex flex-col gap-1">
+                        <div className="font-grotesk tracking-wide font-bold text-lg px-4">{Title}</div>
+                        <span className="text-xs px-4  text-zinc-400 ">Activities related to your watched items</span>
+                    </div>
                     <div className="flex px-5 items-center gap-3" >
                         <div className="text-sm font-helvetica -translate-y-0 text-gray-400">
                             Only show unread</div>
                         <Switcher isOn={showOnlyUnread} onToggle={() => setShowOnlyUnread(!showOnlyUnread)} />
                     </div>
                 </div>
+
                 <div className="border-t border-gray-600 my-2 mx-4" />
 
                 {false && <div className="fixed bottom-6 rounded-md bg-transparent w-full flex justify-center ">

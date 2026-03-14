@@ -32,9 +32,11 @@ type ListRowProps = {
     index: number
     draggedCardId?: string | null
     draggedSourceBoardListId?: string | null
+    isDragDisabled?: boolean
+    isCardDropDisabled?: boolean
 }
 
-export function ListRow({ boardID: boardID, boardListID: boardListID, index: index, draggedCardId = null, draggedSourceBoardListId = null }: ListRowProps) {
+export function ListRow({ boardID: boardID, boardListID: boardListID, index: index, draggedCardId = null, draggedSourceBoardListId = null, isDragDisabled = false, isCardDropDisabled = false }: ListRowProps) {
     const boardList = useBoardDetailStore((state) => state.boardListById[boardListID])
     const listID = boardList?.ListID ?? ""
     const list = useListsStore(state => state.listsById[listID])
@@ -92,7 +94,7 @@ export function ListRow({ boardID: boardID, boardListID: boardListID, index: ind
                 exit={isLoading ? { opacity: 0, scale: 1, y: 20, transition: { duration: duration, ease: "easeOut" } } : { opacity: 1, scale: 1, y: 0, transition: { duration: 0.0 } }}
             >
 
-                <Draggable draggableId={boardListID} index={index}>
+                <Draggable draggableId={boardListID} index={index} isDragDisabled={isDragDisabled}>
 
 
                     {(provided) => (
@@ -151,7 +153,7 @@ export function ListRow({ boardID: boardID, boardListID: boardListID, index: ind
                                         />
                                     </div>
 
-                                    <Droppable droppableId={boardListID} type="card" isDropDisabled={isReadonly || alreadyContainsDraggedCard}>
+                                    <Droppable droppableId={boardListID} type="card" isDropDisabled={isReadonly || alreadyContainsDraggedCard || isCardDropDisabled}>
                                         {(provided) => (
                                             <div
                                                 ref={provided.innerRef}
@@ -165,7 +167,7 @@ export function ListRow({ boardID: boardID, boardListID: boardListID, index: ind
                                                             <CardRow
                                                                 key={listCardID}
                                                                 index={cardIndex}
-                                                                isDragDisabled={isReadonly}
+                                                                isDragDisabled={false}
                                                                 editMenuPrefix={cardEditMenuIdPrefix}
                                                                 boardID={boardID} listId={listID} listCardID={listCardID} />
 

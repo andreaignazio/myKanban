@@ -1,14 +1,10 @@
 import { useShareOffersStore, type ShareOffer } from "@/stores/shareOffersStore";
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { useOutletContext } from "react-router-dom";
 import { useShallow } from "zustand/react/shallow";
-import { ExclamationCircleIcon } from "@heroicons/react/24/solid";
 import { useCacheStore } from "@/stores/cacheStore";
-import { LabeledButtonCustom } from "@/components/buttons/labeledButton";
-import { useOverlayStore, type OverlayDescriptor } from "@/overlays/overlayStore";
-import { ShareOfferRespondModal } from "@/components/modals/ShareOfferRespondModal";
-import { GridBuilder, type ColumnDefinition } from "@/components/OffersLists/UserBoardOutgoingRequests";
+import { GridBuilder, ActionComponent, type ColumnDefinition } from "@/components/OffersLists/UserBoardOutgoingRequests";
 
 type OutletCtx = { showOnlyFiltered: boolean }
 
@@ -23,33 +19,6 @@ export function WorkspaceInbox() {
         if (showOnlyFiltered && offer.Status !== "pending") return false;
         return true;
     });
-    const respondModalRef = useRef<HTMLDivElement>(null);
-
-    const openMenu = useOverlayStore((state) => state.open)
-    const onMenuClose = useOverlayStore((state) => state.close);
-
-    function handleOpenRespondModal(shareOfferID: string) {
-        const id = "respondModal-" + shareOfferID;
-        const descriptor: OverlayDescriptor = {
-            id: id,
-            render: () => <ShareOfferRespondModal ref={respondModalRef} shareOfferID={shareOfferID} onClose={() => onMenuClose(id)} />,
-            panelRef: respondModalRef,
-            type: "modal",
-            renderType: "virtual",
-            exclusiveGroup: "share-action-modal",
-            opts: {
-                closeOnMouseLeave: false,
-                closeOnClickOutside: true,
-                closeOnEscape: true,
-                lockBackdrop: true,
-            },
-            position: {
-                virtual: "viewport-center"
-            }
-        }
-        openMenu(descriptor);
-    }
-
     useEffect(() => {
         if (!workspaceID) return;
         useShareOffersStore.getState().fetchWorkspaceReceivedRequests(workspaceID);
@@ -78,8 +47,8 @@ export function WorkspaceInbox() {
             key: "action",
             width: "140px",
             align: "center",
-            getValue: (offer: ShareOffer) => offer.ID,
-            renderCell: ({ value }) => <RespondCell shareOfferID={value} onRespond={handleOpenRespondModal} />,
+            getValue: (offer: ShareOffer) => offer.Status === "pending" ? "respond" : offer.Status,
+            renderCell: ({ value, shareId }) => <ActionComponent action={value as "respond" | "accepted" | "rejected" | "none"} shareId={shareId} />,
         },
     ]
 
@@ -97,20 +66,6 @@ export function WorkspaceInbox() {
                     emptyMessage="Nessuna richiesta di accesso ricevuta per questo workspace."
                 />
             </div>
-        </div>
-    )
-}
-
-function RespondCell({ shareOfferID, onRespond }: { shareOfferID: string | null, onRespond: (id: string) => void }) {
-    if (!shareOfferID) {
-        return <span className="text-sm text-text/60">—</span>
-    }
-
-    return (
-        <div className="flex md:justify-center">
-            <LabeledButtonCustom label="Respond" onClick={() => onRespond(shareOfferID)}>
-                <ExclamationCircleIcon className="w-5 h-5" />
-            </LabeledButtonCustom>
         </div>
     )
 }

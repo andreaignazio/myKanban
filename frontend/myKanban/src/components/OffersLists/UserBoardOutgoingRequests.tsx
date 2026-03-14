@@ -284,8 +284,8 @@ export const LinkComponent = ({ token, shareId, style }: { token: string, shareI
             iconAtLeft
             style={style}
             className={`text-sm font-medium h-8 ${isRevoked
-                    ? "text-neutral-500 opacity-50"
-                    : "bg-menubtn text-neutral-200"
+                ? "text-neutral-500 opacity-50"
+                : "bg-menubtn text-neutral-200"
                 }`}
         >
             <Link className="w-3.5 h-3.5" />
@@ -663,7 +663,7 @@ export const UserComponent = ({ ID: userId, shareId, style }: UserComponentProps
     }
 
     if (!userId) {
-        return <span className="text-sm text-text/60" style={style}>—</span>
+        return <div className="flex items-center justify-center w-16 h-16 lg:w-44 px-3 py-2" style={style}><span className="text-sm text-text/60">—</span></div>
     }
 
     return (
@@ -671,7 +671,7 @@ export const UserComponent = ({ ID: userId, shareId, style }: UserComponentProps
         <div
             ref={anchorRef}
             className=" relative flex flex-row items-center justify-center overflow-hidden
-             hover:bg-slate-500/20 rounded-lg w-16 h-16 lg:w-auto  px-3 py-2 cursor-pointer"
+             hover:bg-slate-500/20 rounded-lg w-16 h-16 lg:w-44  px-3 py-2 cursor-pointer"
             style={style}
             onClick={onClick}
         >

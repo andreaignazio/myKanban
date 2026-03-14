@@ -34,7 +34,7 @@ const AsyncRequestToaster = forwardRef<HTMLDivElement, AsyncRequestToasterProps>
             show: ["error", "loading", "success"],
         },
         {
-            requestKey: ["card:create", "workspace:create"],
+            requestKey: ["card:create", "workspace:create", "list:create", "list:move:dnd", "card:move:dnd"],
             minLoadingMs: 0,
             minSuccessMs: 3000,
             maxErrorMs: 3000,
@@ -55,7 +55,7 @@ const AsyncRequestToaster = forwardRef<HTMLDivElement, AsyncRequestToasterProps>
             show: ["error", "loading", "success"],
         },
         {
-            requestKey: ["board:sharelink:revoke", "workspace:sharelink:revoke", "workspace:shareoffer:create"],
+            requestKey: ["board:sharelink:revoke", "workspace:sharelink:revoke", "workspace:member:role:update"],
             minLoadingMs: 0,
             minSuccessMs: 3000,
             maxErrorMs: 3000,
@@ -118,10 +118,10 @@ export const AsyncRequestToasterController = () => {
         "card:edit:dates:editmodal"]
 
     const keysCard: AsyncRequestKey[] = ["card:copy", "card:move", "card:mirror", "card:create", "card:edit:title:inline", "card:edit:dates:add:editmodal"]
-    const keysCardB: AsyncRequestKey[] = ["card:create", "workspace:create"]
+    const keysCardB: AsyncRequestKey[] = ["card:create", "workspace:create", "list:create", "list:move:dnd", "card:move:dnd"]
     const keysArchive: AsyncRequestKey[] = ["card:delete", "list:detach", "board:archive:list:purge", "board:archive:card:purge"]
     const keysWatchBoardList: AsyncRequestKey[] = ["watch:add:board", "watch:add:list", "watch:patch:board", "watch:patch:list"]
-    const keysShareLink: AsyncRequestKey[] = ["board:sharelink:revoke", "workspace:sharelink:revoke", "workspace:shareoffer:create"]
+    const keysShareLink: AsyncRequestKey[] = ["board:sharelink:revoke", "workspace:sharelink:revoke", "workspace:member:role:update"]
 
 
 

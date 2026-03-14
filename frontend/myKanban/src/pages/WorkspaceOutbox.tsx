@@ -1,13 +1,9 @@
 ﻿import { useShareOffersStore, type ShareOffer } from "@/stores/shareOffersStore";
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { useOutletContext } from "react-router-dom";
 import { useShallow } from "zustand/react/shallow";
-import { ExclamationCircleIcon } from "@heroicons/react/24/solid";
-import { LabeledButtonCustom } from "@/components/buttons/labeledButton";
-import { useOverlayStore, type OverlayDescriptor } from "@/overlays/overlayStore";
-import { ShareActionModal } from "@/components/modals/ShareActionModal";
-import { GridBuilder, type ColumnDefinition } from "@/components/OffersLists/UserBoardOutgoingRequests";
+import { GridBuilder, ActionComponent, type ColumnDefinition } from "@/components/OffersLists/UserBoardOutgoingRequests";
 
 type OutletCtx = { showOnlyFiltered: boolean }
 
@@ -16,32 +12,6 @@ export function WorkspaceOutbox() {
     const { showOnlyFiltered } = useOutletContext<OutletCtx>();
     const allShareOffers = useShareOffersStore(useShallow((state) => state.getWorkspaceShareOffers(workspaceID))) ?? [];
     const shareOffers = showOnlyFiltered ? allShareOffers.filter(o => o.Status === "pending") : allShareOffers;
-    const shareActionModalRef = useRef<HTMLDivElement>(null);
-
-    const openMenu = useOverlayStore((state) => state.open)
-    const onMenuClose = useOverlayStore((state) => state.close);
-
-    function handleOpenRevokeModal(shareOfferID: string) {
-        const id = "revokeModal-" + shareOfferID;
-        const descriptor: OverlayDescriptor = {
-            id: id,
-            render: () => <ShareActionModal ref={shareActionModalRef} shareOfferID={shareOfferID} actionType="revoke" onClose={() => onMenuClose(id)} />,
-            panelRef: shareActionModalRef,
-            type: "modal",
-            renderType: "virtual",
-            exclusiveGroup: "share-action-modal",
-            opts: {
-                closeOnMouseLeave: false,
-                closeOnClickOutside: true,
-                closeOnEscape: true,
-                lockBackdrop: true,
-            },
-            position: {
-                virtual: "viewport-center"
-            }
-        }
-        openMenu(descriptor);
-    }
 
     useEffect(() => {
         if (!workspaceID) return;
@@ -69,8 +39,8 @@ export function WorkspaceOutbox() {
             key: "action",
             width: "140px",
             align: "center",
-            getValue: (offer: ShareOffer) => offer.ID,
-            renderCell: ({ value }) => <RevokeCell shareOfferID={value} onRevoke={handleOpenRevokeModal} />,
+            getValue: (offer: ShareOffer) => offer.Status === "pending" ? "revoke" : offer.Status,
+            renderCell: ({ value, shareId }) => <ActionComponent action={value as "revoke" | "accepted" | "rejected" | "none"} shareId={shareId} />,
         },
     ]
 
@@ -88,20 +58,6 @@ export function WorkspaceOutbox() {
                     emptyMessage="Nessuna condivisione inviata per questo workspace."
                 />
             </div>
-        </div>
-    )
-}
-
-function RevokeCell({ shareOfferID, onRevoke }: { shareOfferID: string | null, onRevoke: (id: string) => void }) {
-    if (!shareOfferID) {
-        return <span className="text-sm text-text/60">—</span>
-    }
-
-    return (
-        <div className="flex md:justify-center">
-            <LabeledButtonCustom label="Revoke" onClick={() => onRevoke(shareOfferID)}>
-                <ExclamationCircleIcon className="w-5 h-5" />
-            </LabeledButtonCustom>
         </div>
     )
 }

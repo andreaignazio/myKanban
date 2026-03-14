@@ -6,6 +6,7 @@ import { useShallow } from "zustand/shallow"
 import { AnimatePresence, motion } from "framer-motion"
 import { useAsyncKey } from "@/stores/asyncRequestStore"
 import { useAsyncRequest } from "@/hooks/useAsyncRequest"
+import { useBoardsStore } from "@/stores/boardsStore"
 
 import { Droppable } from "@hello-pangea/dnd"
 import { useEffect, useState } from "react"
@@ -28,6 +29,9 @@ export const ListContainer = ({ draggedCardId = null, draggedSourceBoardListId =
     const fetchKey = useAsyncKey("board:read:detail", boardId ?? "")
     //const listAddKey = "list:create"
     const { isLoading } = useAsyncRequest(fetchKey)
+
+    const currentUserRole = useBoardsStore((state) => boardId ? state.userBoardsById[boardId]?.Role : undefined)
+    const isViewer = currentUserRole === "viewer"
     // const { isLoading: isCreatingList } = useAsyncRequest(listAddKey)
 
     const showSkeletons = isLoading && uniqueBoardListIds.length === 0
@@ -90,6 +94,8 @@ export const ListContainer = ({ draggedCardId = null, draggedSourceBoardListId =
                                     index={index}
                                     draggedCardId={draggedCardId}
                                     draggedSourceBoardListId={draggedSourceBoardListId}
+                                    isDragDisabled={isViewer}
+                                    isCardDropDisabled={isViewer}
                                     boardListID={boardListId} boardID={boardId} />
                             </motion.div>
                         ))}

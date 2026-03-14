@@ -52,7 +52,7 @@ type CardsStore = {
     bulkMoveListCardsInBoard: (boardId: string, payload: BulkMoveListCardsInBoardRequest) => Promise<BulkMoveListCardsInBoardResponse | null>
     bulkDetatchListCards: (boardId: string, listId: string) => Promise<BulkDetatchListCardsResponse | null>
     mirrorCardToList: (boardId: string, cardId: string, payload: MirrorCardToListRequest) => Promise<void | null>
-    copyCardToList: (boardId: string, cardId: string, payload: CopyCardToListRequest) => Promise<void | null>
+    copyCardToList: (boardId: string, cardId: string, payload: CopyCardToListRequest, correlationID?: string, onError?: () => void) => Promise<void | null>
 }
 
 export const useCardsStore = create<CardsStore>((set, get) => ({
@@ -213,11 +213,14 @@ export const useCardsStore = create<CardsStore>((set, get) => ({
             { successResetDelayMs: 2000 }
         )
     },
-    copyCardToList: async (boardId: string, cardId: string, payload: CopyCardToListRequest) => {
+    copyCardToList: async (boardId: string, cardId: string, payload: CopyCardToListRequest, correlationID?: string, onError?: () => void) => {
         return useAsyncRequestStore.getState().execute(
             useAsyncKey("card:copy", cardId),
-            () => api.post(`/boards/${boardId}/cards/${cardId}/copy`, payload),
-            { successResetDelayMs: 2000 }
+            () => {
+                const headers = correlationID ? { "x-correlation-id": correlationID } : undefined
+                return api.post(`/boards/${boardId}/cards/${cardId}/copy`, payload, { headers })
+            },
+            { successResetDelayMs: 2000, onError }
         )
     },
 }))

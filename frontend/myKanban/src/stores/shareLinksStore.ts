@@ -18,6 +18,7 @@ import { useBoardMembersStore } from "./boardMembersStore";
 import { useWsMembersStore } from "./wsMembersStore";
 import { useUserStore } from "./userStore";
 import { useAsyncRequestStore, useAsyncKey } from "./asyncRequestStore";
+import { useEventStore } from "./eventStore";
 
 
 
@@ -65,15 +66,19 @@ export const useShareLinksStore = create<ShareLinksState>((set, get) => ({
         return shareLink ? shareLink.Token : null
     },
     createShareLink: async (payload) => {
-
+        const correlationID = crypto.randomUUID();
         const response = await useAsyncRequestStore.getState().execute(
             "board:sharelink:create",
-            () => api.post(`/sharelinks`, payload),
+            () => api.post(`/sharelinks`, payload, { headers: { "x-correlation-id": correlationID } }),
             {
                 successResetDelayMs: 2000,
                 onSuccess(response) {
+                    const shareLink = response.data as PublicShareLink;
+                    const eventType = shareLink.TargetType === "board"
+                        ? "board.sharelink.created"
+                        : "workspace.sharelink.created";
+                    useEventStore.getState().addEvent(correlationID, eventType);
                     set((state) => {
-                        const shareLink = response.data as PublicShareLink;
                         const targetId = shareLink.TargetID;
                         const existingIds = state.shareLinkIdsByTargetId[targetId] || [];
                         return {
@@ -90,7 +95,6 @@ export const useShareLinksStore = create<ShareLinksState>((set, get) => ({
                 },
             });
         return buildUrlFromToken(response?.data.Token);
-
 
     },
     fetchShareLinksByTargetId: async (targetId) => {

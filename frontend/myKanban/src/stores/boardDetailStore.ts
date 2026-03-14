@@ -123,6 +123,7 @@ type BoardDetailStore = {
     rootBoardIdByListCardId: Record<string, string>
     rootListCardDataByListCardId: Record<string, RootData>
     invalidatedRootBoardListCardIds: Record<string, true>
+    pendingCopyPlaceholders: Record<string, { tempListCardId: string; destListId: string }>
 
     getListCardById: () => Record<string, ListCard>
     setListCardById: (listCardById: Record<string, ListCard>) => void
@@ -156,7 +157,7 @@ type BoardDetailStore = {
     applyCreateListEvent: (payload: BoardDetailPatch) => Promise<void>
     applyDetatchListEvent: (payload: BoardDetailPatch) => Promise<void>
     applyMoveListEvent: (payload: BoardDetailPatch) => Promise<void>
-    persistMoveList: (boardId: string, boardListID: string, beforeID: string | null) => Promise<void>
+    persistMoveList: (boardId: string, boardListID: string, beforeID: string | null, previousBoardListIds: string[]) => Promise<void>
     applyMergeListCards: (payload: any) => void
     isListCardInBoard: (listCardID: string, boardID: string) => boolean
     applyListCardCrossBoardMove: (payload: CrossBoardMoveBoardPayload) => void
@@ -169,7 +170,7 @@ type BoardDetailStore = {
     getListIdForListCardId: (listCardId: string) => string | null
     getListIdForBoardListId: (boardListId: string) => string | null
     getCardIdForListCardId: (listCardId: string) => string | null
-    persistMoveCardInBoard: (listCardId: string, targetListID: string, fromListID: string, beforeID: string | null) => Promise<void>
+    persistMoveCardInBoard: (listCardId: string, targetListID: string, fromListID: string, beforeID: string | null, previousSourceListCardIds: string[], previousDestListCardIds: string[]) => Promise<void>
 
     fetchRootBoardForListcardId: (boardID: string, listCardID: string) => Promise<RootBoardListResponse | null>
     getRootBoardForListCardId: (listCardID: string) => Board | null
@@ -177,6 +178,8 @@ type BoardDetailStore = {
     clearRootBoardCacheInvalidation: (listCardID: string) => void
     applyListCardDetachEvent: (payload: BoardDetailPatch) => Promise<void>
     getBoardListForListCardId: (listCardID: string, boardID: string) => BoardList | null
+    insertTempCopyCardPlaceholder: (correlationID: string, sourceCardId: string, destListId: string, atIndex: number) => string
+    removeCopyPlaceholder: (correlationID: string) => void
 }
 
 export type DeltaPayload = {
@@ -200,6 +203,7 @@ export const useBoardDetailStore = create<BoardDetailStore>((set, get) => ({
     rootListCardDataByListCardId: {},
     rootBoardIdByListCardId: {},
     invalidatedRootBoardListCardIds: {},
+    pendingCopyPlaceholders: {},
 
     getListCardById: () => get().listCardById,
     setListCardById: (listCardById) => set(() => ({ listCardById })),
@@ -226,6 +230,55 @@ export const useBoardDetailStore = create<BoardDetailStore>((set, get) => ({
         set((state) => ({
             OpCounter: state.OpCounter + 1
         }))
+    },
+
+    insertTempCopyCardPlaceholder: (correlationID, sourceCardId, destListId, atIndex) => {
+        const tempListCardId = `copy-temp-${correlationID}`
+        const fakeListCard: ListCard = {
+            ID: tempListCardId,
+            CardID: sourceCardId,
+            ListID: destListId,
+            Position: "",
+            CreatedAt: new Date().toISOString(),
+            UpdatedAt: new Date().toISOString(),
+            DeletedAt: null,
+            RootID: tempListCardId,
+        }
+        set((state) => {
+            const nextListCardById = { ...state.listCardById, [tempListCardId]: fakeListCard }
+            const prevIds = state.listCardIdsByListId[destListId] ?? []
+            const nextIds = [...prevIds]
+            nextIds.splice(atIndex, 0, tempListCardId)
+            return {
+                listCardById: nextListCardById,
+                listCardIdsByListId: { ...state.listCardIdsByListId, [destListId]: nextIds },
+                pendingCopyPlaceholders: {
+                    ...state.pendingCopyPlaceholders,
+                    [correlationID]: { tempListCardId, destListId },
+                },
+                OpCounter: state.OpCounter + 1,
+            }
+        })
+        return tempListCardId
+    },
+
+    removeCopyPlaceholder: (correlationID) => {
+        const pending = get().pendingCopyPlaceholders[correlationID]
+        if (!pending) return
+        set((state) => {
+            const nextListCardById = { ...state.listCardById }
+            delete nextListCardById[pending.tempListCardId]
+            const prevIds = state.listCardIdsByListId[pending.destListId] ?? []
+            const nextIds = prevIds.filter((id) => id !== pending.tempListCardId)
+            const nextPlaceholders = { ...state.pendingCopyPlaceholders }
+            delete nextPlaceholders[correlationID]
+            return {
+                listCardById: nextListCardById,
+                listCardIdsByListId: { ...state.listCardIdsByListId, [pending.destListId]: nextIds },
+                pendingCopyPlaceholders: nextPlaceholders,
+                OpCounter: state.OpCounter + 1,
+            }
+        })
     },
 
     setCurrentBoardId: (boardID) => set(() => ({ currentBoardId: boardID })),
@@ -383,7 +436,35 @@ export const useBoardDetailStore = create<BoardDetailStore>((set, get) => ({
                 useCardCommentsStore.getState().mergeCommentsPatch(patch)
                 useCardMembersStore.getState().mergeCardMembersPatch(patch)
                 useChecklistStore.getState().mergeChecklistPatch(patch)
-                await get().applyAddCardList(patch)
+
+                const incomingCorrID = payloadData?.CorrelationID as string | undefined
+                const pending = incomingCorrID ? get().pendingCopyPlaceholders[incomingCorrID] : undefined
+                if (pending && patch.ListCardRelations?.length === 1) {
+                    const realRel = patch.ListCardRelations[0]
+                    set((state) => {
+                        const nextListCardById = { ...state.listCardById }
+                        delete nextListCardById[pending.tempListCardId]
+                        nextListCardById[realRel.ID] = realRel
+                        const prevIds = state.listCardIdsByListId[pending.destListId] ?? []
+                        const idx = prevIds.indexOf(pending.tempListCardId)
+                        const nextIds = [...prevIds]
+                        if (idx !== -1) {
+                            nextIds[idx] = realRel.ID
+                        } else {
+                            nextIds.push(realRel.ID)
+                        }
+                        const nextPlaceholders = { ...state.pendingCopyPlaceholders }
+                        delete nextPlaceholders[incomingCorrID!]
+                        return {
+                            listCardById: nextListCardById,
+                            listCardIdsByListId: { ...state.listCardIdsByListId, [pending.destListId]: nextIds },
+                            pendingCopyPlaceholders: nextPlaceholders,
+                            OpCounter: state.OpCounter + 1,
+                        }
+                    })
+                } else {
+                    await get().applyAddCardList(patch)
+                }
                 break
             }
             case "checklist.entry.converted": {
@@ -736,7 +817,7 @@ export const useBoardDetailStore = create<BoardDetailStore>((set, get) => ({
         }))
 
     },
-    persistMoveCardInBoard: async (listCardId: string, targetListID: string, fromListID: string, beforeID: string | null) => {
+    persistMoveCardInBoard: async (listCardId: string, targetListID: string, fromListID: string, beforeID: string | null, previousSourceListCardIds: string[], previousDestListCardIds: string[]) => {
         const payload: CrossMoveCardRequest = {
             ListCardID: listCardId,
             TargetListID: targetListID,
@@ -746,7 +827,23 @@ export const useBoardDetailStore = create<BoardDetailStore>((set, get) => ({
             BeforeID: beforeID,
             InsertAt: "end"
         }
-        get().persistMoveCard(payload, listCardId)
+        await useAsyncRequestStore.getState().execute(
+            "card:move:dnd",
+            async () => get().persistMoveCard(payload, listCardId),
+            {
+                successResetDelayMs: 2000,
+                onError: () => {
+                    set((state) => ({
+                        listCardIdsByListId: {
+                            ...state.listCardIdsByListId,
+                            [fromListID]: previousSourceListCardIds,
+                            [targetListID]: previousDestListCardIds,
+                        },
+                        OpCounter: state.OpCounter + 1,
+                    }))
+                }
+            }
+        )
     },
 
     persistMoveCard: async (payload, listCardID) => {
@@ -944,8 +1041,7 @@ export const useBoardDetailStore = create<BoardDetailStore>((set, get) => ({
         }
         return true
     },
-    persistMoveList: async (boardId, boardListID, beforeID) => {
-        // console.log("persistMoveList")
+    persistMoveList: async (boardId, boardListID, beforeID, previousBoardListIds) => {
         const movedBoardList = get().boardListById[boardListID]
         const beforeBoardList = beforeID ? get().boardListById[beforeID] : null
 
@@ -957,13 +1053,23 @@ export const useBoardDetailStore = create<BoardDetailStore>((set, get) => ({
             BeforeID: beforeBoardList?.ListID ?? null,
             InsertAt: "end"
         }
-        try {
-            const listId = movedBoardList.ListID
-            api.patch(`/boards/${boardId}/lists/${listId}/move`, request)
-        } catch (error) {
-            // console.error("Error persisting list move:", error)
-            throw error
-        }
+        const listId = movedBoardList.ListID
+        await useAsyncRequestStore.getState().execute(
+            "list:move:dnd",
+            async () => api.patch(`/boards/${boardId}/lists/${listId}/move`, request),
+            {
+                successResetDelayMs: 2000,
+                onError: () => {
+                    set((state) => ({
+                        boardListIdsByBoardId: {
+                            ...state.boardListIdsByBoardId,
+                            [boardId]: previousBoardListIds,
+                        },
+                        OpCounter: state.OpCounter + 1,
+                    }))
+                }
+            }
+        )
     },
     applyMoveListEvent: async (payload) => {
         const movedRel = payload.BoardListRelations?.[0]

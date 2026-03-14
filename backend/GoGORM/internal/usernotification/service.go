@@ -20,33 +20,40 @@ func NewUserNotificationService(repo UserNotificationRepo, eventRegistry *EventR
 
 type UserNotificationRepo interface {
 	GetUserNotifications(ctx context.Context, userID uuid.UUID) ([]dto.UserNotificationRow, error)
+	GetUserNotificationsPaginated(ctx context.Context, userID uuid.UUID, limit int, cursor *dto.AuditCursor) (*dto.NotificationPage, error)
 	GetEntitiesDetails(ctx context.Context, entitiesIdsMap map[string][]uuid.UUID) ([]models.Workspace, []models.Board, []models.List, []models.Card, error)
 	MarkNotifications(ctx context.Context, userID uuid.UUID, notificationIDs []uuid.UUID, read bool) error
 }
 
 func (s *UserNotificationService) GetUserNotifications(ctx context.Context, userID uuid.UUID) (*dto.UserNotificationResponse, error) {
-	notifications, err := s.repo.GetUserNotifications(ctx, userID)
+	return s.GetUserNotificationsPaginated(ctx, userID, 30, nil)
+}
+
+func (s *UserNotificationService) GetUserNotificationsPaginated(ctx context.Context, userID uuid.UUID, limit int, cursor *dto.AuditCursor) (*dto.UserNotificationResponse, error) {
+	page, err := s.repo.GetUserNotificationsPaginated(ctx, userID, limit, cursor)
 	if err != nil {
 		return nil, err
 	}
+	notifications := page.Rows
+
 	unreadCount := 0
-	for _, notification := range notifications {
-		if !notification.Read {
+	for _, n := range notifications {
+		if !n.Read {
 			unreadCount++
 		}
 	}
 	notificationsResponse := make([]dto.UserAuditNotificationResponse, 0, len(notifications))
-	for _, notification := range notifications {
-		notificationsResponse = append(notificationsResponse, dto.UserAuditNotificationRowToResponse(notification))
+	for _, n := range notifications {
+		notificationsResponse = append(notificationsResponse, dto.UserAuditNotificationRowToResponse(n))
 	}
 
 	entitiesIdsMap := make(map[string][]uuid.UUID)
-	for _, notification := range notifications {
-		key := notification.MainEntityType
+	for _, n := range notifications {
+		key := n.MainEntityType
 		if _, exists := entitiesIdsMap[key]; !exists {
 			entitiesIdsMap[key] = []uuid.UUID{}
 		}
-		entitiesIdsMap[key] = append(entitiesIdsMap[key], notification.MainEntityID)
+		entitiesIdsMap[key] = append(entitiesIdsMap[key], n.MainEntityID)
 	}
 	workspaces, boards, lists, cards, err := s.repo.GetEntitiesDetails(ctx, entitiesIdsMap)
 	if err != nil {
@@ -76,9 +83,10 @@ func (s *UserNotificationService) GetUserNotifications(ctx context.Context, user
 		Boards:            boardResponse,
 		Lists:             listResponse,
 		Cards:             cardResponse,
+		NextCursor:        page.NextCursor,
+		HasMore:           page.HasMore,
 	}
 	return response, nil
-
 }
 
 func (s *UserNotificationService) MarkNotificationsAsRead(ctx context.Context, userID uuid.UUID, notificationIDs []uuid.UUID) error {

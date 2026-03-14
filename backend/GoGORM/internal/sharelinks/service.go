@@ -97,7 +97,7 @@ func NewShareLinkService(db *gorm.DB, repo ShareLinkRepository, eventRegistry *E
 	}
 }
 
-func (s *ShareLinkService) CreateShareLink(ctx context.Context, userID uuid.UUID, req CreateShareLinkRequest) (*models.PublicShareLink, error) {
+func (s *ShareLinkService) CreateShareLink(ctx context.Context, userID uuid.UUID, correlationID uuid.UUID, req CreateShareLinkRequest) (*models.PublicShareLink, error) {
 
 	if req.TargetType == "board" {
 		if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, req.TargetID, rbac.Admin, s.IncludeDeleted); err != nil {
@@ -149,7 +149,7 @@ func (s *ShareLinkService) CreateShareLink(ctx context.Context, userID uuid.UUID
 			}
 			return nil, err
 		}
-		if err := s.emitShareLinkCreatedEvent(ctx, userID, shareLink); err != nil {
+		if err := s.emitShareLinkCreatedEvent(ctx, userID, correlationID, shareLink); err != nil {
 			fmt.Println("failed to emit sharelink created event:", err)
 		}
 		return shareLink, nil
@@ -397,21 +397,21 @@ func (s *ShareLinkService) RevokeShareLink(ctx context.Context, userID uuid.UUID
 	return shareLink, nil
 }
 
-func (s *ShareLinkService) emitShareLinkCreatedEvent(ctx context.Context, userID uuid.UUID, shareLink *models.PublicShareLink) error {
+func (s *ShareLinkService) emitShareLinkCreatedEvent(ctx context.Context, userID uuid.UUID, correlationID uuid.UUID, shareLink *models.PublicShareLink) error {
 	if s.EventRegistry == nil {
 		return nil
 	}
-	return s.emitShareLinkEvent(ctx, userID, shareLink, false)
+	return s.emitShareLinkEvent(ctx, userID, &correlationID, shareLink, false)
 }
 
 func (s *ShareLinkService) emitShareLinkRevokedEvent(ctx context.Context, userID uuid.UUID, shareLink *models.PublicShareLink) error {
 	if s.EventRegistry == nil {
 		return nil
 	}
-	return s.emitShareLinkEvent(ctx, userID, shareLink, true)
+	return s.emitShareLinkEvent(ctx, userID, nil, shareLink, true)
 }
 
-func (s *ShareLinkService) emitShareLinkEvent(ctx context.Context, userID uuid.UUID, shareLink *models.PublicShareLink, revoked bool) error {
+func (s *ShareLinkService) emitShareLinkEvent(ctx context.Context, userID uuid.UUID, correlationID *uuid.UUID, shareLink *models.PublicShareLink, revoked bool) error {
 	shareLinkRes := dto.PublicShareLinkToResponse(shareLink)
 	state := &dto.BoardDetailResponse{
 		ShareLinks: []dto.PublicShareLinkResponse{shareLinkRes},
@@ -449,10 +449,11 @@ func (s *ShareLinkService) emitShareLinkEvent(ctx context.Context, userID uuid.U
 	}
 
 	evt := EventRegistry.DomainEvent{
-		Type:        eventType,
-		WorkspaceID: workspaceID,
-		BoardID:     boardID,
-		ActorUserID: &userID,
+		Type:          eventType,
+		WorkspaceID:   workspaceID,
+		BoardID:       boardID,
+		ActorUserID:   &userID,
+		CorrelationID: correlationID,
 		Payload: EventRegistry.EventPayloadEnvelope{
 			StatePayload: state,
 		},

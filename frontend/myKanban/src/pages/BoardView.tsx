@@ -4,6 +4,7 @@ import { Outlet, useParams } from "react-router-dom";
 import { useShallow } from "zustand/shallow"
 import { useBoardsStore } from "@/stores/boardsStore";
 import { useAsyncRequestStore, useAsyncKey } from "@/stores/asyncRequestStore";
+import { useCardsStore } from "@/stores/cardsStore";
 
 import type { InboxCard, MoveInboxToListRequest } from "@/stores/types";
 import { useOverlayStore, type OverlayDescriptor } from "@/overlays/overlayStore";
@@ -239,6 +240,10 @@ export default function BoardView() {
     const getCardIdForListCardId = useBoardDetailStore((state) => state.getCardIdForListCardId)
     const persistMoveList = useBoardDetailStore((state) => state.persistMoveList)
     const persistMoveCard = useBoardDetailStore((state) => state.persistMoveCardInBoard)
+    const boardListById = useBoardDetailStore((state) => state.boardListById)
+    const insertTempCopyCardPlaceholder = useBoardDetailStore((state) => state.insertTempCopyCardPlaceholder)
+    const removeCopyPlaceholder = useBoardDetailStore((state) => state.removeCopyPlaceholder)
+    const copyCardToList = useCardsStore((state) => state.copyCardToList)
     const moveInboxCard = useUserInboxStore((state) => state.moveInboxCard)
     const moveInboxCardToBoard = useUserInboxStore((state) => state.moveInboxCardToListInBoard)
     const mirrorCardToInbox = useUserInboxStore((state) => state.mirrorCardToInbox)
@@ -389,6 +394,7 @@ export default function BoardView() {
         if (type === "list") {
 
             if (!workspaceId || !boardId) return
+            const previousBoardListIds = Array.from(boardListIds)
             const newBoardListIds = Array.from(boardListIds)
             newBoardListIds.splice(source.index, 1)
             newBoardListIds.splice(destination.index, 0, draggableId)
@@ -396,7 +402,7 @@ export default function BoardView() {
             //We need to get the id of the list that is after the moved list in the new order so that 
             // the server can correctly compute the new position of the moved list. If the moved list is now the last one, we pass null as the id of the list after it.
             let beforeId = destination.index < newBoardListIds.length - 1 ? newBoardListIds[destination.index + 1] : null
-            persistMoveList(boardId, draggableId, beforeId)
+            persistMoveList(boardId, draggableId, beforeId, previousBoardListIds)
         }
         else if (type === "card") {
             const sourceListId = getListIdForBoardListId(source.droppableId)
@@ -414,8 +420,7 @@ export default function BoardView() {
                 newListCardIds.splice(destination.index, 0, movedListCardId)
                 setListCardIds(sourceListId, newListCardIds)
                 let beforeId = destination.index < newListCardIds.length - 1 ? newListCardIds[destination.index + 1] : null
-                // const cardId = cardIdForListCardId(movedListCardId) ?? ""
-                persistMoveCard(movedListCardId, destinationListId, sourceListId, beforeId)
+                persistMoveCard(movedListCardId, destinationListId, sourceListId, beforeId, sourceListCardIds, sourceListCardIds)
 
             }
             // Moving to a different list
@@ -423,6 +428,38 @@ export default function BoardView() {
                 const newDestinationListCardIds = Array.from(destinationListCardIds)
                 //Check if alreay there
                 if (newDestinationListCardIds.map(id => getCardIdForListCardId(id)).includes(getCardIdForListCardId(movedListCardId) ?? "")) {
+                    return
+                }
+
+                const isSourceReadonly = boardListById[source.droppableId]?.AccessMode === "readonly"
+
+                if (isSourceReadonly) {
+                    // Copy branch: insert optimistic placeholder, swap on WS event
+                    const movedListCard = listcardById[movedListCardId]
+                    if (!movedListCard || !boardId) return
+                    const correlationID = crypto.randomUUID()
+                    insertTempCopyCardPlaceholder(correlationID, movedListCard.CardID, destinationListId, destination.index)
+                    const beforeCardId = destination.index < destinationListCardIds.length
+                        ? getCardIdForListCardId(destinationListCardIds[destination.index]) ?? null
+                        : null
+                    copyCardToList(
+                        boardId,
+                        movedListCard.CardID,
+                        {
+                            TargetListID: destinationListId,
+                            TargetBoardID: boardId,
+                            BeforeID: beforeCardId,
+                            InsertAt: beforeCardId ? null : "end",
+                            KeepComments: true,
+                            KeepMembers: true,
+                            KeepLabels: true,
+                            KeepChecklists: true,
+                        },
+                        correlationID,
+                        () => removeCopyPlaceholder(correlationID),
+                    )
+                    // Safety net: remove placeholder if WS event never arrives
+                    setTimeout(() => removeCopyPlaceholder(correlationID), 10_000)
                     return
                 }
 
@@ -434,9 +471,7 @@ export default function BoardView() {
                 newDestinationListCardIds.splice(destination.index, 0, movedListCardId)
                 setListCardIds(destinationListId, newDestinationListCardIds)
                 let beforeId = destination.index < newDestinationListCardIds.length - 1 ? newDestinationListCardIds[destination.index + 1] : null
-                //const cardId = cardIdForListCardId(movedListCardId) ?? ""
-                console.log("movedListCardId", movedListCardId, "sourceListId", sourceListId, "destinationListId", destinationListId, "beforeId", beforeId)
-                persistMoveCard(movedListCardId, destinationListId, sourceListId, beforeId)
+                persistMoveCard(movedListCardId, destinationListId, sourceListId, beforeId, sourceListCardIds, destinationListCardIds)
             }
         }
     }

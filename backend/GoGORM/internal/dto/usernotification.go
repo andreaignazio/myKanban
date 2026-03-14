@@ -23,6 +23,14 @@ type UserNotificationResponse struct {
 	Boards            []BoardResponse
 	Lists             []ListResponse
 	Cards             []CardResponse
+	NextCursor        *AuditCursor `json:"NextCursor,omitempty"`
+	HasMore           bool         `json:"HasMore"`
+}
+
+type NotificationPage struct {
+	Rows       []UserNotificationRow
+	NextCursor *AuditCursor
+	HasMore    bool
 }
 
 func UserAuditNotificationRowToResponse(row UserNotificationRow) UserAuditNotificationResponse {

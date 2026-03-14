@@ -106,7 +106,7 @@ function UserHeader({ context }: { context: string | null }) {
                 <UserNotificationMenuBtn
                     style={{}}
                     iconClassName={iconSizeClass}
-                    overrideClassName={`
+                    overrideClassName={` relative
                     ${isNotificationMenuActive ? "ring-2 ring-white/80 ring-offset-1 ring-offset-neutral-900/80" : ""}
                     ${context === "board" ? "h-7" : "h-8"} 
                     flex items-center justify-center 

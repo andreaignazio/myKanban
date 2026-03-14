@@ -164,18 +164,16 @@ export const useAsyncRequestStore = create<AsyncRequestStore>((set, get) => ({
             const result = await fn();
             get().markSuccess(requestKey);
             options?.onSuccess?.(result);
-            if (options?.successResetDelayMs !== undefined) {
-                _scheduleReset(requestKey, options.successResetDelayMs, get().resetRequest);
-            }
+            const successDelay = options?.successResetDelayMs ?? 3000;
+            _scheduleReset(requestKey, successDelay, get().resetRequest);
             return result;
         } catch (err) {
             const error = err instanceof Error ? err : new Error(String(err));
             const mappedMessage = options?.mapError?.(error) ?? defaultErrorMapper(error);
             get().markError(requestKey, mappedMessage);
             options?.onError?.(error); // receives the original error, not the mapped message
-            if (options?.errorResetDelayMs !== undefined) {
-                _scheduleReset(requestKey, options.errorResetDelayMs, get().resetRequest);
-            }
+            const errorDelay = options?.errorResetDelayMs ?? 3000;
+            _scheduleReset(requestKey, errorDelay, get().resetRequest);
             return null;
         }
     },

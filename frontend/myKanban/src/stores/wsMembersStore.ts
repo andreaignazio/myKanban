@@ -156,15 +156,12 @@ export const useWsMembersStore = create<WsMembersState>((set, get) => ({
         return Object.values(members);
     },
     updateMemberRole: async (workspaceID: string, userID: string, payload: ChangeWorkspaceMemberRoleRequest) => {
-        try {
-            const resposne = await api.patch(`/workspaces/${workspaceID}/members/${userID}`, payload);
-            const data: UserWorkspace = resposne.data;
-            //console.log("Updated member role", data);
+        const key: AsyncRequestKey = `workspace:member:role:update:${userID}`;
+        await useAsyncRequestStore.getState().execute(key, async () => {
+            const response = await api.patch(`/workspaces/${workspaceID}/members/${userID}`, payload);
+            const data: UserWorkspace = response.data;
             get().applyUpsertUserWorkspaceRelations([data]);
-        } catch (error) {
-            // console.log("Error updating member role");
-            throw error;
-        }
+        }, { successResetDelayMs: 1500 });
     },
     replaceMemberPendingSuspensionSelection: async (workspaceID, markedUserIDs, unmarkedUserIDs, asyncKey?) => {
         const run = async () => {

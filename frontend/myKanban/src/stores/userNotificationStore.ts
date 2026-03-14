@@ -1,5 +1,5 @@
 ﻿import { create } from "zustand";
-import type { UserAuditNotification, UserNotificationResponse, MarkNotificationsRequest, UserEvent } from "./types";
+import type { UserAuditNotification, UserNotificationResponse, MarkNotificationsRequest, UserEvent, NotificationCursor, NotificationPageInfo } from "./types";
 import { api } from "@/api/api";
 import type { MainEntityTypeStrict, RenderFeed } from "@/hooks/useFeedFromAudit";
 import { buildFeedFromAudit } from "@/hooks/useFeedFromAudit";
@@ -124,8 +124,11 @@ type UserNotificationStore = {
     notificationsById: Record<string, UserAuditNotification>;
     notificationsIDs: string[];
     renderNotifications: UserNotificationRender[];
+    pageInfo: NotificationPageInfo;
 
     fetchUserNotifications: () => Promise<void>;
+    fetchMoreNotifications: () => Promise<void>;
+    resetNotificationCursor: () => void;
 
     markNotificationAsRead: (notificationID: string) => Promise<void>;
 
@@ -155,6 +158,7 @@ export const useUserNotificationStore = create<UserNotificationStore>((set, get)
     notificationsById: {},
     notificationsIDs: [],
     renderNotifications: [],
+    pageInfo: { NextCursor: null, HasMore: false },
     fetchUserNotifications: async () => {
         try {
             const response = await api.get("/users/notifications");
@@ -167,11 +171,11 @@ export const useUserNotificationStore = create<UserNotificationStore>((set, get)
 
             set({
                 notificationsById,
-                notificationsIDs: notificationsById ? data.UserNotifications.map(n => n.NotificationID) : [],
+                notificationsIDs: data.UserNotifications.map(n => n.NotificationID),
                 unreadCount: data.UnreadCount,
+                pageInfo: { NextCursor: data.NextCursor ?? null, HasMore: data.HasMore },
             });
             get().generateRenderIdsAndGroupByEntityAndReadStatus();
-            console.log("Fetched user notifications:", data.UserNotifications);
             const { Workspaces, Boards, Lists, Cards } = data;
 
             useAuditEntityStore.getState().mergeAuditEntities({
@@ -184,13 +188,48 @@ export const useUserNotificationStore = create<UserNotificationStore>((set, get)
             useBoardsStore.getState().mergeBoards(Boards)
             useListsStore.getState().mergeLists(Lists)
             useCardsStore.getState().mergeCards(Cards)
-
-
-
-
         } catch (error) {
             console.error("Failed to fetch user notifications:", error);
         }
+    },
+    fetchMoreNotifications: async () => {
+        const { pageInfo } = get();
+        if (!pageInfo.HasMore || !pageInfo.NextCursor) return;
+        try {
+            const cursor = pageInfo.NextCursor as NotificationCursor;
+            const params = new URLSearchParams({
+                cursorID: cursor.ID,
+                cursorCreatedAt: cursor.CreatedAt,
+            });
+            const response = await api.get(`/users/notifications?${params.toString()}`);
+            const data = response.data as UserNotificationResponse;
+
+            const newById: Record<string, UserAuditNotification> = {};
+            data.UserNotifications.forEach(n => { newById[n.NotificationID] = n; });
+
+            set((state) => ({
+                notificationsById: { ...state.notificationsById, ...newById },
+                notificationsIDs: [...state.notificationsIDs, ...data.UserNotifications.map(n => n.NotificationID)],
+                pageInfo: { NextCursor: data.NextCursor ?? null, HasMore: data.HasMore },
+            }));
+            get().generateRenderIdsAndGroupByEntityAndReadStatus();
+            const { Workspaces, Boards, Lists, Cards } = data;
+            useAuditEntityStore.getState().mergeAuditEntities({
+                Workspaces: Workspaces as Array<Record<string, unknown> & { ID: string }>,
+                Boards: Boards as Array<Record<string, unknown> & { ID: string }>,
+                Lists: Lists as Array<Record<string, unknown> & { ID: string }>,
+                Cards: Cards as Array<Record<string, unknown> & { ID: string }>,
+            })
+            useWorkspaceStore.getState().mergeWorkspaces(Workspaces)
+            useBoardsStore.getState().mergeBoards(Boards)
+            useListsStore.getState().mergeLists(Lists)
+            useCardsStore.getState().mergeCards(Cards)
+        } catch (error) {
+            console.error("Failed to fetch more notifications:", error);
+        }
+    },
+    resetNotificationCursor: () => {
+        set({ pageInfo: { NextCursor: null, HasMore: false }, notificationsById: {}, notificationsIDs: [] });
     },
     generateRenderIdsAndGroupByEntityAndReadStatus: () => {
         const notificationsById = get().notificationsById

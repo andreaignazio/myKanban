@@ -20,13 +20,14 @@ func NewShareLinksHandler(service *ShareLinkService) *ShareLinksHandler {
 func (h *ShareLinksHandler) CreateShareLink(c *gin.Context) {
 	ctx := c.Request.Context()
 	userID := c.MustGet("userID").(uuid.UUID)
+	correlationID := c.MustGet("correlationID").(uuid.UUID)
 
 	var req CreateShareLinkRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		httperr.WriteParamsError(c, err, "sharelinks.handler.CreateShareLink")
 		return
 	}
-	shareLink, err := h.service.CreateShareLink(ctx, userID, req)
+	shareLink, err := h.service.CreateShareLink(ctx, userID, correlationID, req)
 	if err != nil {
 		httperr.Write(c, err)
 		return

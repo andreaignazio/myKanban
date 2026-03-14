@@ -417,6 +417,18 @@ export type UserNotificationResponse = {
     Boards: Board[];
     Lists: List[];
     Cards: Card[];
+    NextCursor?: NotificationCursor | null;
+    HasMore: boolean;
+}
+
+export type NotificationCursor = {
+    ID: string;
+    CreatedAt: string;
+}
+
+export type NotificationPageInfo = {
+    NextCursor: NotificationCursor | null;
+    HasMore: boolean;
 }
 
 export type BoardMember = {

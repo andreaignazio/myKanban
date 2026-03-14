@@ -108,6 +108,7 @@ export const CardRow = ({ boardID, listId, listCardID: listCardID, cardId, index
     const done = card?.Done
 
     const { canEdit } = useCardEditableContext({ cardContext, boardId })
+    const isPendingCopy = (listCardID?.startsWith("copy-temp-") ?? false)
 
 
 
@@ -239,14 +240,14 @@ export const CardRow = ({ boardID, listId, listCardID: listCardID, cardId, index
                 zIndex: editMode ? 1000 : 0,
             }}
             onClick={() => {
-                if (editMode) return
+                if (editMode || isPendingCopy) return
                 openCard(cardID!)
             }}
             data-list-card-id={listCardID}
             className="relative -mt-2 pt-2 overflow-visible "
         >
 
-            <Draggable draggableId={resolvedDraggableId} index={index} isDragDisabled={isDragDisabled}>
+            <Draggable draggableId={resolvedDraggableId} index={index} isDragDisabled={isDragDisabled || isPendingCopy}>
                 {(provided, snapshot) => {
                     const draggableNode = (
                         <div
@@ -282,6 +283,8 @@ export const CardRow = ({ boardID, listId, listCardID: listCardID, cardId, index
                                     />
                                 )}
                                 <div className={`absolute inset-0 z-10 bg-gray-500/20 ${!canEdit ? "opacity-100" : "opacity-0"} transition-opacity ease-in-out duration-300`} />
+
+                                <div className={`absolute inset-0 z-20 bg-black/50 ${isPendingCopy ? "opacity-100" : "opacity-0"} transition-opacity ease-in-out duration-200`} />
 
                                 <div className="flex flex-col ">
 

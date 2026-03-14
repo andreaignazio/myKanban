@@ -11,6 +11,8 @@ import { UserAvatar } from "../badges/UserAvatar";
 import { AuditActivityItem } from "../activityfeed/AuditActivityItem";
 import { CatalogIcon } from "@/icons/iconCatalog";
 import { AnimatePresence, motion } from "framer-motion";
+import { LabeledButtonPresetA } from "@/components/buttons/labeledButton";
+import { ArrowPathIcon } from "@heroicons/react/24/outline";
 
 
 type UserNotificationTabPlaceholderProps = {
@@ -19,19 +21,22 @@ type UserNotificationTabPlaceholderProps = {
 
 export const UserNotificationTabPlaceholder = ({ onlyShowUnread }: UserNotificationTabPlaceholderProps) => {
     const RenderIds = useUserNotificationStore(useShallow((state) => state.sortedRenderIDs));
+    const pageInfo = useUserNotificationStore((state) => state.pageInfo);
+    const fetchMoreNotifications = useUserNotificationStore((state) => state.fetchMoreNotifications);
+    const [isFetchingMore, setIsFetchingMore] = useState(false);
+
     const filteredRenderIds = onlyShowUnread ? RenderIds.filter((renderId) => renderId.split(":")[1] === "unread") : RenderIds;
-    const visibleIds = filteredRenderIds.slice(0, 10)
 
-
-
-
-
-
+    const handleLoadMore = async () => {
+        setIsFetchingMore(true);
+        await fetchMoreNotifications();
+        setIsFetchingMore(false);
+    };
 
     return (
         <div className="h-[600px] flex flex-col overflow-hidden ">
             {
-                visibleIds.length === 0 ? (
+                filteredRenderIds.length === 0 ? (
                     <div className=" min-h-[500px] max-h-[650px] flex flex-col items-center justify-center h-full">
                         <h2 className="text-2xl font-bold mb-4">No Notifications</h2>
                         <p className="text-gray-600">You have no notifications at the moment.</p>
@@ -40,7 +45,7 @@ export const UserNotificationTabPlaceholder = ({ onlyShowUnread }: UserNotificat
                     <div className="min-h-0 flex-1 overflow-y-auto scrollbar-hidden w-full flex flex-col
                       pr-1  py-0 gap-0">
                         <AnimatePresence initial={false} mode="popLayout">
-                            {visibleIds.map((renderId) => (
+                            {filteredRenderIds.map((renderId) => (
                                 <motion.div
                                     key={renderId}
                                     layout
@@ -54,6 +59,17 @@ export const UserNotificationTabPlaceholder = ({ onlyShowUnread }: UserNotificat
                                 </motion.div>
                             ))}
                         </AnimatePresence>
+                        {pageInfo.HasMore && (
+                            <div className="flex justify-center py-3">
+                                <LabeledButtonPresetA
+                                    label={isFetchingMore ? "Loading..." : "Load more"}
+                                    onClick={() => void handleLoadMore()}
+                                    disabled={isFetchingMore}
+                                >
+                                    <ArrowPathIcon className={`w-4 h-4 ${isFetchingMore ? "animate-spin" : ""}`} />
+                                </LabeledButtonPresetA>
+                            </div>
+                        )}
                     </div>
                 )
             }

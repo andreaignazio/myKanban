@@ -30,6 +30,8 @@ export const ASYNC_REQUEST_BASE_KEYS = [
     "list:create",
     "list:copy:bulk",
     "list:move",
+    "list:move:dnd",
+    "card:move:dnd",
     "list:mirror",
     "list:detach",
     "list:edit:title",
@@ -96,6 +98,7 @@ export const ASYNC_REQUEST_BASE_KEYS = [
     "shareoffer:revoke",
     "workspace:shareoffer:create",
     "workspace:sharelink:revoke",
+    "workspace:member:role:update",
 ] as const;
 
 export type AsyncRequestBaseKey = typeof ASYNC_REQUEST_BASE_KEYS[number];
