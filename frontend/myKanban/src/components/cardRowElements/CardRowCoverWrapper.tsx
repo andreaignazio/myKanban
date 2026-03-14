@@ -44,7 +44,7 @@ export const CardRowCoverWrapper = forwardRef<HTMLDivElement, CardRowCoverWrappe
             {showMirrorBackdrop && (
                 <div
                     style={mirroBgStyle}
-                    className={`absolute -bottom-1 left-1/2 -translate-x-1/2 ${mirrorBackdropSize || "w-[245px] h-[15px]"} rounded-lg z-0 overflow-hidden`}>
+                    className={`absolute -bottom-1 left-1/2 -translate-x-1/2 ${mirrorBackdropSize || "w-[93%] h-[15px]"} rounded-lg z-0 overflow-hidden`}>
                     <ImageColorRenderer
                         overrideClassName
                         className="h-full w-full"
@@ -68,7 +68,7 @@ export const CardRowCoverWrapper = forwardRef<HTMLDivElement, CardRowCoverWrappe
                 rounded-lg  min-h-[40px] justify-center overflow-hidden shadow-md 
                 ${canEdit
                         ? "shadow-black/40 hover:ring-white/100"
-                        : "shadow-black/20 hover:ring-white/30"}
+                        : "shadow-black/20 ring-inset  hover:ring-white/50"}
                 group ring-2 ring-white/0 mx-1 
                 ${mainDivClassName ?? ""}`}>
 

@@ -281,15 +281,20 @@ export const CardRow = ({ boardID, listId, listCardID: listCardID, cardId, index
                                         rootBoardContext={rootBoardContext}
                                         mode={source}
                                         placement="cover"
+                                        showShadow={true}
                                     />
                                 )}
-                                <div className={`absolute inset-0 z-10 bg-gray-500/20 ${!canEdit ? "opacity-100" : "opacity-0"} transition-opacity ease-in-out duration-300`} />
+                                <div className={`absolute inset-0 z-10 bg-gray-500/10  ${!canEdit ? "opacity-100" : "opacity-0"} transition-opacity ease-in-out duration-300`} />
 
                                 <div className={`absolute inset-0 z-20 bg-black/50 ${isPendingCopy ? "opacity-100" : "opacity-0"} transition-opacity ease-in-out duration-200`} />
 
                                 <div className="flex flex-col ">
 
-                                    {mode !== "detailed" && <Mirrors cardId={cardID!} listCardId={listCardID} rootBoardContext={rootBoardContext} mode={source} />}
+                                    {mode !== "detailed" && <Mirrors
+
+                                        cardId={cardID!}
+                                        listCardId={listCardID}
+                                        rootBoardContext={rootBoardContext} mode={source} showShadow={true} />}
 
                                     <CardFieldsLabels hasLabels={cardHasLabels} cardID={cardID}
                                         boardID={boardId} mode={source}

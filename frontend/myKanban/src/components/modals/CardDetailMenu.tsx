@@ -16,8 +16,8 @@ import { CardChecklists } from "../cardMenus/cardChecklist/cardChecklists";
 import { CardDatesMenu } from "../cardMenus/cardDatesMenu";
 import { headerStyle } from "../cardMenus/cardMenuStyle";
 import { useDateTimeParser } from "@/hooks/useDateTimeParser";
-import { LabeledButtonPresetB } from "../buttons/labeledButton";
-import { ChevronDown, ChevronDownIcon, EyeIcon, TextAlignEndIcon, XIcon } from "lucide-react";
+import { LabeledButtonPresetA, LabeledButtonPresetB } from "../buttons/labeledButton";
+import { ChevronDown, ChevronDownIcon, ExternalLink, EyeIcon, TextAlignEndIcon, XIcon } from "lucide-react";
 import { CardComments } from "../cardMenus/CardDetailActivityTabs/CardComments";
 import { EntityDescriptionEditor } from "../common/EntityDescriptionEditor";
 import { useCardMembersStore } from "@/stores/CardMembersStore";
@@ -45,8 +45,14 @@ import { motion } from "motion/react";
 import { menuMotionProps } from "./menuMotion";
 import type { CardContext } from "@/domain/cardContext";
 import { ImageColorRenderer } from "../menuElements/ImageColorRenderer";
+import { useNavigate } from "react-router-dom";
 import { useCardRootBoardContext } from "@/hooks/useCardRootBoardContext";
 import { useCardEditableContext } from "@/hooks/useCardEditableContext";
+import { RequestAccessModal } from "./RequestAccessModal";
+import { DummyMirrorUI } from "../cardRowElements/CardMirrorsField";
+import { CardMirrorDetailPanel } from "./CardMirrorDetailPanel";
+import type { Board } from "@/stores/types";
+import { InboxBadge } from "../common/InboxBadge";
 
 type CardDetailMenuProps = {
     cardContext?: CardContext;
@@ -110,7 +116,7 @@ export const CardDetailMenu = forwardRef<HTMLDivElement, CardDetailMenuProps>(({
         patchCardWatchActive(cardId, !isCardWatched);
     };
 
-    const { canEdit, userBoardRoot, rootBoardId } = useCardEditableContext({ cardContext, boardId, effectiveRootBoard });
+    const { canEdit, userBoardRoot, rootBoardId, hasRootBoardAccess } = useCardEditableContext({ cardContext, boardId, effectiveRootBoard });
 
     const [asideActiveTab, setAsideActiveTab] = useState("activity");
     const isAsideCollapsedByWindow = useMediaQuery(`(max-width: ${ACTIVITY_COLUMN_COLLAPSE_WIDTH - 1}px)`);
@@ -220,6 +226,8 @@ export const CardDetailMenu = forwardRef<HTMLDivElement, CardDetailMenuProps>(({
         //
     }
 
+    const isInboxCard = cardContext?.source === "inbox";
+
     return (
         <>
             <CardMenuWrapper
@@ -253,7 +261,7 @@ export const CardDetailMenu = forwardRef<HTMLDivElement, CardDetailMenuProps>(({
                                 </RoundButton>
                             )}
 
-                            {canEdit.toString()} {userBoardRoot?.Role} {cardContext?.rootListCardId}
+
                             <CardRowMenuBtn
                                 disableClick={!canEdit}
 
@@ -286,9 +294,7 @@ export const CardDetailMenu = forwardRef<HTMLDivElement, CardDetailMenuProps>(({
                         </div>
                         <div className="absolute top-5 left-5">
 
-
-
-                            <CardRowMenuBtn
+                            {!isMirrorCard && !isInboxCard && <CardRowMenuBtn
                                 disableClick={!canEdit}
                                 offset={[8, 0]}
                                 cardID={cardId!}
@@ -296,7 +302,6 @@ export const CardDetailMenu = forwardRef<HTMLDivElement, CardDetailMenuProps>(({
                                     <CardMoveMenu onClose={onClose}
                                         ref={ref} cardId={cardId} mode="mirror"
                                         listId={listId} />} >
-
 
                                 <LabeledButtonPresetB label={rootListName} onClick={() => { }} iconAtLeft={false}
                                     style={{
@@ -310,8 +315,46 @@ export const CardDetailMenu = forwardRef<HTMLDivElement, CardDetailMenuProps>(({
                                 >
                                     <ChevronDownIcon className="w-4 h-4 ml-1 text-neutral-300" />
                                 </LabeledButtonPresetB>
-                            </CardRowMenuBtn>
+                            </CardRowMenuBtn>}
+
                         </div>
+                        <div className="absolute top-3 left-3">
+                            {isMirrorCard && (
+                                <CardRowMenuBtn
+                                    offset={[8, 0]}
+                                    placement="bottom-end"
+                                    menuComponent={({ onClose, ref }) =>
+                                        <CardMirrorDetailPanel cardId={cardId!} onClose={onClose} ref={ref} />
+                                    }
+                                >
+                                    <DummyMirrorUI
+                                        wrapperClassName="relative"
+                                        name={effectiveRootBoard?.Name ?? "Root unavailable"}
+                                        detailLabel={`${rootListName}`}
+                                        bgImage={rootBoardBgImage}
+                                        bgColorClass={rootBoardBgColorClass}
+                                        bgColorType={rootBoardBackgroundType}
+                                        showResourceWarning={false}
+                                        showAccessWarning={false}
+                                        className={`!h-[40px] !w-fit !pe-4 !max-w-[400px]
+                                            shadow-lg shadow-black/20
+                                            !gap-2 !bg-zinc-800 !overflow-hidden relative`}
+                                        imageSize="36px"
+                                        nameClassName="!text-[13px]"
+                                        labelClassName="!text-[10px] text-zinc-300"
+                                    >
+                                        <div className="z-200 absolute inset-0 bg-gradient-to-tr from-black/10 to-white/20 cursor-pointer
+                                         opacity-50 hover:opacity-100 transition-opacity duration-300" />
+                                    </DummyMirrorUI>
+                                </CardRowMenuBtn>
+                            )}
+                        </div>
+                        <div className="absolute top-5 left-5">
+                            {cardContext?.source === "inbox" && (
+                                <InboxBadge />
+                            )}
+                        </div>
+
 
                     </div>
                     <div className="relative flex w-full flex-row items-stretch flex-1 min-h-0">
@@ -320,7 +363,12 @@ export const CardDetailMenu = forwardRef<HTMLDivElement, CardDetailMenuProps>(({
                             <MirrorWarnings rootListName={rootListName}
                                 cardContext={cardContext}
                                 isMirrorCard={isMirrorCard}
-                                canEdit={canEdit} />
+                                canEdit={canEdit}
+                                rootBoard={effectiveRootBoard}
+                                hasRootBoardAccess={hasRootBoardAccess}
+                                cardId={cardId}
+                                listId={listId}
+                            />
 
                             <CardMain cardId={cardId!} source={cardContext?.source} listCardId={listCardId} canEdit={canEdit} isAsideCollapsed={isAsideCollapsedByWindow} />
 
@@ -359,23 +407,89 @@ type MirrorWarningsProps = {
     isMirrorCard?: boolean;
     canEdit?: boolean;
     canEditReason?: string;
+    rootBoard?: Board
+    hasRootBoardAccess?: boolean;
+    cardId?: string;
+    listId?: string;
 }
 
-const MirrorWarnings = ({ rootListName, cardContext, isMirrorCard, canEdit }: MirrorWarningsProps) => {
-    const mirroLabel = ` This card is mirrored from the "{rootListName}" list. Changes made here will reflect on the original card and vice versa.`
+const MirrorWarnings = ({ rootListName, cardContext, isMirrorCard, canEdit, hasRootBoardAccess, rootBoard, cardId, listId }: MirrorWarningsProps) => {
+    const mirrorLabel = `This card is mirrored from the "${rootListName}" list. Changes made here will reflect on the original card and vice versa.`
     const cannotEditLabel = "This card is not editable in this view."
+    const inboxMirrorLabel = "You are viewing this card from the Inbox. To edit, please go to the original board where this card is located."
+    const inboxLabel = "This card is in the Inbox. To get full functionality, please move it to a board and list."
+    const isInboxMirror = cardContext?.source === "inbox-mirror";
+    const isInbox = cardContext?.source === "inbox"
 
-    const resolvedLabel = !canEdit ? cannotEditLabel : isMirrorCard ? mirroLabel : "";
+    const { workspaceId } = useParams<{ workspaceId: string }>()
+    const navigate = useNavigate()
 
-    const markColor = !canEdit ? "text-gray-400/50" : "text-amber-500/50";
+    const resolvedLabel = isInboxMirror ? inboxMirrorLabel : isInbox ? inboxLabel : !canEdit ? cannotEditLabel : isMirrorCard ? mirrorLabel : "";
 
-    if (!isMirrorCard && canEdit) return null;
+    const markColor = !canEdit ? "text-gray-400/50" : "text-gray-500/50";
+
+    if (!isInbox && !isInboxMirror && !isMirrorCard && canEdit) return null;
+
+    // ── Action button ────────────────────────────────────────────────────────
+    let actionBtn: React.ReactNode
+
+    if (isInbox && cardId) {
+        // Move to board — open CardMoveMenu in moveInboxCard mode
+        actionBtn = (
+            <CardRowMenuBtn
+                renderType="anchored"
+                placement="bottom-start"
+                offset={[6, 0]}
+                menuComponent={({ onClose, ref }) =>
+                    <CardMoveMenu onClose={onClose} ref={ref} cardId={cardId} listId={listId} mode="moveInboxCard" />
+                }
+            >
+                <LabeledButtonPresetA
+                    onClick={() => { }}
+                    label="Move to board" className="!text-sm !text-neutral-300 !pe-2">
+                    <ExternalLink className="w-4 h-4" />
+                </LabeledButtonPresetA>
+            </CardRowMenuBtn>
+        )
+    } else if ((isInboxMirror || isMirrorCard) && hasRootBoardAccess && rootBoard) {
+        // Go to original board
+        actionBtn = (
+            <LabeledButtonPresetA
+                label="Go to original"
+                className="!text-sm !text-neutral-300 !pe-2"
+                onClick={() => navigate(`/workspaces/${workspaceId}/boards/${rootBoard.ID}`)}
+            >
+                <ExternalLink className="w-4 h-4" />
+            </LabeledButtonPresetA>
+        )
+    } else if ((isInboxMirror || isMirrorCard) && !hasRootBoardAccess && rootBoard) {
+        // Request access to root board
+        actionBtn = (
+            <CardRowMenuBtn
+                enableOwnBackdrop={true}
+                renderType="virtual"
+                menuComponent={({ onClose, ref }) =>
+                    <RequestAccessModal ref={ref} targetType="board" targetID={rootBoard.ID} onClose={onClose} />
+                }
+            >
+                <LabeledButtonPresetA
+                    onClick={() => { }}
+                    label="Request access" className="!text-sm !text-neutral-300 !pe-2">
+                    <ExternalLink className="w-4 h-4" />
+                </LabeledButtonPresetA>
+            </CardRowMenuBtn>
+        )
+    }
+
     return (
-        <div className="flex flex-row items-center gap-2 px-4 py-2 text-xs  h-fit
-                            border-b-2 border-neutral-300/20 bg-menusec
+        <div className="flex flex-row items-center gap-2 px-4 py-2 text-xs h-fit
+                            border-b-2 border-neutral-300/20 bg-menusec justify-between
                             text-neutral-300/50">
-            <ExclamationCircleIcon className={`w-5 h-5 ${markColor}`} />
-            <span>{resolvedLabel}</span>
+            <div className="flex flex-row items-center gap-1">
+                <ExclamationCircleIcon className={`w-5 h-5 ${markColor}`} />
+                <span>{resolvedLabel}</span>
+            </div>
+            {actionBtn}
         </div>
     )
 }

@@ -8,7 +8,7 @@ export function LabeledButtonPresetA({ label, onClick, onClickCapture, onPointer
             onPointerDownCapture={onPointerDownCapture}
             disabled={disabled}
             iconAtLeft={true}
-            className={`bg-menubtn rounded-md h-8 justify-center
+            className={`bg-menubtn rounded-md h-8 justify-center transition-all duration-300 ease-in-out
                     ${disabled ? " opacity-50 " : "hover:bg-gray-500/30"}
                                font-medium text-[14px] tracking-wide ${className}`} >
             {children}

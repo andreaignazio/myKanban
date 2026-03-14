@@ -57,7 +57,7 @@ type ShareOffersState = {
     mergeWorkspaceDetailsFromShareOffers: (shareOffers: ShareOffer[]) => void;
     respondToShareOffer: (offerID: string, accept: boolean) => Promise<void>;
     revokeWorkspaceShareOffer: (offerID: string, message: string) => Promise<void>;
-    createBoardAccessRequest: (boardID: string, message: string, role: "owner" | "admin" | "member" | "viewer") => Promise<void>;
+    createBoardAccessRequest: (boardID: string, message: string, role: "member" | "viewer") => Promise<void>;
     createWorkspaceAccessRequest: (workspaceID: string, message: string, role: "member" | "viewer" | "admin") => Promise<void>;
     getPendingIncomingUserInvitesCount: () => number;
     getPendingIncomingCountUserInvitesByEntity: () => ShareOfferCounts;
@@ -1179,55 +1179,36 @@ export const useShareOffersStore = create<ShareOffersState>((set, get) => ({
             { successResetDelayMs: 1500 }
         );
     },
-    createBoardAccessRequest: async (boardID: string, message: string, role: "owner" | "admin" | "member" | "viewer") => {
-        try {
-            set({
-                isSendingShareOffer: true,
-                isRequestSuccessful: false
-            });
-            await api.post(`/shareoffers/boards/${boardID}/request`, { RequestedRole: "viewer", Message: message });
-            set({ isRequestSuccessful: true });
-        } catch (error) {
-            set({ isRequestSuccessful: false });
-            // console.log("Error creating board access request", error);
-            throw error;
-        } finally {
-            set({ isSendingShareOffer: false });
-        }
+    createBoardAccessRequest: async (boardID: string, message: string, role: "member" | "viewer") => {
+        await useAsyncRequestStore.getState().execute<AxiosResponse>(
+            useAsyncKey("board:access:request", boardID),
+            () => api.post(`/shareoffers/boards/${boardID}/request`, { RequestedRole: role, Message: message }),
+            { successResetDelayMs: 1500 }
+        );
     },
     createWorkspaceAccessRequest: async (workspaceID: string, message: string, role: "member" | "viewer" | "admin") => {
-        try {
-            set({
-                isSendingShareOffer: true,
-                isRequestSuccessful: false
-            });
-            const response = await api.post(`/shareoffers/workspaces/${workspaceID}/request`, { RequestedRole: role, Message: message });
-            const createdOffer = response.data as ShareOffer | undefined;
-
-            if (createdOffer?.ID) {
-                useCacheStore.getState().upsertShareOffers([createdOffer]);
-                const targetWorkspaceID = createdOffer.TargetID ?? workspaceID;
-                const targetWorkspace = useCacheStore.getState().getWorkspaceById(targetWorkspaceID);
-                useWorkspaceStore.getState().appendPendingWorkspaceId(targetWorkspaceID, "request", createdOffer.ID, targetWorkspace);
-
-                set((state) => {
-                    if (state.userWorkspaceAccessSentRequestsIds.includes(createdOffer.ID)) {
-                        return state;
+        await useAsyncRequestStore.getState().execute<AxiosResponse>(
+            useAsyncKey("workspace:access:request", workspaceID),
+            () => api.post(`/shareoffers/workspaces/${workspaceID}/request`, { RequestedRole: role, Message: message }),
+            {
+                successResetDelayMs: 1500,
+                onSuccess: (res) => {
+                    const createdOffer = res?.data as ShareOffer | undefined;
+                    if (createdOffer?.ID) {
+                        useCacheStore.getState().upsertShareOffers([createdOffer]);
+                        const targetWorkspaceID = createdOffer.TargetID ?? workspaceID;
+                        const targetWorkspace = useCacheStore.getState().getWorkspaceById(targetWorkspaceID);
+                        useWorkspaceStore.getState().appendPendingWorkspaceId(targetWorkspaceID, "request", createdOffer.ID, targetWorkspace);
+                        set((state) => {
+                            if (state.userWorkspaceAccessSentRequestsIds.includes(createdOffer.ID)) return state;
+                            return { userWorkspaceAccessSentRequestsIds: [...state.userWorkspaceAccessSentRequestsIds, createdOffer.ID] };
+                        });
+                    } else {
+                        useWorkspaceStore.getState().appendPendingWorkspaceId(workspaceID, "request");
                     }
-                    return {
-                        userWorkspaceAccessSentRequestsIds: [...state.userWorkspaceAccessSentRequestsIds, createdOffer.ID]
-                    }
-                })
-            } else {
-                useWorkspaceStore.getState().appendPendingWorkspaceId(workspaceID, "request");
+                },
             }
-            set({ isRequestSuccessful: true });
-        } catch (error) {
-            set({ isRequestSuccessful: false });
-            throw error;
-        } finally {
-            set({ isSendingShareOffer: false });
-        }
+        );
     },
 
 

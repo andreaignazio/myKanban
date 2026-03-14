@@ -57,5 +57,6 @@ export function useCardEditableContext({ cardContext, boardId, effectiveRootBoar
         isReadOnlyList: accessMode === "readonly",
         rootBoardId,
         userBoardRoot,
+        hasRootBoardAccess
     }
 }

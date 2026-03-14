@@ -9,7 +9,7 @@ import { useWorkspaceDerivedProps } from "@/hooks/useWorkspaceDerivedProps";
 import { SubscriptionBadge } from "../badges/subscriptionBadge";
 import { useResolveSubscriptionPlan } from "@/hooks/useResolveSubscriptionPlan";
 import { CardRowMenuBtn } from "../cardMenus/cardRowMenus";
-import { ShareActionModal } from "./ShareActionModal";
+import { RequestAccessModal } from "./RequestAccessModal";
 
 type SearchWorkspaceOverlayProps = {
     onClose: () => void;
@@ -64,7 +64,7 @@ const RequestableWorkspaceCard = ({ workspaceId }: { workspaceId: string }) => {
     return (
         <CardRowMenuBtn
             renderType="virtual"
-            menuComponent={({ onClose, ref }) => <ShareActionModal onClose={onClose} targetID={workspaceId} actionType={"createWorkspaceAccessRequest"} ref={ref} />}
+            menuComponent={({ onClose, ref }) => <RequestAccessModal onClose={onClose} targetType="workspace" targetID={workspaceId} ref={ref} />}
             customId="workspace-access-request"
         >
             <WorkspaceCard workspaceId={workspaceId} />
