@@ -28,7 +28,7 @@ export const WorkspaceRow = forwardRef<HTMLDivElement, WorkspaceRowProps>(({ wor
     const currentUserId = useAuthStore((state) => state.userID)
     const userWorkspace = useWsMembersStore((state) => state.userWorkspacesByWorkspaceId[workspaceId]?.[currentUserId ?? ""])
     const isSuspended = userWorkspace?.IsSuspended ?? false
-    const isPendingSuspension = userWorkspace?.IsPendingSuspend ?? false
+    const _isPendingSuspension = userWorkspace?.IsPendingSuspend ?? false
 
     const isWorkspaceAccessible = status === "accessible"
     const isStatusOffered = status === "offered"

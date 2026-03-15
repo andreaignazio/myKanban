@@ -6,7 +6,7 @@ import { ViewDeletedBoards } from "@/components/modals/ViewDeletedBoards";
 import { CardRowMenuBtn } from "@/components/cardMenus/cardRowMenus";
 import { useCurrentWorkspaceRole } from "@/hooks/useCurrentWorkspaceRole";
 import { BoardGrid } from "@/components/workspaceView/BoardGrid";
-import { useState, useCallback, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { useBoardsStore } from "@/stores/boardsStore";
 import { useShallow } from "zustand/shallow";
 
@@ -28,8 +28,8 @@ export function WorkspaceView() {
 
     const showFilterBtn = isAdminOrOwner || hasPrivateBoards;
 
-    const filterFn = useCallback(
-        visibilityFilter === "all"
+    const filterFn = useMemo<((boardId: string) => boolean) | undefined>(
+        () => visibilityFilter === "all"
             ? undefined
             : visibilityFilter === "private"
                 ? (boardId: string) => boardsById[boardId]?.Visibility === "private"
