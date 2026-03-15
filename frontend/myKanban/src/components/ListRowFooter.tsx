@@ -126,8 +126,6 @@ export function ListRowFooter({ boardID, listID, isReadonly = false }: ListRowFo
                 disabled={isReadonly}
                 openedHeight={30}
                 onCancel={() => setIsAddingCard(false)} />
-
-
         </>
     )
 }

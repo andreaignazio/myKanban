@@ -116,7 +116,7 @@ export const CardDetailMenu = forwardRef<HTMLDivElement, CardDetailMenuProps>(({
         patchCardWatchActive(cardId, !isCardWatched);
     };
 
-    const { canEdit, userBoardRoot, rootBoardId, hasRootBoardAccess } = useCardEditableContext({ cardContext, boardId, effectiveRootBoard });
+    const { canEdit, hasRootBoardAccess } = useCardEditableContext({ cardContext, boardId, effectiveRootBoard });
 
     const [asideActiveTab, setAsideActiveTab] = useState("activity");
     const isAsideCollapsedByWindow = useMediaQuery(`(max-width: ${ACTIVITY_COLUMN_COLLAPSE_WIDTH - 1}px)`);

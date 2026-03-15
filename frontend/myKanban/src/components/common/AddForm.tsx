@@ -19,10 +19,9 @@ type AddFormProps = {
 
 export const AddForm = ({ onSubmit, onCancel, isAdding, setIsAdding, disabled = false, closedHeight = 8, openedHeight = 24, textAreaClassName, label, placeholder, placeholderClosed }: AddFormProps) => {
 
-    // const [isAddingCard, setIsAddingCard] = useState(false)
+    // const [isAddingCard, setIsAddingCard] = useState("")
     const [title, setTitle] = useState("")
     const addCardInputRef = useRef<CustomInputHandle | null>(null)
-
 
     useEffect(() => {
         if (!isAdding) {
@@ -84,13 +83,8 @@ export const AddForm = ({ onSubmit, onCancel, isAdding, setIsAdding, disabled = 
                 pendingTitle={title}
                 setPendingTitle={setTitle}
             />
-
-
-
         </>
     )
-
-
 }
 
 type AddFormPlaceholderProps = {

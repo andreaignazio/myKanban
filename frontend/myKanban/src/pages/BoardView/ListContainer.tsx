@@ -55,8 +55,10 @@ export const ListContainer = ({ draggedCardId = null, draggedSourceBoardListId =
                 <div
                     {...provided.droppableProps}
                     ref={provided.innerRef}
-                    className="relative flex h-full min-h-0 w-full flex-row items-start pt-2 pb-2 mb-1 !pr-8
-                            overflow-x-auto overflow-y-hidden scrollbar-hidden "
+
+                    className="relative flex h-full min-h-0 w-full flex-row items-start pt-2 pb-2 mb-1
+                     
+                             overflow-y-hidden scrollbar-hidden "
                 >
                     <AnimatePresence mode="popLayout">
                         {showSkeletons && SKELETON_CARD_COUNTS.map((cardCount, i) => (
@@ -88,7 +90,8 @@ export const ListContainer = ({ draggedCardId = null, draggedSourceBoardListId =
                                     transition: { duration: 1.5, ease: "easeInOut", delay: Math.min(index * 0.1, 0.5) }
                                 } : { opacity: 1, y: 0, transition: { duration: 0, delay: 0, } }}
                                 exit={shouldAnimate ? { opacity: 0, scale: 0.95, transition: { duration: 1.5 } } : undefined}
-                                className="shrink-0"
+
+                                className="flex shrink-0 self-start max-h-full"
                             >
                                 <ListRow
                                     index={index}

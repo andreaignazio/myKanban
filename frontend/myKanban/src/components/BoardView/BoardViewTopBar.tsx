@@ -65,7 +65,7 @@ export const BoardViewTopBar = ({ board, backgroundType }: BoardViewTopBarProps)
         backdrop-blur-md
          h-[60px] w-full items-center justify-between gap-2 px-4 ">
             <div className="flex items-center gap-2">
-                <span className="text-mb font-manrope font-extrabold tracking-normal text-inherit">
+                <span className="text-md font-manrope font-extrabold tracking-normal text-inherit">
                     {board?.Name}</span>
                 <BaseBtn
                     className="!text-inherit"

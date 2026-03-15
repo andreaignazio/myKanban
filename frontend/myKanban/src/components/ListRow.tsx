@@ -25,6 +25,7 @@ import { useListTheme } from "@/hooks/useListTheme"
 import { useAsyncKey } from "@/stores/asyncRequestStore"
 import { useAsyncRequest } from "@/hooks/useAsyncRequest"
 import { AnimatePresence, motion } from "motion/react"
+import { flushSync } from "react-dom"
 
 type ListRowProps = {
     boardID: string
@@ -55,21 +56,40 @@ export function ListRow({ boardID: boardID, boardListID: boardListID, index: ind
         setIsCardEditing(isEditMenuOpen)
     }, [stack, cardEditMenuIdPrefix])
 
+    const [windowHeight, setWindowHeight] = useState(() => window.innerHeight)
+    useEffect(() => {
+        const onResize = () => setWindowHeight(window.innerHeight)
+        window.addEventListener("resize", onResize)
+        return () => window.removeEventListener("resize", onResize)
+    }, [])
+
+    const footerRef = useRef<HTMLDivElement>(null)
+    const [footerHeight, setFooterHeight] = useState(0)
+    useEffect(() => {
+        const el = footerRef.current
+        if (!el) return
+        const ro = new ResizeObserver(() => flushSync(() => setFooterHeight(el.offsetHeight)))
+        ro.observe(el)
+        return () => ro.disconnect()
+    }, [])
+    // chrome = topbar(48) + boardTopBar(60) + containerPads(80) + listPadding(17) + listHeader(48) + safety(16) = 269
+    const maxCardsAreaHeight = Math.max(60, windowHeight - 269 - footerHeight)
+
+    const cardsMeasureRef = useRef<HTMLDivElement>(null)
+    const [cardsNatHeight, setCardsNatHeight] = useState(0)
+    useEffect(() => {
+        const el = cardsMeasureRef.current
+        if (!el) return
+        const ro = new ResizeObserver(() => {
+            setCardsNatHeight(el.offsetHeight)
+        })
+        ro.observe(el)
+        return () => ro.disconnect()
+    }, [])
+    const cardsAreaHeight = Math.min(cardsNatHeight, maxCardsAreaHeight)
+
     const key = useAsyncKey("list:create", boardListID)
     let { isLoading } = useAsyncRequest(key)
-    //isLoading = true
-    /*  const [showPlaceholder, setShowPlaceholder] = useState(true)
-      useEffect(() => {
-          if (!isLoading) {
-              //   setShowPlaceholder(false)
-              const timeout = setTimeout(() => {
-                  setShowPlaceholder(false)
-              }, 500)
-              return () => clearTimeout(timeout)
-          } else {
-              setShowPlaceholder(true)
-          }
-      }, [isLoading])*/
 
 
     if (!boardList || !listID) return null
@@ -101,46 +121,42 @@ export function ListRow({ boardID: boardID, boardListID: boardListID, index: ind
                         <div
                             {...provided.draggableProps}
                             ref={provided.innerRef}
-                            className={`relative shrink-0 h-full min-h-0 select-none w-[280px] mr-4`}
+                            className={`relative self-start min-h-0 max-h-full w-[280px] mr-4`}
                             style={{
                                 ...provided.draggableProps.style,
                                 color: listTextColor,
                             }}>
 
-                            {false && (<motion.div
-                                initial={{ opacity: 0, scale: 1.02 }}
-                                animate={{ opacity: 1, scale: 1, transition: { duration: 0.3, ease: "easeInOut" } }}
-                                exit={{ opacity: 0, scale: 1.02, transition: { duration: 0.3, ease: "easeInOut" } }}
-                                className={`absolute flex flex-col items-center justify-center inset-0 z-10  rounded-xl 
-                    pointer-events-none 
-                     bg-black  ring-2 ring-white/50 ring-inset
-                       `} >
-
-                            </motion.div>)}
-
-
-                            <div className={`relative group/readonly ${isReadonly
-                                ? `border-2 border-fuchsia-400/50 pt-1 hover:pt-6 ${isCardEditing ? "pt-6" : ""}  bg-fuchsia-500/50`
-                                : " "}
-                     transition-all ease-in-out duration-300
-                     rounded-xl  `}>
+                            <div className={`relative group/readonly min-h-0 max-h-full w-full
+                            ${isReadonly
+                                    ? `border-2 border-fuchsia-400/50 pt-1 hover:pt-6 ${isCardEditing ? "pt-6" : ""}  bg-fuchsia-500/50`
+                                    : " "}
+                                transition-all ease-in-out duration-300
+                                rounded-xl  `}
+                            >
 
                                 {isReadonly && (
-                                    <div className={`pointer-events-none absolute top-1 left-2 text-xs ${isCardEditing ? "opacity-40" : "opacity-0"} transition-opacity duration-200 group-hover/readonly:opacity-40`}>
+                                    <div className={`pointer-events-none absolute top-1 left-2 text-xs
+                                    ${isCardEditing ? "opacity-40" : "opacity-0"} transition-opacity duration-200 group-hover/readonly:opacity-40`}
+                                    >
                                         READONLY
                                     </div>
                                 )}
 
                                 <div
                                     {...provided.dragHandleProps}
-                                    className={` relative w-full bg-[#101204] max-h-full min-h-0 flex flex-col overflow-hidden
-            rounded-xl p-2 pt-[9px] shadow-md shadow-black/60 ${!isRootBoardList ? "ring-4 ring-neutral-300/55" : ""}`}
+
+                                    className={` relative w-full bg-[#101204] min-h-0 
+                                     flex flex-col
+                                    rounded-xl p-2 pt-[9px] shadow-md shadow-black/60 
+                                    ${!isRootBoardList ? "ring-4 ring-neutral-300/55" : ""}`}
                                     style={{
                                         ...(listColor ? { backgroundColor: listColor } : {}),
                                         color: listTextColor,
-                                    }}>
+                                    }}
+                                >
 
-                                    <div className="relative group/list-header">
+                                    <div className="relative h-10 group/list-header">
                                         <ListHeader
                                             boardListID={boardListID}
                                             listID={listID}
@@ -158,26 +174,28 @@ export function ListRow({ boardID: boardID, boardListID: boardListID, index: ind
                                             <div
                                                 ref={provided.innerRef}
                                                 {...provided.droppableProps}
-                                                className="flex flex-1 min-h-0 flex-col pt-2 
-                        overflow-y-auto scrollbar-hidden">
+                                                className="scrollbar-hidden"
+                                                style={{ height: cardsAreaHeight, overflowY: cardsNatHeight >= (maxCardsAreaHeight) ? "auto" : "hidden" }}>
 
-                                                {listCardIds && (
-                                                    listCardIds.map((listCardID, cardIndex) => {
-                                                        return (
-                                                            <CardRow
-                                                                key={listCardID}
-                                                                index={cardIndex}
-                                                                isDragDisabled={false}
-                                                                editMenuPrefix={cardEditMenuIdPrefix}
-                                                                boardID={boardID} listId={listID} listCardID={listCardID} />
+                                                <div ref={cardsMeasureRef} className="flex flex-col pt-0 pb-1">
+                                                    {listCardIds && (
+                                                        listCardIds.map((listCardID, cardIndex) => {
+                                                            return (
+                                                                <CardRow
+                                                                    key={listCardID}
+                                                                    index={cardIndex}
+                                                                    isDragDisabled={false}
+                                                                    editMenuPrefix={cardEditMenuIdPrefix}
+                                                                    boardID={boardID} listId={listID} listCardID={listCardID} />
 
-                                                        )
-                                                    }))}
-                                                {provided.placeholder}
+                                                            )
+                                                        }))}
+                                                    {provided.placeholder}
+                                                </div>
                                             </div>
                                         )}
                                     </Droppable>
-                                    <div className="shrink-0 pt-1">
+                                    <div className="shrink-0 pt-1" ref={footerRef}>
                                         <ListRowFooter boardID={boardID} listID={listID} isReadonly={isReadonly} />
                                     </div>
                                 </div>

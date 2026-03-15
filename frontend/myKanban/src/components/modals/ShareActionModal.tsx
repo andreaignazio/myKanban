@@ -70,7 +70,7 @@ export const ShareActionModal = forwardRef<HTMLDivElement, ShareActionModalProps
     async function handleSendBoardAccessRequest() {
         if (!props.targetID) return;
         await runWithOverlay(
-            () => createBoardAccessRequest(props.targetID ?? "", msgInputRef.current?.value ?? "", role.toLowerCase() as "owner" | "admin" | "member" | "viewer"),
+            () => createBoardAccessRequest(props.targetID ?? "", msgInputRef.current?.value ?? "", role.toLowerCase() as "member" | "viewer"),
             {
                 settleDelayMs: 1000,
                 evaluateSuccess: () => Boolean(getIsSuccess()),

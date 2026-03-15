@@ -134,6 +134,26 @@ export const CardRow = ({ boardID, listId, listCardID: listCardID, cardId, index
 
 
     const cardRowRef = useRef<HTMLDivElement>(null)
+    const [saveButtonRect, setSaveButtonRect] = useState<{ top: number; left: number; width: number } | null>(null)
+    useEffect(() => {
+        if (!editMode) {
+            setSaveButtonRect(null)
+            return
+        }
+        const update = () => {
+            const el = cardRowRef.current
+            if (!el) return
+            const rect = el.getBoundingClientRect()
+            setSaveButtonRect({ top: rect.bottom + 4, left: rect.left, width: rect.width })
+        }
+        update()
+        window.addEventListener("scroll", update, true)
+        window.addEventListener("resize", update)
+        return () => {
+            window.removeEventListener("scroll", update, true)
+            window.removeEventListener("resize", update)
+        }
+    }, [editMode])
 
     const handleCardEditMode = () => {
         setEditMode(true)
@@ -245,7 +265,7 @@ export const CardRow = ({ boardID, listId, listCardID: listCardID, cardId, index
                 openCard(cardID!)
             }}
             data-list-card-id={listCardID}
-            className="relative -mt-2 pt-2 overflow-visible "
+            className="relative  pt-0 overflow-visible "
         >
 
             <Draggable draggableId={resolvedDraggableId} index={index} isDragDisabled={isDragDisabled || isPendingCopy}>
@@ -359,28 +379,32 @@ export const CardRow = ({ boardID, listId, listCardID: listCardID, cardId, index
                     return draggableNode
                 }}
             </Draggable>
-            <div className={` ${`/*absolute -bottom-14*/`}
-                ${editMode ? "opacity-100 h-full " : "opacity-0 h-0"} transition-opacity duration-200
-                ${canEdit ? "" : "filter grayscale brightness-50 pointer-events-none"}
-                flex flex-row justify-start items-start ps-1`}>
-                {true === true &&
-
+            {editMode && saveButtonRect && createPortal(
+                <div
+                    style={{
+                        position: "fixed",
+                        top: saveButtonRect.top,
+                        left: saveButtonRect.left,
+                        width: saveButtonRect.width,
+                        zIndex: 1100,
+                    }}
+                    className={`flex flex-row justify-start items-start ps-1
+                        ${canEdit ? "" : "filter grayscale brightness-50 pointer-events-none"}`}
+                >
                     <LabeledButtonPresetBSubmit
-                        className="!w-fit px-8 !opacity-100 "
+                        className="!w-fit px-8 !opacity-100"
                         disabled={!canEdit}
                         label="Save"
                         onClick={() => { }}
-                        onPointerDownCapture={(e) => {
+                        onPointerDownCapture={(e) => e.stopPropagation()}
+                        onClickCapture={(e) => {
                             e.stopPropagation()
+                            onSubmitTitle()
                         }}
-                        onClickCapture={
-                            (e) => {
-                                e.stopPropagation()
-                                onSubmitTitle()
-                            }}
                     />
-                }
-            </div>
+                </div>,
+                document.body
+            )}
         </div>
 
 

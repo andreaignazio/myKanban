@@ -109,7 +109,7 @@ const JoinTab = ({ User, shareLink, token }: JoinTabProps) => {
         if (!shareLink?.TargetID || !shareLink?.TargetType) return;
 
         if (shareLink.TargetType === "board") {
-            await createBoardAccessRequest(shareLink.TargetID, "", shareLinkRole ?? "viewer");
+            await createBoardAccessRequest(shareLink.TargetID, "", (shareLinkRole === "member" || shareLinkRole === "viewer") ? shareLinkRole : "viewer");
         } else if (shareLink.TargetType === "workspace") {
             await createWorkspaceAccessRequest(shareLink.TargetID, "", shareLinkRole ?? "viewer");
         }

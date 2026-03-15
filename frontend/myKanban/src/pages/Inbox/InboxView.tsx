@@ -38,9 +38,9 @@ export const InboxView = ({ draggedRootListCardId = null }: InboxViewProps) => {
                 className={`flex flex-col min-h-0 h-full w-full px-[${PADDING_X}px] overflow-hidden gap-4 pb-3`}>
                 <div
                     style={{ marginInline: `calc(${PADDING_X}px * -1)`, width: `calc(100% + ${PADDING_X * 2}px)` }}
-                    className="shrink-0 flex items-center gap-2 mb-4 bg-[#142137] h-16 w-full py-2 px-4 rounded">
-                    <WalletCardsIcon className="w-5 h-5" />
-                    <span className="text-sm font-medium">Inbox</span>
+                    className="shrink-0 flex items-center gap-2 mb-4 bg-[#142137] h-14 w-full py-2 px-4 rounded">
+                    <WalletCardsIcon className="w-4 h-4" />
+                    <span className="text-md tracking-wide font-bold !font-manrope">Inbox</span>
                 </div>
                 <InboxAddCard />
 
@@ -54,7 +54,7 @@ export const InboxView = ({ draggedRootListCardId = null }: InboxViewProps) => {
                             <div
                                 ref={provided.innerRef}
                                 {...provided.droppableProps}
-                                className="flex h-full min-h-full w-full flex-col overflow-y-auto overflow-x-hidden pr-3 pt-2 pb-6 scrollbar-hidden">
+                                className="flex h-full min-h-full w-full flex-col overflow-y-auto overflow-x-hidden  pt-2 pb-6 scrollbar-hidden">
 
                                 <div className="flex flex-col gap-2 min-h-full w-full">
                                     {inboxCardIds.length > 0 && inboxCardIds.map((id, index) => {
@@ -96,7 +96,7 @@ const InboxAddCard = () => {
         if (newCardTitle.trim() === "") {
             return
         }
-        addInboxCard({ Title: newCardTitle })
+        addInboxCard({ Title: newCardTitle, InsertAt: "start" })
         setNewCardTitle("")
         setIsEditing(false)
     }
@@ -105,14 +105,21 @@ const InboxAddCard = () => {
         setNewCardTitle("")
     }
 
+    const resolvedPlaceholder = isEditing ? "Enter a title for this card..." : "Add card to inbox"
+    const buttonClass = "h-full !font-medium !px-4 !w-full !rounded-xl transition-all ease-in-out duration-300"
     return (
-        <div className="flex flex-col items-center gap-2 cursor-pointer">
-            <CustomInput ref={inputRef} placeholder="Add card to inbox"
-                className={"rounded-xl"} onFocus={() => setIsEditing(true)} onInputChange={(inputRef) => setNewCardTitle(inputRef?.current?.value ?? "  ")} />
-            {isEditing && <div className=" w-full flex flex-row gap-2" >
-                <LabeledButtonPresetBSubmit label="Add" onClick={handleAddCard} />
-                <LabeledButtonPresetB label="Cancel" onClick={() => { handleCancel }} />
-            </div>}
+        <div className="flex flex-col items-center gap-0 cursor-pointer pe-1 ps-1">
+            <CustomInput ref={inputRef} placeholder={resolvedPlaceholder}
+                className={"rounded-xl border-none shadow-md shadow-black/20"}
+                onFocus={() => setIsEditing(true)} onInputChange={(inputRef) => setNewCardTitle(inputRef?.current?.value ?? "  ")} />
+            <div className={` w-full flex flex-row gap-2  ${isEditing ? "h-10 opacity-100 mt-2" : "h-0 opacity-0 mt-0"} transition-all duration-300 ease-in-out`}>
+                <LabeledButtonPresetBSubmit
+                    className={buttonClass}
+                    label="Add Card " onClick={handleAddCard} />
+                <LabeledButtonPresetB
+                    className={buttonClass + " bg-neutral-500/20 hover:bg-neutral-500/30"}
+                    label="Cancel" onClick={() => { handleCancel() }} />
+            </div>
         </div>
     )
 

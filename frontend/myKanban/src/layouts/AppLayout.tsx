@@ -350,7 +350,7 @@ export default function AppLayout() {
                             <Sidebar isSingleMode={isSingleMode} />
                         </div>
 
-                        <main className=" relative overflow-y-auto scrollbar-hidden h-full min-h-0 w-full">
+                        <main className=" relative overflow-y-auto scrollbar-hidden h-full min-h-0 w-[100vw]">
                             <Outlet />
                         </main>
                     </div>

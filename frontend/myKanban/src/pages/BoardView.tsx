@@ -224,10 +224,6 @@ export default function BoardView() {
     const [activeFloatingTab, setActiveFloatingTab] = useState("Board")
     const isInboxActive = activeFloatingTab === "Inbox"
 
-    const paddingBottom = isInboxActive ? "pb-[70px]" : "pb-[70px]"
-
-    const bottomPX = "90px"
-
 
     // const boardId = useParams().boardId as string
     const boardListIds = useBoardDetailStore(useShallow((state) => (
@@ -479,11 +475,13 @@ export default function BoardView() {
     return (
         <>
             <div className="absolute inset-0 -z-20 bg-menusec" />
-            <div className="flex flex-row gap-3 h-full w-full overflow-hidden ">
+            <div className=" relative flex flex-row gap-0 h-full w-[100vw] ">
 
                 <DragDropContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-                    <div className={`h-[calc(100vh-120px)] min-h-0 relative flex-shrink-0  transition-all 
-                ${activeFloatingTab === "Inbox" ? "w-80" : "w-0"}
+                    <div
+                        style={{ paddingBottom: isInboxActive ? 40 : 0, }}
+                        className={` min-h-0 relative flex-shrink-0  transition-all 
+                ${isInboxActive ? "w-80 mx-2" : "w-0 mx-0"}
                  bg-transparent overflow-hidden
                  `}>
 
@@ -491,28 +489,48 @@ export default function BoardView() {
 
                     </div>
                     {boardId && (
-                        <div className={`flex-shrink-0 h-full transition-all 
-                    ${isInboxActive ? ` rounded-2xl overflow-hidden` : ""} w-full`}>
-                            <div className={`relative w-full h-full min-h-0 flex flex-col`}>
-                                <div className={`absolute inset-0 transition-all ${isInboxActive ? `bottom-[${bottomPX}]` : ""} `}>
-                                    <BoardBackgroundTransition target={targetBackground} />
-                                </div>
 
+                        <div
+                            className={` flex flex-col items-start justify-start h-full min-h-0 flex-1 transition-all
+                                 relative pb-2 overflow-hidden`}
+                        >
+                            <div
+                                className=" flex h-fit min-h-0 w-full flex-col overflow-hidden "
+                                style={{ borderRadius: isInboxActive ? "20px 20px 0px 0" : 0, overflow: "hidden" }}
+                            >
                                 <BoardViewTopBar board={board} backgroundType={backgroundType} />
+                            </div>
+                            <div
+                                style={{
+                                    height: isInboxActive ? "calc(100% - 40px)" : "100%",
+                                    paddingBottom: isInboxActive ? 40 : 0, borderRadius: isInboxActive ? 20 : 0, overflow: "hidden"
+                                }}
+                                className={`absolute inset-0 transition-all w-full min-h-0   `}>
+                                <BoardBackgroundTransition target={targetBackground} />
+                            </div>
 
-                                <div className={`flex flex-1 min-h-0 w-full ps-4 py-0 ${paddingBottom} overflow-hidden scrollbar-hidden`}>
+                            <div
+                                style={{ paddingTop: 10, paddingBottom: 70, }}
+                                className={`
+                               
+                                flex-1 min-h-0 w-full ps-4 pe-2 scrollbar-hidden `}>
 
-                                    <ListContainer draggedCardId={draggedCardId} draggedSourceBoardListId={draggedSourceBoardListId} />
-
-                                </div>
+                                <ListContainer draggedCardId={draggedCardId} draggedSourceBoardListId={draggedSourceBoardListId} />
 
                             </div>
+
+
                         </div>
+
+
+
+
+
                     )}
-                </DragDropContext>
+                </DragDropContext >
 
                 <Outlet />
-            </div>
+            </div >
             <div className="absolute bottom-0 flex flex-row w-full  py-4 items-center justify-center ">
                 <FloatingTabSelector activeTab={activeFloatingTab} setActiveTab={setActiveFloatingTab} tabs={floatingTabs} />
             </div>
