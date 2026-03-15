@@ -10,6 +10,7 @@ import { useBoardDescription } from "@/hooks/useBoardDescription";
 import { EntityHoverCard } from "./EntityHoverCard";
 import { useCacheStore } from "@/stores/cacheStore";
 import { useShallow } from "zustand/shallow";
+import { SubscriptionBadge } from "../badges/subscriptionBadge";
 
 
 type BoardHoverCardProps = {
@@ -48,7 +49,7 @@ export const BoardHoverCard = forwardRef<HTMLDivElement, BoardHoverCardProps>(({
     const subscriptionsByWorkspaceId = useWorkspaceStore(state => state.wSubscriptionsById)
     const workspace = workspaceById[workspaceId ?? ""]
     const workspacePlan = workspaceId ? subscriptionsByWorkspaceId[workspaceId]?.Plan ?? "free" : undefined
-    const workpaceDateCreated = useDateTimeParser().stringifyDatePretty(workspace?.CreatedAt ? new Date(workspace.CreatedAt) : undefined)?.date
+    //const workpaceDateCreated = useDateTimeParser().stringifyDatePretty(workspace?.CreatedAt ? new Date(workspace.CreatedAt) : undefined)?.date
     const { avatarProps } = useWorkspaceDerivedProps("", workspace)
     const iconId = avatarProps.iconId
 
@@ -56,6 +57,10 @@ export const BoardHoverCard = forwardRef<HTMLDivElement, BoardHoverCardProps>(({
 
 
     const boardDescription = useBoardDescription({ boardID })
+    const defaultDescription = boardCreatedAt
+        ? `Created ${boardCreatedAt} · ${members.length} ${members.length === 1 ? "member" : "members"}`
+        : `${members.length} ${members.length === 1 ? "member" : "members"}`;
+    const description = boardDescription ? boardDescription === "No description" ? defaultDescription : boardDescription : defaultDescription
     return (
         <EntityHoverCard
             ref={ref}
@@ -63,17 +68,18 @@ export const BoardHoverCard = forwardRef<HTMLDivElement, BoardHoverCardProps>(({
             entityCreatedAt={boardCreatedAt}
             iconId={iconId}
             entityName={board?.Name}
-            description={boardDescription}
-            plan={workspacePlan}
+            description={description}
+            plan={""}
             coverType={backgroundType}
             coverColor={backgroundColorClassName}
             coverImage={backgroundImageUrl}
             headerInRowChilden={workspace ?
-                <div className="flex flex-col">
+                <div className="flex flex-col gap-1">
+                    <SubscriptionBadge plan={workspacePlan ?? ""} />
                     <span className="text-sm text-neutral-800/80 font-medium">
                         {workspace.Name}
                     </span>
-                    <span className="text-xs text-neutral-400/80">{workpaceDateCreated}</span>
+
                 </div>
                 : undefined}
             detailsChildren={

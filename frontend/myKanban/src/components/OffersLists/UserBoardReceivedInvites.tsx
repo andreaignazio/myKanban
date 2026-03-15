@@ -48,10 +48,10 @@ export const UserBoardReceivedInvites = forwardRef<HTMLDivElement, OutgoingReque
     const columns: ColumnDefinition[] = [
         { name: "Board", key: "board", width: "1fr", align: "center", getValue: (offer: ShareOffer) => getBoardIdFromOffer(offer) },
         { name: "Workspace", key: "workspace", width: "1fr", align: "center", getValue: (offer: ShareOffer) => getWorkspaceIdFromOffer(offer) },
-        { name: "Status", key: "status", width: "0.5fr", align: "center", getValue: (offer: ShareOffer) => offer.Status },
-        { name: "Role", key: "role", width: "0.5fr", align: "center", getValue: (offer: ShareOffer) => offer.OfferedRole },
+        { name: "Status", key: "status", width: "1fr", align: "center", getValue: (offer: ShareOffer) => offer.Status },
+        { name: "Role", key: "role", width: "1fr", align: "center", getValue: (offer: ShareOffer) => offer.OfferedRole },
         { name: "Date", key: "date", width: "1fr", align: "center", getValue: (offer: ShareOffer) => offer.CreatedAt },
-        { name: "From", key: "sender", width: "2fr", align: "center", getValue: (offer: ShareOffer) => offer.FromUserID },
+        { name: "From", key: "sender", width: "1fr", align: "center", getValue: (offer: ShareOffer) => offer.FromUserID },
         { name: "Action", key: "action", width: "1fr", align: "center", getValue: (offer: ShareOffer) => offer.Status === "pending" ? "respond" : offer.Status },
     ]
 

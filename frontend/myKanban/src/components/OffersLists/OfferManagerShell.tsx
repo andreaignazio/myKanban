@@ -44,10 +44,10 @@ export const OfferManagerShell = forwardRef<HTMLDivElement, OfferManagerShellPro
             ref={ref}
             onClose={onClose}
             requestKey={requestKey}
-            className={`w-[90vw] max-w-5xl !bg-main h-[80vh] flex flex-col items-center justify-start p-16 font-grotesk text-neutral-200 ${className || ""}`}
+            className={`w-[90vw] max-w-[800px]  !bg-main h-[80vh] flex flex-col items-center justify-start p-16 font-grotesk text-neutral-200 ${className || ""}`}
         >
             {/* Header: title + pending toggle */}
-            <div className="w-full !h-22 max-w-5xl flex flex-row items-start justify-between gap-4 mb-1">
+            <div className="w-full !h-22 max-w-[800px]  flex flex-row items-start justify-between gap-4 mb-1">
                 <div className="flex flex-col gap-1">
                     <p className="text-2xl font-semibold tracking-tight text-text">{activeTab.title}</p>
                     <p className="text-sm text-zinc-400">{activeTab.description}</p>

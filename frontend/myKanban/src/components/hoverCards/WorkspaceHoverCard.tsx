@@ -6,6 +6,7 @@ import { useWorkspaceDerivedProps } from "@/hooks/useWorkspaceDerivedProps";
 import { useDateTimeParser } from "@/hooks/useDateTimeParser";
 import { EntityHoverCard } from "./EntityHoverCard";
 import { MembersList } from "../common/MemberList";
+import { SubscriptionBadge } from "../badges/subscriptionBadge";
 
 type WorkspaceHoverCardProps = {
     workspaceID: string;
@@ -34,23 +35,26 @@ export const WorkspaceHoverCard = forwardRef<HTMLDivElement, WorkspaceHoverCardP
     const { avatarProps, headerProps } = useWorkspaceDerivedProps("", workspace)
     const workspaceCreatedAt = workspace ? useDateTimeParser().stringifyDatePretty(new Date(workspace?.CreatedAt) ?? "")?.date : "";
 
+    const defaultDescription = workspaceCreatedAt
+        ? `Created ${workspaceCreatedAt} · ${members.length} ${members.length === 1 ? "member" : "members"}`
+        : `${members.length} ${members.length === 1 ? "member" : "members"}`;
+    const description = (workspace?.Props?.Description as string | undefined) || defaultDescription;
+
     return (
         <EntityHoverCard
             ref={ref}
             onClose={onClose}
-            entityCreatedAt={workspaceCreatedAt}
+            entityCreatedAt={""}
             iconId={avatarProps.iconId}
             entityName={workspace?.Name}
-            description={workspace?.Props?.Description as string | undefined}
-            plan={subscription}
+            description={description}
+            plan={""}
             coverType={headerProps.coverType as "color" | "image" | undefined}
             coverColor={headerProps.coverColor}
             coverImage={headerProps.coverImage}
             headerInRowChilden={
                 <div className="flex flex-col">
-                    <span className="text-sm text-neutral-800/80 font-medium">
-                        {workspace?.Name}
-                    </span>
+                    <SubscriptionBadge plan={subscription} />
                     <span className="text-xs text-neutral-400/80">{workspaceCreatedAt}</span>
                 </div>
             }

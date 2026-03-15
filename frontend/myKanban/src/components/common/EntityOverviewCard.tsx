@@ -81,7 +81,7 @@ export const EntityOverviewPanel = ({ onClick, onClose, wrapperRef, iconId, cove
                     <div className={`${isOpen ? 'opacity-0' : 'opacity-100'} absolute bottom-6 left-4 text-xl z-10 font-normal transition-opacity duration-300 ease-in-out`}>{entityName}</div>
                 </ImageColorRenderer>
                 <div className={`${isOpen ? 'h-[200px] opacity-100' : 'h-0 opacity-0'} transition-all ease-in-out duration-600 flex flex-col gap-1 text-neutral-900 cursor-default`}>
-                    <div className="flex flex-row gap-2 items-baseline">
+                    <div className="flex flex-col gap-2 items-baseline">
                         <div className="text-xl font-normal">{entityName}</div>
                         {entityCreatedAt && <span className="text-xs text-neutral-400/80">{entityCreatedAt}</span>}
                     </div>

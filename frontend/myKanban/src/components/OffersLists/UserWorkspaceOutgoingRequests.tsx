@@ -19,10 +19,10 @@ export const UserWorkspaceOutgoingRequests = forwardRef<HTMLDivElement, Outgoing
 
     const columns: ColumnDefinition[] = [
         { name: "Workspace", key: "workspace", width: "1.5fr", align: "center", getValue: (offer: ShareOffer) => offer.TargetID },
-        { name: "Status", key: "status", width: "1fr", align: "center", getValue: (offer: ShareOffer) => offer.Status, style: { textTransform: "capitalize", transform: "translateX(8px)" } },
-        { name: "Role", key: "role", width: "1fr", align: "center", getValue: (offer: ShareOffer) => offer.OfferedRole, style: { textTransform: "capitalize", transform: "translateX(18px)" } },
-        { name: "Date", key: "date", width: "1.5fr", align: "end", getValue: (offer: ShareOffer) => offer.CreatedAt },
-        { name: "Action", key: "action", width: "1fr", align: "start", getValue: (offer: ShareOffer) => offer.Status === "pending" ? "revoke" : offer.Status, labelStyle: { transform: "translateX(-22px)" } },
+        { name: "Status", key: "status", width: "1fr", align: "center", getValue: (offer: ShareOffer) => offer.Status, },
+        { name: "Role", key: "role", width: "1fr", align: "center", getValue: (offer: ShareOffer) => offer.OfferedRole, },
+        { name: "Date", key: "date", width: "1fr", align: "center", getValue: (offer: ShareOffer) => offer.CreatedAt },
+        { name: "Action", key: "action", width: "1fr", align: "center", getValue: (offer: ShareOffer) => offer.Status === "pending" ? "revoke" : offer.Status, },
     ]
 
     return (

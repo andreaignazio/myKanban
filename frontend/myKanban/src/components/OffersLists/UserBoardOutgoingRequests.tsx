@@ -75,16 +75,16 @@ export const UserBoardOutgoingRequests = forwardRef<HTMLDivElement, OutgoingRequ
     }
 
     const columns: ColumnDefinition[] = [
-        { name: "Board", key: "board", width: "2fr", align: "start", getValue: (offer: ShareOffer) => getBoardIdFromOffer(offer) },
-        { name: "Workspace", key: "workspace", width: "1.5fr", align: "center", getValue: (offer: ShareOffer) => getWorkspaceIdFromOffer(offer) },
-        { name: "Status", key: "status", width: "0.5fr", align: "center", getValue: (offer: ShareOffer) => offer.Status },
-        { name: "Role", key: "role", width: "0.5fr", align: "center", getValue: (offer: ShareOffer) => offer.OfferedRole },
-        { name: "Date", key: "date", width: "1.2fr", align: "center", getValue: (offer: ShareOffer) => offer.CreatedAt },
-        { name: "Action", key: "action", width: "90px", align: "center", getValue: (offer: ShareOffer) => offer.Status === "pending" ? "revoke" : offer.Status },
+        { name: "Board", key: "board", width: "1fr", align: "center", getValue: (offer: ShareOffer) => getBoardIdFromOffer(offer) },
+        { name: "Workspace", key: "workspace", width: "1fr", align: "center", getValue: (offer: ShareOffer) => getWorkspaceIdFromOffer(offer) },
+        { name: "Status", key: "status", width: "1fr", align: "center", getValue: (offer: ShareOffer) => offer.Status },
+        { name: "Role", key: "role", width: "1fr", align: "center", getValue: (offer: ShareOffer) => offer.OfferedRole },
+        { name: "Date", key: "date", width: "1fr", align: "center", getValue: (offer: ShareOffer) => offer.CreatedAt },
+        { name: "Action", key: "action", width: "1fr", align: "center", getValue: (offer: ShareOffer) => offer.Status === "pending" ? "revoke" : offer.Status },
     ]
 
     return (
-        <div className="w-full flex flex-col gap-3 animate-rise-in">
+        <div className="w-full flex flex-col  gap-3 animate-rise-in">
             <GridBuilder
                 columns={columns}
                 data={offersIds}
@@ -138,7 +138,7 @@ export function GridBuilder<Row extends TabularData = ShareOffer>({ columns, dat
             <div className="w-full rounded-xl bg-transparent">
                 <div className="flex flex-col gap-3">
                     {data.length > 0 && (
-                        <div className="hidden md:block relative w-full py-2 text-xs uppercase tracking-wide text-text/60" style={{ minHeight: '2rem' }}>
+                        <div className="hidden lg:block relative w-full py-2 text-xs uppercase tracking-wide text-text/60" style={{ minHeight: '2rem' }}>
                             {colRects.length > 0 && columns.map((col, i) => {
                                 const rect = colRects[i];
                                 if (!rect) return null;
@@ -254,9 +254,11 @@ export function ShareOfferCustomRow<Row extends TabularData = ShareOffer>({ offe
                 const alignClass = item.align === "start" ? "items-start" : item.align === "end" ? "items-end" : "items-center";
                 return (
                     <div key={item.key}
-                        className={`flex flex-col col-auto gap-1 py-4 ${alignClass}`}>
-                        <span className="md:hidden text-[11px] uppercase tracking-wide text-text/60">{item.name}</span>
-                        {customCell ?? (componentsByKey[item.key] ? componentsByKey[item.key].render(value, offerId, item.style) : <div>{value}</div>)}
+                        className={`flex flex-col col-auto h-full items-start  gap-1 py-4 ${alignClass}`}>
+                        <span className="lg:hidden text-[11px] uppercase tracking-wide text-text/60">{item.name}</span>
+                        <div className="h-full flex flex-col items-center justify-center">
+                            {customCell ?? (componentsByKey[item.key] ? componentsByKey[item.key].render(value, offerId, item.style) : <div>{value}</div>)}
+                        </div>
                     </div>
                 );
             })}
@@ -374,7 +376,7 @@ export const ActionComponent = ({ action, shareId, style }: ActionComponentProps
             >
                 <div className="hidden w-0 lg:block lg:w-fit text-nowrap">{label}</div>
                 <div className=" rounded-sm  ">
-                    {action === "respond" && <PencilIcon className="w-5 h-5" />}
+                    {action === "respond" && <PencilIcon className="w-5 h-5 lg:ms-2" />}
                     {action === "revoke" && <ExclamationCircleIcon className="w-5 h-5 text-red-500" />}
                     {action === "accepted" && <ShieldCheckIcon className="w-5 h-5 text-green-500" />}
                     {action === "rejected" && <XCircleIcon className="w-5 h-5 text-red-500" />}
@@ -404,14 +406,14 @@ export const DateComponent = ({ date, style }: { date: string | null, style?: Re
     }).format(d);
 
     return (
-        <span className="text-sm text-text" style={style}>{readable}</span>
+        <span className="text-sm text-text text-center" style={style}>{readable}</span>
     )
 }
 
 export const RoleComponent = ({ role, style }: { role: string | null, style?: React.CSSProperties }) => {
     const roleBadgeClass = getRoleBadgeClass(role as ShareOffer["OfferedRole"]);
     return (
-        <span className={`w-18 rounded-full border px-2 py-1 text-xs font-medium ${roleBadgeClass}`} style={style}>
+        <span className={`w-18 rounded-full border px-2 py-1 text-xs font-medium capitalize ${roleBadgeClass}`} style={style}>
             {role}
         </span>
     )
@@ -421,9 +423,14 @@ export const RoleComponent = ({ role, style }: { role: string | null, style?: Re
 export const StatusComponent = ({ status, style }: { status: string | null, style?: React.CSSProperties }) => {
     const statusBadgeClass = getStatusBadgeClass(status as ShareOffer["Status"]);
     return (
-        <span className={`w-18 rounded-full border px-2 py-1 text-xs font-medium ${statusBadgeClass}`} style={style}>
-            {status}
-        </span>
+        <>
+            <span className={`lg:hidden w-7 h-7 rounded-full border flex items-center justify-center text-xs font-semibold ${statusBadgeClass}`} style={style}>
+                {status?.charAt(0).toUpperCase()}
+            </span>
+            <span className={`hidden lg:inline w-18 rounded-full border px-2 py-1 text-xs font-medium capitalize ${statusBadgeClass}`} style={style}>
+                {status}
+            </span>
+        </>
     )
 }
 
@@ -466,13 +473,16 @@ export const BoardComponent = ({ ID: boardId, shareId, style }: BoardComponentPr
                     renderType="virtual"
                     menuComponent={({ onClose, ref }) => <BoardHoverCard boardID={boardId ?? ""} onClose={onClose} ref={ref} />}
                 >
-                    <div className="flex flex-row  relative group
+                    <div
+
+                        className="flex flex-row  relative group
                 items-center 
                  bg-transparent hover:bg-main/20
                   hover:cursor-pointer overflow-hidden 
                   hover:ring hover:ring-white
                   transition-all ease-in-out duration-300
-                  rounded-lg w-16 md:w-28 h-16 " ref={anchorRef} onClick={onClick} style={style}>
+                    sm:w-[clamp(64px,128px,128px)] w-16
+                  rounded-lg  h-16 " ref={anchorRef} onClick={onClick} style={{ ...style }}>
                         <ImageColorRenderer
                             className="!w-full"
                             backgroundType={backgroundType}
@@ -488,7 +498,7 @@ export const BoardComponent = ({ ID: boardId, shareId, style }: BoardComponentPr
                          flex items-center justify-center" >
 
                             <span className=" absolute text-sm font-medium
-                         text-gray-300 opacity-0 delay-[75ms]
+                         text-gray-300 opacity-0 delay-[75ms] truncate w-16 px-2 text-center
                          group-hover:opacity-100 transition-opacity">
                                 {board ? board.Name : "Caricamento..."}
                             </span>
@@ -517,13 +527,14 @@ const NameOverlay = ({ name, className }: NameOverlayProps) => {
     return (
         <div
             onClick={() => { }}
-            className={`absolute inset-0 z-20
+            className={`absolute inset-0 z-20  overflow-hidden 
                         transition-all ease-in-out duration-300 delay-[50ms]
-                       group-hover:backdrop-blur-lg
+                       group-hover:backdrop-blur-lg 
                         group-hover:bg-gradient-to-t group-hover:from-black/20 group-hover:to-transparent
-                         flex items-center justify-center ${className}`} >
+                         flex flex-col items-center justify-center ${className}`} >
 
-            <span className=" absolute text-sm font-medium
+            <span className=" truncate  text-center
+             text-xs font-medium w-16 px-2
                          text-gray-300 opacity-0 delay-[75ms]
                          group-hover:opacity-100 transition-opacity">
                 {name}
@@ -574,9 +585,9 @@ export const WorkspaceComponent = ({ ID: workspaceId, shareId, style }: Workspac
         <>
             {variant === "1" && (
                 <div className=" group relative overflow-hidden justify-center cursor-pointer
-                hover:ring hover:ring-white
+                hover:ring-1 hover:ring-zinc-300 
                   transition-all ease-in-out duration-300
-                hover:bg-slate-500/10 w-16 md:w-28 h-16 px-2 flex flex-row items-center rounded-2xl">
+                hover:bg-slate-500/10 w-16 lg:w-36 h-16 px-2 grid grid-cols-1 items-center rounded-2xl">
                     <CardRowMenuBtn
                         customId={"workspace-hover-card-" + shareId}
                         exclusiveGroup="entity-hover-card"
@@ -585,15 +596,15 @@ export const WorkspaceComponent = ({ ID: workspaceId, shareId, style }: Workspac
                             ({ onClose, ref }) => <WorkspaceHoverCard workspaceID={workspaceId ?? ""} onClose={onClose} ref={ref} />
                         }
                     >
-                        <div className="flex 
+                        <div className="grid grid-cols-[52px_1fr] 
                         opacity-100 group-hover:opacity-10 transition-opacity ease-in-out duration-300
-                        flex-row gap-2 justify-center items-center" style={style}>
+                        items-center" style={style}>
                             <CatalogIcon id={iconId ?? "boards"}
-                                className="w-12 h-12
+                                className="w-12 h-12 grid-span-1
                      text-neutral-300  
                      border border-neutral-300 rounded-xl p-3"
                             />
-                            <div className="hidden md:flex flex-col items-center">
+                            <div className="hidden lg:flex flex-col items-center">
                                 <SubscriptionBadge plan={workspaceId ? getSubscription(workspaceId)?.Plan ?? "free" : "free"} />
                             </div>
                         </div>
@@ -663,7 +674,7 @@ export const UserComponent = ({ ID: userId, shareId, style }: UserComponentProps
     }
 
     if (!userId) {
-        return <div className="flex items-center justify-center w-16 h-16 lg:w-44 px-3 py-2" style={style}><span className="text-sm text-text/60">—</span></div>
+        return <div className="flex items-center justify-center w-16 h-16  px-3 py-2" style={style}><span className="text-sm text-text/60">—</span></div>
     }
 
     return (
@@ -671,7 +682,7 @@ export const UserComponent = ({ ID: userId, shareId, style }: UserComponentProps
         <div
             ref={anchorRef}
             className=" relative flex flex-row items-center justify-center overflow-hidden
-             hover:bg-slate-500/20 rounded-lg w-16 h-16 lg:w-44  px-3 py-2 cursor-pointer"
+             hover:bg-slate-500/20 rounded-lg w-16 h-16  px-3 py-2 cursor-pointer"
             style={style}
             onClick={onClick}
         >
@@ -679,7 +690,7 @@ export const UserComponent = ({ ID: userId, shareId, style }: UserComponentProps
             <div className="mr-0 ">
                 <UserAvatarDummy user={user ?? undefined} size={36} disableHoverEffect={true} />
             </div>
-            <div className=" flex-col min-h-12 min-w-0 w-0 items-start lg:ms-2 hidden lg:flex lg:w-auto lg:pe-2">
+            <div className=" flex-col min-h-12 min-w-0 w-0 items-start lg:ms-2 hidden lg:hidden lg:w-auto lg:pe-2">
                 <p className="font-semibold text-text truncate w-full">{user?.Name ?? "Caricamento..."}</p>
                 <p className="text-xs text-text/70 truncate w-full">@{user?.Username === "" ? "username" : user?.Username}</p>
             </div>
