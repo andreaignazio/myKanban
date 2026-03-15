@@ -130,7 +130,7 @@ func (p *StripeProvider) GetSubscriptionState(ctx context.Context, input GetSubs
 		occurredAt = time.Now()
 	}
 
-	return buildSubscriptionStateEvent(eventType, input.EventID, occurredAt, stripeSubscription)
+	return p.buildSubscriptionStateEvent(eventType, input.EventID, occurredAt, stripeSubscription)
 }
 
 func (p *StripeProvider) CreateSubscriptionUpdateConfirmationSession(ctx context.Context, input CreateSubscriptionUpdateConfirmationSessionInput) (*CreateCheckoutSessionOutput, error) {
@@ -221,7 +221,7 @@ func (p *StripeProvider) CancelSubscription(ctx context.Context, subscriptionID 
 		return nil, domainerr.New(nil, "received nil subscription from Stripe cancel update")
 	}
 
-	return buildSubscriptionStateEvent(string(CustomerSubscriptionUpdated), "", time.Now(), updatedSubscription)
+	return p.buildSubscriptionStateEvent(string(CustomerSubscriptionUpdated), "", time.Now(), updatedSubscription)
 }
 
 func (p *StripeProvider) ResumeSubscription(ctx context.Context, subscriptionID string) (*BillingWebhookEvent, error) {
@@ -240,7 +240,7 @@ func (p *StripeProvider) ResumeSubscription(ctx context.Context, subscriptionID 
 		return nil, domainerr.New(nil, "received nil subscription from Stripe resume update")
 	}
 
-	return buildSubscriptionStateEvent(string(CustomerSubscriptionUpdated), "", time.Now(), updatedSubscription)
+	return p.buildSubscriptionStateEvent(string(CustomerSubscriptionUpdated), "", time.Now(), updatedSubscription)
 }
 
 func (p *StripeProvider) ReleaseSubscriptionSchedule(ctx context.Context, scheduleID string) error {
@@ -419,7 +419,7 @@ func (p *StripeProvider) VerifyAndParseWebhook(ctx context.Context, rawBody []by
 			return nil, domainerr.Wrap(err, "failed to unmarshal subscription from webhook event")
 		}
 
-		return buildSubscriptionStateEvent(string(event.Type), event.ID, time.Unix(event.Created, 0), &stripeSubscription)
+		return p.buildSubscriptionStateEvent(string(event.Type), event.ID, time.Unix(event.Created, 0), &stripeSubscription)
 
 	default:
 		fmt.Println("Received unsupported event type:", event.Type)
@@ -427,7 +427,23 @@ func (p *StripeProvider) VerifyAndParseWebhook(ctx context.Context, rawBody []by
 	}
 }
 
-func buildSubscriptionStateEvent(eventType string, eventID string, occurredAt time.Time, stripeSubscription *stripe.Subscription) (*BillingWebhookEvent, error) {
+func (p *StripeProvider) mapPriceIDToPlan(priceID string) (subscriptionplan.Plan, bool) {
+	if priceID == "" {
+		return "", false
+	}
+	if id := os.Getenv("STRIPE_PRICE_FREE_ID"); id != "" && priceID == id {
+		return subscriptionplan.Free, true
+	}
+	if id := os.Getenv("STRIPE_PRICE_PRO_ID"); id != "" && priceID == id {
+		return subscriptionplan.Pro, true
+	}
+	if id := os.Getenv("STRIPE_PRICE_PREMIUM_ID"); id != "" && priceID == id {
+		return subscriptionplan.Premium, true
+	}
+	return "", false
+}
+
+func (p *StripeProvider) buildSubscriptionStateEvent(eventType string, eventID string, occurredAt time.Time, stripeSubscription *stripe.Subscription) (*BillingWebhookEvent, error) {
 	if stripeSubscription == nil {
 		return nil, domainerr.New(nil, "missing subscription in webhook event")
 	}
@@ -462,6 +478,12 @@ func buildSubscriptionStateEvent(eventType string, eventID string, occurredAt ti
 		}
 		currentPeriodStart = stripeUnixPtr(item.CurrentPeriodStart)
 		currentPeriodEnd = stripeUnixPtr(item.CurrentPeriodEnd)
+	}
+	// If the price on the subscription item maps to a known plan, use it.
+	// This handles upgrades via the Billing Portal, which updates the price
+	// on the subscription item but does NOT update the subscription metadata.
+	if derivedPlan, ok := p.mapPriceIDToPlan(priceID); ok {
+		plan = derivedPlan
 	}
 
 	snapshot := ProviderSubscriptionSnapshot{
