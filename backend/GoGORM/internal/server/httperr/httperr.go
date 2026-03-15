@@ -63,6 +63,9 @@ func classify(err error) (int, string, string) {
 	if errors.Is(err, domainerr.ErrNotFound) {
 		return http.StatusNotFound, "not_found", "not found"
 	}
+	if errors.Is(err, domainerr.ErrMemberSuspended) {
+		return http.StatusForbidden, "member_suspended", "workspace membership is suspended"
+	}
 	if errors.Is(err, domainerr.ErrForbidden) {
 		return http.StatusForbidden, "forbidden", "forbidden"
 	}

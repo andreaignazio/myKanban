@@ -19,14 +19,19 @@ type WorkspaceBoardHandler struct {
 type WorkspaceBoardHandlerMode string
 
 const (
-	WorkspaceBoardHandlerModeCreated  WorkspaceBoardHandlerMode = "created"
-	WorkspaceBoardHandlerModeClosed   WorkspaceBoardHandlerMode = "closed"
-	WorkspaceBoardHandlerModeRestored WorkspaceBoardHandlerMode = "restored"
-	WorkspaceBoardHandlerModePurged   WorkspaceBoardHandlerMode = "purged"
+	WorkspaceBoardHandlerModeCreated        WorkspaceBoardHandlerMode = "created"
+	WorkspaceBoardHandlerModeCreatedPrivate WorkspaceBoardHandlerMode = "created.private"
+	WorkspaceBoardHandlerModeClosed         WorkspaceBoardHandlerMode = "closed"
+	WorkspaceBoardHandlerModeRestored       WorkspaceBoardHandlerMode = "restored"
+	WorkspaceBoardHandlerModePurged         WorkspaceBoardHandlerMode = "purged"
 )
 
 func NewWorkspaceBoardCreatedHandler(auditRepo auditcontext.Reader) *WorkspaceBoardHandler {
 	return &WorkspaceBoardHandler{auditRepo: auditRepo, mode: WorkspaceBoardHandlerModeCreated}
+}
+
+func NewWorkspaceBoardCreatedPrivateHandler(auditRepo auditcontext.Reader) *WorkspaceBoardHandler {
+	return &WorkspaceBoardHandler{auditRepo: auditRepo, mode: WorkspaceBoardHandlerModeCreatedPrivate}
 }
 
 func NewWorkspaceBoardClosedHandler(auditRepo auditcontext.Reader) *WorkspaceBoardHandler {
@@ -92,7 +97,7 @@ func (h *WorkspaceBoardHandler) Build(ctx context.Context, evt DomainEvent) (Eve
 
 	var templateKey AuditTemplateKey
 	switch h.mode {
-	case WorkspaceBoardHandlerModeCreated:
+	case WorkspaceBoardHandlerModeCreated, WorkspaceBoardHandlerModeCreatedPrivate:
 		templateKey = AuditTemplateWorkspaceBoardCreated
 	case WorkspaceBoardHandlerModeClosed:
 		templateKey = AuditTemplateWorkspaceBoardClosed
@@ -143,6 +148,43 @@ func (h *WorkspaceBoardHandler) Build(ctx context.Context, evt DomainEvent) (Eve
 			}
 		}
 		result.UserPayload = userPayload
+	}
+
+	if h.mode == WorkspaceBoardHandlerModeCreatedPrivate {
+		// Fan-out to creator + all admin/owner members of the workspace
+		adminOwnerIDs, err := h.auditRepo.GetWorkspaceAdminOwnerUserIDs(ctx, *evt.WorkspaceID)
+		if err != nil {
+			return EventBuildResult{}, err
+		}
+		// Build a set of recipients: creator first, then admins/owners
+		recipientSet := make(map[uuid.UUID]struct{})
+		recipientSet[*evt.ActorUserID] = struct{}{}
+		for _, id := range adminOwnerIDs {
+			recipientSet[id] = struct{}{}
+		}
+		// Fetch the userBoard for the creator (created during board creation)
+		creatorUserBoards, err := h.auditRepo.GetUserBoardsByBoardID(ctx, boardID)
+		if err != nil {
+			return EventBuildResult{}, err
+		}
+		creatorUBByUserID := make(map[uuid.UUID]*dto.UserBoardResponse, len(creatorUserBoards))
+		for _, ub := range creatorUserBoards {
+			resp := dto.UserBoardToResponse(ub)
+			creatorUBByUserID[ub.UserID] = &resp
+		}
+		userEventType := ws.EventUserWorkspaceBoardCreated
+		userPayload := make(map[uuid.UUID]ws.UserEventPayload, len(recipientSet))
+		for recipientID := range recipientSet {
+			payload := ws.WorkspaceBoardCreatedPayload{
+				Board:     boardMeta,
+				UserBoard: creatorUBByUserID[recipientID], // nil for admins without board membership
+			}
+			userPayload[recipientID] = ws.UserEventPayload{
+				WorkspaceBoardCreatedPayload: &payload,
+			}
+		}
+		result.UserPayload = userPayload
+		result.UserEventType = &userEventType
 	}
 
 	return result, nil

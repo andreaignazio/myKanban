@@ -17,10 +17,11 @@ type BoardGridProps = {
     overrideWorkspaceId?: string;
     className?: string;
     overrideClassName?: boolean; // If true, will not apply default grid column class
+    filterFn?: (boardId: string) => boolean;
 
 }
 
-export const BoardGrid = forwardRef<HTMLDivElement, BoardGridProps>(({ overrideWorkspaceId, className, overrideClassName }: BoardGridProps, ref) => {
+export const BoardGrid = forwardRef<HTMLDivElement, BoardGridProps>(({ overrideWorkspaceId, className, overrideClassName, filterFn }: BoardGridProps, ref) => {
     const workspaceId = overrideWorkspaceId ?? (useParams().workspaceId as string);
     const gridColumnsClassName = className?.includes("grid-cols-")
         ? ""
@@ -66,6 +67,14 @@ export const BoardGrid = forwardRef<HTMLDivElement, BoardGridProps>(({ overrideW
 
         return [...sortedWithRelation, ...sortedWithoutRelation];
     }, [boardIds, userBoardsById, boardsById, sortByPosition]);
+
+    const filteredBoardIds = useMemo(() => {
+        if (!filterFn) return sortedBoardIds;
+        return sortedBoardIds.filter(filterFn);
+    }, [sortedBoardIds, filterFn]);
+
+
+
     return (
 
         <div
@@ -85,7 +94,7 @@ export const BoardGrid = forwardRef<HTMLDivElement, BoardGridProps>(({ overrideW
                 ))}
             </AnimatePresence>
             <AnimatePresence mode="popLayout">
-                {sortedBoardIds.map((boardId: string, i: number) => (
+                {filteredBoardIds.map((boardId: string, i: number) => (
                     <motion.div
                         key={boardId}
                         layout

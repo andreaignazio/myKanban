@@ -58,6 +58,7 @@ const (
 	EventCardsUserMemberAdded                      UserEventType = "cards.user.member.added"
 	EventCardsUserMemberRemoved                    UserEventType = "cards.user.member.removed"
 	EventUserWorkspaceBoardRestored                UserEventType = "workspace.user.board.restored"
+	EventUserWorkspaceBoardCreated                 UserEventType = "workspace.user.board.created"
 	EventUserWorkspaceMemberRoleChanged            UserEventType = "workspace.user.member.role.changed"
 	EventUserWorkspaceMemberRemoved                UserEventType = "workspace.user.member.removed"
 	EventUserBoardMemberRemoved                    UserEventType = "board.user.member.removed"
@@ -86,6 +87,7 @@ const (
 	EventUserBoardShareInviteRevokedAdmin          UserEventType = "board.user.shareoffer.admin.invite.revoked"
 	EventUserBoardShareInviteRevokedNonAdmin       UserEventType = "board.user.shareoffer.nonadmin.invite.revoked"
 	EventUserBoardShareRequestCreatedAdmin         UserEventType = "board.user.shareoffer.admin.request.created"
+	EventUserWorkspaceMemberSuspensionUpdated      UserEventType = "workspace.user.member.suspension.updated"
 	EventUserBoardShareRequestCreatedNonAdmin      UserEventType = "board.user.shareoffer.nonadmin.request.created"
 	EventUserBoardShareRequestAcceptedAdmin        UserEventType = "board.user.shareoffer.admin.request.accepted"
 	EventUserBoardShareRequestAcceptedNonAdmin     UserEventType = "board.user.shareoffer.nonadmin.request.accepted"
@@ -119,6 +121,17 @@ type UserEventPayload struct {
 	BoardShareRequestRevokedPayload          *BoardShareRequestRevokedPayload          `json:"BoardShareRequestRevokedPayload,omitempty"`
 	BoardMembershipPayload                   *BoardMembershipPayload                   `json:"BoardMembershipPayload,omitempty"`
 	BoardMemberRoleChangedPayload            *BoardMemberRoleChangedPayload            `json:"BoardMemberRoleChangedPayload,omitempty"`
+	WorkspaceMemberSuspensionUpdatedPayload  *WorkspaceMemberSuspensionUpdatedPayload  `json:"WorkspaceMemberSuspensionUpdatedPayload,omitempty"`
+	WorkspaceBoardCreatedPayload             *WorkspaceBoardCreatedPayload             `json:"WorkspaceBoardCreatedPayload,omitempty"`
+}
+
+type WorkspaceMemberSuspensionUpdatedPayload struct {
+	UserWorkspace dto.UserWorkspaceResponse `json:"UserWorkspace"`
+}
+
+type WorkspaceBoardCreatedPayload struct {
+	Board     dto.BoardResponse      `json:"Board"`
+	UserBoard *dto.UserBoardResponse `json:"UserBoard,omitempty"`
 }
 
 type CardsUserMemberAddedPayload struct {

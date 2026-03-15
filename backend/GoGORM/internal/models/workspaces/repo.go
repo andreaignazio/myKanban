@@ -317,6 +317,45 @@ func (r *GormWorkspaceRepo) GetWorkspaceBoardsForUserID(ctx context.Context, use
 	return rows, nil
 }
 
+func (r *GormWorkspaceRepo) GetAllWorkspaceBoardsForAdmin(ctx context.Context, userID uuid.UUID, workspaceIDs []uuid.UUID) ([]boards.UserBoardRow, error) {
+	if len(workspaceIDs) == 0 {
+		return []boards.UserBoardRow{}, nil
+	}
+	var rows []boards.UserBoardRow
+	if err := r.db.WithContext(ctx).
+		Table("boards").
+		Joins("LEFT JOIN user_boards ub ON ub.board_id = boards.id AND ub.user_id = ? AND ub.deleted_at IS NULL", userID).
+		Select(`
+			boards.id AS board_id,
+			boards.name AS board_name,
+			boards.created_by_user_id AS board_created_by_user_id,
+			boards.workspace_id AS board_workspace_id,
+			boards.visibility AS board_visibility,
+			boards.public_token AS board_public_token,
+			boards.props AS board_props,
+			boards.is_suspended AS board_is_suspended,
+			boards.is_pending_suspend AS board_is_pending_suspend,
+			boards.created_at AS board_created_at,
+			boards.updated_at AS board_updated_at,
+			boards.deleted_at AS board_deleted_at,
+			ub.user_id AS ub_user_id,
+			ub.board_id AS ub_board_id,
+			ub.role AS ub_role,
+			ub.pos AS ub_pos,
+			ub.props AS ub_props,
+			ub.created_at AS ub_created_at,
+			ub.updated_at AS ub_updated_at,
+			ub.deleted_at AS ub_deleted_at
+		`).
+		Where("boards.workspace_id IN ?", workspaceIDs).
+		Where("boards.deleted_at IS NULL").
+		Order("boards.created_at DESC").
+		Scan(&rows).Error; err != nil {
+		return nil, err
+	}
+	return rows, nil
+}
+
 func (r *GormWorkspaceRepo) GetUserWorkspace(ctx context.Context, userID, workspaceID uuid.UUID) (*models.UserWorkspace, error) {
 	var userWorkspace models.UserWorkspace
 	if err := r.db.WithContext(ctx).

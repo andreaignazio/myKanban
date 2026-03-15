@@ -26,6 +26,24 @@ type SubscriptionCheckoutResponse struct {
 	Subscription *dto.SubscriptionResponse `json:"Subscription,omitempty"`
 }
 
+type MemberSuspensionState struct {
+	UserID           uuid.UUID `json:"UserID"`
+	IsSuspended      bool      `json:"IsSuspended"`
+	IsPendingSuspend bool      `json:"IsPendingSuspend"`
+}
+
+type BoardSuspensionState struct {
+	BoardID          uuid.UUID `json:"BoardID"`
+	IsSuspended      bool      `json:"IsSuspended"`
+	IsPendingSuspend bool      `json:"IsPendingSuspend"`
+}
+
+type SubscriptionReconcileResponse struct {
+	Subscription dto.SubscriptionResponse `json:"Subscription"`
+	MemberStates []MemberSuspensionState  `json:"MemberStates"`
+	BoardStates  []BoardSuspensionState   `json:"BoardStates"`
+}
+
 type ReplaceWorkspaceBoardSuspensionSelectionRequest struct {
 	MarkedBoardIDs   []uuid.UUID `json:"MarkedBoardIDs"`
 	UnmarkedBoardIDs []uuid.UUID `json:"UnmarkedBoardIDs"`

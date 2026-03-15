@@ -3,43 +3,44 @@ package EventRegistry
 type DomainEventType string
 
 const (
-	EventCardCreated              DomainEventType = "card.created"
-	EventCardPatched              DomainEventType = "card.patched"
-	EventBoardPatched             DomainEventType = "board.patched"
-	EventBoardLabelCreated        DomainEventType = "board.label.created"
-	EventBoardLabelDeleted        DomainEventType = "board.label.deleted"
-	EventBoardLabelPatched        DomainEventType = "board.label.patched"
-	EventCardLabelAdded           DomainEventType = "card.label.added"
-	EventCardLabelRemoved         DomainEventType = "card.label.removed"
-	EventCardMemberAdded          DomainEventType = "card.member.added"
-	EventCardMemberRemoved        DomainEventType = "card.member.removed"
-	EventChecklistCreated         DomainEventType = "checklist.created"
-	EventChecklistCopied          DomainEventType = "checklist.copied"
-	EventChecklistPatched         DomainEventType = "checklist.patched"
-	EventChecklistDeleted         DomainEventType = "checklist.deleted"
-	EventChecklistMoved           DomainEventType = "checklist.moved"
-	EventChecklistEntryCreated    DomainEventType = "checklist.entry.created"
-	EventChecklistEntryPatched    DomainEventType = "checklist.entry.patched"
-	EventChecklistEntryDeleted    DomainEventType = "checklist.entry.deleted"
-	EventChecklistEntryMoved      DomainEventType = "checklist.entry.moved"
-	EventChecklistEntryConverted  DomainEventType = "checklist.entry.converted"
-	EventEntryMemberAdded         DomainEventType = "checklist.entry.member.added"
-	EventEntryMemberRemoved       DomainEventType = "checklist.entry.member.removed"
-	EventChecklistEntryCrossMoved DomainEventType = "checklist.entry.crossmoved"
-	EventCardCommentCreated       DomainEventType = "card.comment.created"
-	EventCardCommentDeleted       DomainEventType = "card.comment.deleted"
-	EventCardCommentEdited        DomainEventType = "card.comment.edited"
-	EventListPatched              DomainEventType = "list.patched"
-	EventCardMirrored             DomainEventType = "card.mirrored"
-	EventCardMirroredTarget       DomainEventType = "card.mirrored.target"
-	EventCardMirroredSource       DomainEventType = "card.mirrored.source"
-	EventListCardCrossBoardMoved  DomainEventType = "listcard.crossboard.moved"
-	EventInboxRootCardMoved       DomainEventType = "inbox.rootcard.moved"
-	EventWorkspaceBoardCreated    DomainEventType = "workspace.board.created"
-	EventWorkspaceBoardClosed     DomainEventType = "workspace.board.closed"
-	EventWorkspaceBoardRestored   DomainEventType = "workspace.board.restored"
-	EventWorkspaceBoardPurged     DomainEventType = "workspace.board.purged"
-	EventWorkspacePatched         DomainEventType = "workspace.patched"
+	EventCardCreated                  DomainEventType = "card.created"
+	EventCardPatched                  DomainEventType = "card.patched"
+	EventBoardPatched                 DomainEventType = "board.patched"
+	EventBoardLabelCreated            DomainEventType = "board.label.created"
+	EventBoardLabelDeleted            DomainEventType = "board.label.deleted"
+	EventBoardLabelPatched            DomainEventType = "board.label.patched"
+	EventCardLabelAdded               DomainEventType = "card.label.added"
+	EventCardLabelRemoved             DomainEventType = "card.label.removed"
+	EventCardMemberAdded              DomainEventType = "card.member.added"
+	EventCardMemberRemoved            DomainEventType = "card.member.removed"
+	EventChecklistCreated             DomainEventType = "checklist.created"
+	EventChecklistCopied              DomainEventType = "checklist.copied"
+	EventChecklistPatched             DomainEventType = "checklist.patched"
+	EventChecklistDeleted             DomainEventType = "checklist.deleted"
+	EventChecklistMoved               DomainEventType = "checklist.moved"
+	EventChecklistEntryCreated        DomainEventType = "checklist.entry.created"
+	EventChecklistEntryPatched        DomainEventType = "checklist.entry.patched"
+	EventChecklistEntryDeleted        DomainEventType = "checklist.entry.deleted"
+	EventChecklistEntryMoved          DomainEventType = "checklist.entry.moved"
+	EventChecklistEntryConverted      DomainEventType = "checklist.entry.converted"
+	EventEntryMemberAdded             DomainEventType = "checklist.entry.member.added"
+	EventEntryMemberRemoved           DomainEventType = "checklist.entry.member.removed"
+	EventChecklistEntryCrossMoved     DomainEventType = "checklist.entry.crossmoved"
+	EventCardCommentCreated           DomainEventType = "card.comment.created"
+	EventCardCommentDeleted           DomainEventType = "card.comment.deleted"
+	EventCardCommentEdited            DomainEventType = "card.comment.edited"
+	EventListPatched                  DomainEventType = "list.patched"
+	EventCardMirrored                 DomainEventType = "card.mirrored"
+	EventCardMirroredTarget           DomainEventType = "card.mirrored.target"
+	EventCardMirroredSource           DomainEventType = "card.mirrored.source"
+	EventListCardCrossBoardMoved      DomainEventType = "listcard.crossboard.moved"
+	EventInboxRootCardMoved           DomainEventType = "inbox.rootcard.moved"
+	EventWorkspaceBoardCreated        DomainEventType = "workspace.board.created"
+	EventWorkspaceBoardCreatedPrivate DomainEventType = "workspace.board.created.private"
+	EventWorkspaceBoardClosed         DomainEventType = "workspace.board.closed"
+	EventWorkspaceBoardRestored       DomainEventType = "workspace.board.restored"
+	EventWorkspaceBoardPurged         DomainEventType = "workspace.board.purged"
+	EventWorkspacePatched             DomainEventType = "workspace.patched"
 
 	EventWorkspaceMemberRoleChanged DomainEventType = "workspace.member.role.changed"
 	EventWorkspaceMemberRemoved     DomainEventType = "workspace.member.removed"
@@ -92,6 +93,9 @@ const (
 	EventWorkspaceSubscriptionCreated  DomainEventType = "workspace.subscription.created"
 	EventWorkspaceSubscriptionUpdated  DomainEventType = "workspace.subscription.updated"
 	EventWorkspaceSubscriptionCanceled DomainEventType = "workspace.subscription.canceled"
+
+	EventWorkspaceMemberSuspensionUpdated DomainEventType = "workspace.member.suspension.updated"
+	EventWorkspaceBoardSuspensionUpdated  DomainEventType = "workspace.board.suspension.updated"
 )
 
 func (e DomainEventType) IsValidEventType() bool {
@@ -176,7 +180,10 @@ func (e DomainEventType) IsValidEventType() bool {
 		EventWorkspaceShareLinkRevoked,
 		EventWorkspaceSubscriptionCreated,
 		EventWorkspaceSubscriptionUpdated,
-		EventWorkspaceSubscriptionCanceled:
+		EventWorkspaceSubscriptionCanceled,
+		EventWorkspaceMemberSuspensionUpdated,
+		EventWorkspaceBoardSuspensionUpdated,
+		EventWorkspaceBoardCreatedPrivate:
 
 		return true
 	default:
@@ -289,7 +296,10 @@ func (e DomainEventType) IsWorkspaceCoreToastEvent() bool {
 		EventWorkspaceShareLinkRevoked,
 		EventWorkspaceSubscriptionCreated,
 		EventWorkspaceSubscriptionUpdated,
-		EventWorkspaceSubscriptionCanceled:
+		EventWorkspaceSubscriptionCanceled,
+		EventWorkspaceMemberSuspensionUpdated,
+		EventWorkspaceBoardSuspensionUpdated:
+
 		return true
 	default:
 		return false
@@ -299,6 +309,7 @@ func (e DomainEventType) IsWorkspaceCoreToastEvent() bool {
 func (e DomainEventType) IsUserFanOutEvent() bool {
 	switch e {
 	case EventWorkspaceBoardRestored,
+		EventWorkspaceBoardCreatedPrivate,
 		EventWorkspaceMemberRoleChanged,
 		EventWorkspaceMemberRemoved,
 		EventCardsUserMemberAdded,
@@ -319,7 +330,8 @@ func (e DomainEventType) IsUserFanOutEvent() bool {
 		EventBoardShareRequestCreated,
 		EventBoardShareRequestAccepted,
 		EventBoardShareRequestRejected,
-		EventBoardShareRequestRevoked:
+		EventBoardShareRequestRevoked,
+		EventWorkspaceMemberSuspensionUpdated:
 		return true
 	default:
 		return false

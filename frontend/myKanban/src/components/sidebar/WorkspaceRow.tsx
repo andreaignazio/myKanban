@@ -13,6 +13,9 @@ import { HomeIcon } from "@heroicons/react/24/solid";
 
 
 import { useWorkspaceStore } from "@/stores/workspaceStore";
+import { useWsMembersStore } from "@/stores/wsMembersStore";
+import { useAuthStore } from "@/stores/auth";
+import { WorkspaceSuspensionBadge } from "@/components/badges/WorkspaceSuspensionBadge";
 import { forwardRef, useEffect, useState } from "react";
 import { ChevronDown, MailOpen } from "lucide-react";
 
@@ -21,6 +24,11 @@ export const WorkspaceRow = forwardRef<HTMLDivElement, WorkspaceRowProps>(({ wor
 
     const subscription = useWorkspaceStore((state) => state.wSubscriptionsById[workspaceId]?.Plan ?? "free")
     const subscriptionLabel = subscription.charAt(0).toUpperCase() + subscription.slice(1)
+
+    const currentUserId = useAuthStore((state) => state.userID)
+    const userWorkspace = useWsMembersStore((state) => state.userWorkspacesByWorkspaceId[workspaceId]?.[currentUserId ?? ""])
+    const isSuspended = userWorkspace?.IsSuspended ?? false
+    const isPendingSuspension = userWorkspace?.IsPendingSuspend ?? false
 
     const isWorkspaceAccessible = status === "accessible"
     const isStatusOffered = status === "offered"
@@ -48,16 +56,20 @@ export const WorkspaceRow = forwardRef<HTMLDivElement, WorkspaceRowProps>(({ wor
     const isCompact = !isActive
 
 
+    const isClickable = isWorkspaceAccessible && !isSuspended
+
     return (
         <>
             <div ref={ref}
-                onClick={(e) => onSubRowToggle && isWorkspaceAccessible && onSubRowToggle(workspaceId)}
+                onClick={(e) => onSubRowToggle && isClickable && onSubRowToggle(workspaceId)}
                 className={`grid grid-cols-[36px_1fr_1fr_1fr] h-11 
                     ${className}
         p-1 items-center relative ${resolvedActive ? "bg-active " : "hover:bg-surface"}
         ${isCompact ? "h-[36px]" : "h-[44px]"}
-         rounded-xl text-text hover:bg-active cursor-pointer
+         rounded-xl text-text hover:bg-active
+         ${isClickable ? "cursor-pointer" : "cursor-default"}
          ${isWorkspaceAccessible ? "" : isStatusOffered ? "opacity-80" : "opacity-50"}
+         ${isSuspended ? "opacity-50" : ""}
           transition-[padding,height,border-color,background-color] duration-300 ease-in-out`}>
                 <div className={`col-span-1   h-full w-full
              rounded-lg 
@@ -70,8 +82,18 @@ export const WorkspaceRow = forwardRef<HTMLDivElement, WorkspaceRowProps>(({ wor
                     <div className={`${isCompact ? "text-[13px] font-normal text-gray-300/80" : "text-gray-200 text-sm font-medium"}`}>{workspace.Name}</div>
                     <div className={`
                         ${isCompact ? "h-0 opacity-0" : "h-auto opacity-100"}
-                        text-xs font-extralight`}>{subscriptionLabel}</div>
+                        flex flex-row items-center gap-1.5
+                        text-xs font-extralight`}>
+                        <span>{subscriptionLabel}</span>
+                        <WorkspaceSuspensionBadge userWorkspace={userWorkspace} />
+                    </div>
                 </div>
+                {/* Compact-mode suspension dot */}
+                {isCompact && (
+                    <div className="absolute bottom-1 start-1">
+                        <WorkspaceSuspensionBadge userWorkspace={userWorkspace} compact />
+                    </div>
+                )}
                 <div className={`absolute end-12 ${isStatusOffered ? "opacity-100" : "opacity-0"} transition-opacity`}>
                     <MailOpen className="w-4 h-4 text-white" />
                 </div>

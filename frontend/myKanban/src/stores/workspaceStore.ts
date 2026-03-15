@@ -3,14 +3,14 @@ import { getSubscriptionMaxBoards } from "@/domain/plans";
 import { create } from "zustand";
 
 import type { BoardDetailPatch, DeltaPayload } from "./boardDetailStore";
-import type { PatchWorkspacePropsRequest, SubscriptionPlan, User, UserEvent, UserWorkspace, UserWorkspaceBoardRestoredPayload, Workspace, WorkspaceEvent, WorkspaceSubscription } from "./types";
+import type { PatchWorkspacePropsRequest, SubscriptionPlan, User, UserEvent, UserWorkspace, UserWorkspaceBoardRestoredPayload, Workspace, WorkspaceEvent, WorkspaceSubscription, Board } from "./types";
 import { useWsMembersStore } from "./wsMembersStore";
 import { useUserStore } from "./userStore";
 import { useBoardsStore, type UserBoardData } from "./boardsStore";
 import type { AnyUser } from "./usertypes";
 import { useUiStore } from "./uiStore";
 import { useAuthStore } from "./auth";
-import type { RequestSubscriptionCheckout, SubscriptionCheckoutResponse } from "@/types/subscriptiontypes";
+import type { RequestSubscriptionCheckout, SubscriptionCheckoutResponse, SubscriptionReconcileResponse } from "@/types/subscriptiontypes";
 import type { ShareOffer } from "./shareOfferTypes";
 import { useAsyncRequestStore } from "./asyncRequestStore";
 import { buildAppURL } from "@/config/runtime";
@@ -76,6 +76,7 @@ export type WorkspaceStore = {
     createUpgradeSubscriptionRequest: (plan: SubscriptionPlan, seats: number, workspaceID: string) => Promise<void>;
     cancelWorkspaceSubscription: (workspaceID: string) => Promise<WorkspaceSubscription | null>;
     resumeWorkspaceSubscription: (workspaceID: string) => Promise<WorkspaceSubscription | null>;
+    fetchWorkspaceSubscription: (workspaceID: string) => Promise<void>;
     patchWorkspaceProps: (workspaceID: string, payload: PatchWorkspacePropsRequest) => Promise<Workspace>;
     getWorkspaceWhereUserIsMember: (userId: string) => Workspace[];
     isWorkspaceAccessible: (workspaceId: string) => boolean;
@@ -83,6 +84,7 @@ export type WorkspaceStore = {
     appendPendingWorkspaceId: (workspaceId: string, offerKind: "invite" | "request", offerID?: string, workspace?: Workspace) => void;
     removePendingWorkspaceId: (workspaceId: string, offerKind: "invite" | "request") => void;
     getWorkspaceStatus: (workspaceId: string) => "accessible" | "offered" | "requested" | "none";
+    getMyWorkspaceMemberStatus: (workspaceId: string) => "active" | "suspended" | "pending_suspension";
     isAnyWorkspaceAvailabe: () => boolean;
 };
 
@@ -365,6 +367,16 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
                 useBoardsStore.getState().applyCrateBoard(data)
                 break
             }
+            case "workspace.user.board.created": {
+                const payload = (evt as UserEvent).Payload.WorkspaceBoardCreatedPayload
+                if (!payload) return
+                const data: UserBoardData = {
+                    Boards: [payload.Board],
+                    UserBoards: payload.UserBoard ? [payload.UserBoard] : []
+                }
+                useBoardsStore.getState().applyCrateBoard(data)
+                break
+            }
             case "workspace.board.purged": {
                 console.log("Applying board purged event", evt)
                 const payload = evt.Payload.StatePayload as BoardDetailPatch
@@ -418,6 +430,30 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
                         [evt.WorkspaceID]: subscription,
                     }
                 }))
+                break
+            }
+            case "workspace.member.suspension.updated": {
+                const relations = (evt as WorkspaceEvent).Payload?.StatePayload?.UserWorkspaceRelations ?? []
+                if (relations.length > 0) {
+                    useWsMembersStore.getState().applyUpsertUserWorkspaceRelations(relations)
+                }
+                break
+            }
+            case "workspace.board.suspension.updated": {
+                const boards = (evt as WorkspaceEvent).Payload?.StatePayload?.Boards ?? {}
+                const patch: Record<string, Partial<Board>> = {}
+                for (const [id, board] of Object.entries(boards)) {
+                    patch[id] = { IsSuspended: (board as Board).IsSuspended, IsPendingSuspend: (board as Board).IsPendingSuspend }
+                }
+                if (Object.keys(patch).length > 0) {
+                    useBoardsStore.getState().mergeBoardsPatch(patch)
+                }
+                // If the user is currently viewing a board that just became suspended, kick them out
+                const currentBoardId = useUiStore.getState().currentRouteParams.boardId
+                if (currentBoardId && patch[currentBoardId]?.IsSuspended === true) {
+                    const workspaceId = (evt as WorkspaceEvent).WorkspaceID
+                    useUiStore.getState().setLostBoardAccessModalOpen(true, currentBoardId, workspaceId)
+                }
                 break
             }
 
@@ -513,6 +549,39 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
         )
 
         return response?.data as WorkspaceSubscription | null
+    },
+    fetchWorkspaceSubscription: async (workspaceID: string) => {
+        const response = await api.get(`/workspaces/${workspaceID}/subscription`);
+        const data = response.data as SubscriptionReconcileResponse;
+
+        set((state) => ({
+            wSubscriptionsById: {
+                ...state.wSubscriptionsById,
+                [workspaceID]: data.Subscription,
+            },
+        }));
+
+        if (data.MemberStates.length > 0) {
+            const existingMembers = useWsMembersStore.getState().userWorkspacesByWorkspaceId[workspaceID] ?? {};
+            const updatedRelations = data.MemberStates
+                .map((ms) => {
+                    const existing = existingMembers[ms.UserID];
+                    if (!existing) return null;
+                    return { ...existing, IsSuspended: ms.IsSuspended, IsPendingSuspend: ms.IsPendingSuspend };
+                })
+                .filter((r): r is NonNullable<typeof r> => r !== null);
+            if (updatedRelations.length > 0) {
+                useWsMembersStore.getState().mergeUserWorkspaceRelation(updatedRelations);
+            }
+        }
+
+        if (data.BoardStates.length > 0) {
+            const boardPatch: Record<string, Partial<Board>> = {};
+            data.BoardStates.forEach((bs) => {
+                boardPatch[bs.BoardID] = { IsSuspended: bs.IsSuspended, IsPendingSuspend: bs.IsPendingSuspend };
+            });
+            useBoardsStore.getState().mergeBoardsPatch(boardPatch);
+        }
     },
     patchWorkspaceProps: async (workspaceID: string, payload: PatchWorkspacePropsRequest) => {
         const response = await api.patch(`/workspaces/${workspaceID}/props`, payload);
@@ -638,6 +707,15 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
             return "requested"
         }
         return "none"
+    },
+    getMyWorkspaceMemberStatus: (workspaceId: string) => {
+        const currentUserId = useAuthStore.getState().userID
+        if (!currentUserId) return "active"
+        const uw = useWsMembersStore.getState().userWorkspacesByWorkspaceId[workspaceId]?.[currentUserId]
+        if (!uw) return "active"
+        if (uw.IsSuspended) return "suspended"
+        if (uw.IsPendingSuspend) return "pending_suspension"
+        return "active"
     },
     isAnyWorkspaceAvailabe: () => {
         const { workspaceIds } = get();

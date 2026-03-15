@@ -38,6 +38,8 @@ export function BoardCard({ boardID: boardID, workspaceId: overrideWorkspaceId }
     const offerIdByBoardId = useBoardsStore((state) => state.offerIdByBoardId);
     const isRequested = boardStatus === "requested"
     const isOffered = boardStatus === "offered"
+    const isSuspended = boardStatus === "suspended"
+    const isPendingSuspension = boardStatus === "pending_suspension"
     const pendingAccessRequestsCount = useShareOffersStore((state) => {
         const ids = state.boardReceivedRequestsIdsByBoardId[boardID] ?? [];
         const offerById = useCacheStore.getState().offerById;
@@ -54,6 +56,9 @@ export function BoardCard({ boardID: boardID, workspaceId: overrideWorkspaceId }
     const workspaceId = overrideWorkspaceId ?? (useParams().workspaceId as string);
     const handleOpenBoard = () => {
 
+        if (isSuspended || isPendingSuspension) {
+            return
+        }
         if (isLocked) {
             const pendingOfferId = offerIdByBoardId[boardID]
             if ((isRequested || isOffered) && pendingOfferId) {
@@ -123,6 +128,7 @@ export function BoardCard({ boardID: boardID, workspaceId: overrideWorkspaceId }
     const gradientIndex = getStableIndexFromString(boardID, gradientColorTokens.length);
     const fallbackGradient = gradientColorTokens[gradientIndex];
 
+    const isPrivate = board?.Visibility === "private"
     const userMembership = useBoardsStore((state) => state.userBoardsById[boardID])
     const isOwnerOrAdmin = userMembership?.Role === "owner" || userMembership?.Role === "admin"
 
@@ -133,6 +139,8 @@ export function BoardCard({ boardID: boardID, workspaceId: overrideWorkspaceId }
                 className={`
                     ${isRequested ? "ring-2 hover:ring-fuchsia-500/80" : ""}
                     ${isOffered ? "ring-2 ring-yellow-500/80" : ""}
+                    ${isSuspended ? "ring-2 ring-red-500/60 opacity-60" : ""}
+                    ${isPendingSuspension ? "ring-2 ring-orange-400/60 opacity-75" : ""}
                     `}
             >
                 <CardRowMenuBtn
@@ -152,7 +160,7 @@ export function BoardCard({ boardID: boardID, workspaceId: overrideWorkspaceId }
                     </RoundButton>
                 </CardRowMenuBtn>
 
-                {isLocked && (
+                {(isLocked || isSuspended || isPendingSuspension) && (
                     <div
                         onClick={() => handleOpenBoard()}
                         className="absolute inset-0 z-10 
@@ -168,7 +176,7 @@ export function BoardCard({ boardID: boardID, workspaceId: overrideWorkspaceId }
                         <span className=" absolute mt-2 text-sm font-medium
                          text-gray-300 opacity-0 
                          group-hover:opacity-100 transition-opacity">
-                            {isRequested ? "Access requested" : isOffered ? "Access offered" : "Request access"}
+                            {isRequested ? "Access requested" : isOffered ? "Access offered" : isSuspended ? "Board suspended" : isPendingSuspension ? "Suspension pending" : "Request access"}
                         </span>
 
                     </div>
@@ -206,12 +214,18 @@ export function BoardCard({ boardID: boardID, workspaceId: overrideWorkspaceId }
                     <div className="flex items-center  justify-start pt-0.5 pb-0.5 px-3">
                         <h3 className="text-sm font-normal"> {name}</h3>
                         <div className="ml-auto flex items-center gap-2">
-                            {(pendingAccessRequestsCount > 0 && isOwnerOrAdmin) && (
+                            {(pendingAccessRequestsCount > 0 && isOwnerOrAdmin && !isLocked) && (
                                 <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-[11px] font-semibold leading-none text-white">
                                     {pendingAccessRequestsCount}
                                 </span>
                             )}
                             {false && <span className="text-xs text-red-500 capitalize">{boardStatus}</span>}
+                            {isPrivate && (
+                                <span className="flex items-center gap-0.5 text-xs text-white/50  transition-opacity">
+                                    <LockKeyholeIcon className="h-3 w-3" strokeWidth={2} />
+                                    Private
+                                </span>
+                            )}
                             {!isLocked && <StarIcon
                                 className={`h-4 w-4 ${isStarred ? "text-yellow-400" : "text-white/50"}`}
                                 fill={isStarred ? "currentColor" : "none"}

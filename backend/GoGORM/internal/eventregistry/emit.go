@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 
 	"github.com/google/uuid"
 	"gorm.io/datatypes"
@@ -14,10 +15,8 @@ import (
 )
 
 func (s *EventRegistryService) Emit(ctx context.Context, tx *gorm.DB, event DomainEvent) error {
-	//Validate event type
-	fmt.Printf("Emitting event: %s, BoardID: %v, ActorUserID: %v, WorkspaceID: %v\n", event.Type, event.BoardID, event.ActorUserID, event.WorkspaceID)
 	if !event.Type.IsValidEventType() {
-		fmt.Println("Invalid event type:", event.Type)
+		log.Printf("[emit] invalid event type: %s", event.Type)
 		return nil
 	}
 
@@ -26,17 +25,17 @@ func (s *EventRegistryService) Emit(ctx context.Context, tx *gorm.DB, event Doma
 		db = s.db
 	}
 	if db == nil {
-		fmt.Println("Error-1: db is nil in EventRegistryService.Emit")
+		log.Printf("[emit] error: db is nil for event type %s", event.Type)
 		return fmt.Errorf("event registry emit: nil db")
 	}
 	if event.WorkspaceID == nil && event.BoardID != nil {
 		if s.workspaceResolver == nil {
-			fmt.Println("Error-2: workspace resolver is nil in EventRegistryService.Emit when resolving workspace ID for board event")
+			log.Printf("[emit] error: workspace resolver is nil for board event (type=%s)", event.Type)
 			return fmt.Errorf("event registry emit: workspace resolver is nil for board event")
 		}
 		workspaceID, err := s.workspaceResolver.ResolveWorkspaceID(ctx, *event.BoardID)
 		if err != nil {
-			fmt.Println("Error-3: failed to resolve workspace ID for board event in EventRegistryService.Emit:", err)
+			log.Printf("[emit] error: failed to resolve workspace ID for board event (type=%s): %v", event.Type, err)
 			return err
 		}
 		event.WorkspaceID = &workspaceID
@@ -44,13 +43,13 @@ func (s *EventRegistryService) Emit(ctx context.Context, tx *gorm.DB, event Doma
 
 	handler, err := getHandler(s.handlers, event.Type)
 	if err != nil {
-		fmt.Println("Error-4: no handler found for event type in EventRegistryService.Emit:", event.Type)
+		log.Printf("[emit] error: no handler for event type %s", event.Type)
 		return err
 	}
 
 	buildResult, err := handler.Build(ctx, event)
 	if err != nil {
-		fmt.Println("Error-5: failed to build event payload in EventRegistryService.Emit for event type:", event.Type, "error:", err)
+		log.Printf("[emit] error: handler.Build failed for event type %s: %v", event.Type, err)
 		return err
 	}
 
@@ -61,14 +60,14 @@ func (s *EventRegistryService) Emit(ctx context.Context, tx *gorm.DB, event Doma
 			BuildResult: buildResult,
 		})
 		if err != nil {
-			fmt.Println("Error-5b: failed to resolve mirror propagation in EventRegistryService.Emit for event type:", event.Type, "error:", err)
+			log.Printf("[emit] error: mirror propagation failed for event type %s: %v", event.Type, err)
 			return err
 		}
 	}
 
 	payloadByte, err := json.Marshal(buildResult.FeedPayload)
 	if err != nil {
-		fmt.Println("Error-6: failed to marshal event payload in EventRegistryService.Emit for event type:", event.Type, "error:", err)
+		log.Printf("[emit] error: failed to marshal feed payload for event type %s: %v", event.Type, err)
 		return err
 	}
 	payloadJSON := datatypes.JSON(payloadByte)
@@ -116,19 +115,17 @@ func (s *EventRegistryService) Emit(ctx context.Context, tx *gorm.DB, event Doma
 	}
 	err = db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := s.repo.CreateAuditEvent(ctx, tx, &auditEvent); err != nil {
-			fmt.Println("Error-8: Tx.CreateAuditEvent")
 			return err
 		}
 		if len(eventTargets) > 0 {
 			if err := s.repo.CreateAuditEventTargets(ctx, tx, eventTargets); err != nil {
-				fmt.Println("Error-9: Tx.CreateAuditEventTargets")
 				return err
 			}
 		}
 		return nil
 	})
 	if err != nil {
-		fmt.Println("Error-10: failed to create audit event and targets in transaction in EventRegistryService.Emit for event type:", event.Type, "error:", err)
+		log.Printf("[emit] error: failed to persist audit event for type %s: %v", event.Type, err)
 		return err
 	}
 
@@ -140,9 +137,8 @@ func (s *EventRegistryService) Emit(ctx context.Context, tx *gorm.DB, event Doma
 		targetIDsByEntity[target.EntityType] = append(targetIDsByEntity[target.EntityType], target.EntityID)
 	}
 
-	/// Emit notifications after audit event is successfully created
 	if err := s.EmitNotificationHandler(ctx, event, auditEvent, targetIDsByEntity); err != nil {
-		fmt.Println("Error-11: failed to emit notifications in EventRegistryService.Emit for event type:", event.Type, "error:", err)
+		log.Printf("[emit] error: notification handler failed for event type %s: %v", event.Type, err)
 		return err
 	}
 
@@ -150,7 +146,7 @@ func (s *EventRegistryService) Emit(ctx context.Context, tx *gorm.DB, event Doma
 	affectedBoardSet := make(map[uuid.UUID]struct{})
 	resolvedBoardIDs, err := s.repo.GetAffectedBoardIDsForTargets(ctx, targetIDsByEntity)
 	if err != nil {
-		fmt.Println("Error-11b: failed to resolve affected boards in EventRegistryService.Emit for event type:", event.Type, "error:", err)
+		log.Printf("[emit] error: failed to resolve affected boards for type %s: %v", event.Type, err)
 		return err
 	}
 	for _, boardID := range resolvedBoardIDs {
@@ -184,7 +180,7 @@ func (s *EventRegistryService) Emit(ctx context.Context, tx *gorm.DB, event Doma
 
 	additionalFanoutBoardIDs, err := s.resolveAdditionalFanoutBoardIDs(ctx, event, buildResult)
 	if err != nil {
-		fmt.Println("Error-11c: failed to resolve additional fanout boards for event:", event.Type, "error:", err)
+		log.Printf("[emit] error: failed to resolve additional fanout boards for type %s: %v", event.Type, err)
 		return err
 	}
 	for _, boardID := range additionalFanoutBoardIDs {
@@ -198,10 +194,6 @@ func (s *EventRegistryService) Emit(ctx context.Context, tx *gorm.DB, event Doma
 		affectedBoardIDs = append(affectedBoardIDs, boardID)
 	}
 
-	if event.Type == EventCardMirrored || event.Type == EventCardMirroredTarget || event.Type == EventCardMirroredSource {
-		fmt.Printf("[eventregistry][card-mirrored.pre-reset] event=%s board=%v targets=%+v targetIDsByEntity=%+v resolvedBoardIDs=%v additionalFanoutBoardIDs=%v affectedBoardIDs=%v\n", event.Type, event.BoardID, targets, targetIDsByEntity, resolvedBoardIDs, additionalFanoutBoardIDs, affectedBoardIDs)
-	}
-
 	// Disabled on purpose: forcing card mirrored events to a single board drops already
 	// resolved fan-out targets and can desynchronize affectedBoardIDs from affectedBoardSet.
 	// if (event.Type == EventCardMirrored || event.Type == EventCardMirroredTarget || event.Type == EventCardMirroredSource) && event.BoardID != nil {
@@ -211,9 +203,8 @@ func (s *EventRegistryService) Emit(ctx context.Context, tx *gorm.DB, event Doma
 	// }
 
 	boardIdsForMirroredListsTargets, err := s.resolveBoardIDsForMirroredListsTargets(ctx, targetIDsByEntity)
-	fmt.Println("Resolved board IDs for mirrored lists targets for event:", event.Type, "boardIdsForMirroredListsTargets:", boardIdsForMirroredListsTargets)
 	if err != nil {
-		fmt.Println("Error-11d: failed to resolve board IDs for mirrored lists targets for event:", event.Type, "error:", err)
+		log.Printf("[emit] error: failed to resolve mirrored list board IDs for type %s: %v", event.Type, err)
 		return err
 	}
 
@@ -227,11 +218,6 @@ func (s *EventRegistryService) Emit(ctx context.Context, tx *gorm.DB, event Doma
 		affectedBoardSet[boardID] = struct{}{}
 		affectedBoardIDs = append(affectedBoardIDs, boardID)
 	}
-	if event.Type == EventCardMirrored || event.Type == EventCardMirroredTarget || event.Type == EventCardMirroredSource {
-		fmt.Printf("[eventregistry][card-mirrored.pre-broadcast] event=%s board=%v mirroredListTargetBoardIDs=%v affectedBoardIDs=%v affectedBoardSet=%+v\n", event.Type, event.BoardID, boardIdsForMirroredListsTargets, affectedBoardIDs, affectedBoardSet)
-	}
-
-	fmt.Println("Before Emitted event:", event.Type, "for BoardID:", event.BoardID)
 	if event.Type.IsBoardCoreToastEvent() {
 		if len(affectedBoardIDs) == 0 && event.BoardID != nil {
 			affectedBoardIDs = append(affectedBoardIDs, *event.BoardID)
@@ -241,7 +227,6 @@ func (s *EventRegistryService) Emit(ctx context.Context, tx *gorm.DB, event Doma
 			invalidatedListCardIDs = uuidListToStrings(mirrorPropagationResult.InvalidatedListCardIDs)
 		}
 		for _, boardID := range affectedBoardIDs {
-			fmt.Println("Emitting board event to WebSocket for event type:", event.Type, "BoardID:", boardID, "affectedBoardIDs:", affectedBoardIDs)
 			wsPayload := EventPayloadEnvelope{
 				StatePayload:    buildResult.StatePayload,
 				RealtimePayload: buildResult.RealtimePayload,
@@ -259,10 +244,10 @@ func (s *EventRegistryService) Emit(ctx context.Context, tx *gorm.DB, event Doma
 				ActorUserID:   event.ActorUserID,
 				CorrelationID: event.CorrelationID,
 			}
+			log.Printf("[emit] board  evt=%s board=%s", event.Type, boardID)
 			s.Hub.BroadCastToBoard(wsEvent)
 		}
 	} else if event.WorkspaceID != nil && !event.Type.IsUserFanOutEvent() {
-		fmt.Println("Emitting workspace event to WebSocket for event type:", event.Type, "WorkspaceID:", *event.WorkspaceID)
 		resolvedBoardID := uuid.Nil
 		for _, target := range targets {
 			if target.EntityType == "board" && target.EntityID != uuid.Nil {
@@ -288,7 +273,6 @@ func (s *EventRegistryService) Emit(ctx context.Context, tx *gorm.DB, event Doma
 			workspacePayload.Invalidations = &EventInvalidations{RootBoardListCardIds: invalidatedListCardIDs}
 		}
 
-		fmt.Println("Workspace event payload for WebSocket:", event.Type, "payload:", workspacePayload)
 		wsEvent := ws.WorkspaceEvent{
 			Type:          string(event.Type),
 			WorkspaceID:   *event.WorkspaceID,
@@ -298,10 +282,10 @@ func (s *EventRegistryService) Emit(ctx context.Context, tx *gorm.DB, event Doma
 			ActorUserID:   event.ActorUserID,
 			CorrelationID: event.CorrelationID,
 		}
+		log.Printf("[emit] workspace evt=%s workspace=%s", event.Type, *event.WorkspaceID)
 		s.Hub.BroadCastToWorkspace(wsEvent)
 	}
 	if event.Type.IsWorkspaceCoreToastEvent() {
-		fmt.Println("Emitting workspace core toast event to WebSocket for event type:", event.Type, "WorkspaceID:", *event.WorkspaceID)
 		resolvedBoardID := uuid.Nil
 		for _, target := range targets {
 			if target.EntityType == "board" && target.EntityID != uuid.Nil {
@@ -336,6 +320,7 @@ func (s *EventRegistryService) Emit(ctx context.Context, tx *gorm.DB, event Doma
 			ActorUserID:   event.ActorUserID,
 			CorrelationID: event.CorrelationID,
 		}
+		log.Printf("[emit] workspace-toast evt=%s workspace=%s", event.Type, *event.WorkspaceID)
 		s.Hub.BroadCastToWorkspace(wsEvent)
 	}
 	if err := s.emitMirrorPropagationUserEvents(event, mirrorPropagationResult); err != nil {
@@ -357,6 +342,7 @@ func (s *EventRegistryService) emitUserEvent(userEvent ws.UserEvent) {
 	if userEvent.ID == uuid.Nil {
 		userEvent.ID = uuid.New()
 	}
+	log.Printf("[emit] user   evt=%s user=%s", userEvent.Type, userEvent.RecipientUserID)
 	s.Hub.BroadCastToUser(userEvent)
 }
 
@@ -401,8 +387,6 @@ func (s *EventRegistryService) emitMirrorPropagationUserEvents(event DomainEvent
 }
 
 func (s *EventRegistryService) emitHandlerUserFanOutEvents(event DomainEvent, buildResult EventBuildResult) error {
-	fmt.Printf("[eventregistry][fanout.start] event=%s workspace=%v recipients=%d correlation=%v\n", event.Type, event.WorkspaceID, len(buildResult.UserPayload), event.CorrelationID)
-
 	userEvents := make([]ws.UserEvent, 0, len(buildResult.UserPayload))
 	for userID, payload := range buildResult.UserPayload {
 		userEventType := event.UserEventType
@@ -418,7 +402,6 @@ func (s *EventRegistryService) emitHandlerUserFanOutEvents(event DomainEvent, bu
 			return fmt.Errorf("event registry emit: missing user event type for fan-out event type %s and user %s", event.Type, userID)
 		}
 
-		fmt.Printf("[eventregistry][fanout.emit] event=%s userEventType=%s recipient=%s correlation=%v payloadKeys=%+v\n", event.Type, *userEventType, userID.String(), event.CorrelationID, payload)
 		userEvents = append(userEvents, ws.UserEvent{
 			Type:            string(*userEventType),
 			RecipientUserID: userID,
@@ -438,7 +421,7 @@ func (s *EventRegistryService) EmitNotificationHandler(ctx context.Context, even
 
 	usersToBeNotified, err := s.repo.GetUsersToBeNotifiedFlatSingleQuery(ctx, targetIDsByEntity)
 	if err != nil {
-		fmt.Println("Error-11: failed to get users to be notified in EventRegistryService.Emit for event type:", event.Type, "error:", err)
+		log.Printf("[emit] error: failed to get notification targets for type %s: %v", event.Type, err)
 		return err
 	}
 	if event.MentionedUserIDs != nil {
@@ -456,7 +439,7 @@ func (s *EventRegistryService) EmitNotificationHandler(ctx context.Context, even
 	}
 	if len(notifications) > 0 {
 		if err := s.repo.CreateUserAuditNotifications(ctx, notifications); err != nil {
-			fmt.Println("Error-12: failed to create user audit notifications in EventRegistryService.Emit for event type:", event.Type, "error:", err)
+			log.Printf("[emit] error: failed to create notifications for type %s: %v", event.Type, err)
 			return err
 		}
 
@@ -472,7 +455,7 @@ func (s *EventRegistryService) EmitNotificationHandler(ctx context.Context, even
 			userNotificationResponse := dto.UserAuditNotificationRowToResponse(userNortificationRow)
 			unreadCount, err := s.repo.GetUserUnreadNotificationCount(ctx, notification.UserID)
 			if err != nil {
-				fmt.Println("Error-13: failed to get user unread notification count in EventRegistryService.Emit for event type:", event.Type, "error:", err)
+				log.Printf("[emit] error: failed to get unread count for user %s (type=%s): %v", notification.UserID, event.Type, err)
 				return err
 			}
 

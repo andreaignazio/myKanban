@@ -33,14 +33,14 @@ export const SettingsPageWrapper = ({ asideHeader, asideLinks, activeTab, handle
             </nav>
 
             {/* Desktop aside — visible at xl+ */}
-            <div className="hidden xl:block ms-5 rounded-lg bg-transparent h-full">
+            <div className="hidden xl:block ms-5 rounded-lg bg-transparent h-full mt-2">
                 <div className="flex flex-row items-center justify-between gap-2 mb-12">
                     {asideHeader}
                 </div>
                 <AsideTabsBar asideLinks={asideLinks} activeTab={activeTab} handleNavigate={handleNavigate} width={widthAside} />
             </div>
 
-            <div className="flex flex-col flex-1 min-h-0 px-4 xl:px-12">
+            <div className="flex flex-col flex-1 min-h-0 px-4 xl:px-12 xl:mt-2">
                 {mainHeader}
             </div>
 

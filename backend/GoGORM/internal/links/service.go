@@ -1365,6 +1365,9 @@ func (s *LinksService) GetUserBoardDetail(ctx context.Context, userID, boardID u
 	if err != nil {
 		return nil, domainerr.MapRepoErr(err, false)
 	}
+	if board.IsSuspended {
+		return nil, domainerr.New(domainerr.ErrForbidden, "board is suspended")
+	}
 
 	boardLabels, err := s.BoardLabelsRepo.GetBoardLabels(ctx, boardID, includeDeleted)
 	if err != nil {

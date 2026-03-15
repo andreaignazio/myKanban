@@ -463,6 +463,7 @@ export type UserEventPayload = {
     CardsUserMemberAddedPayload?: CardsUserMemberAddedPayload;
     CardsUserMemberRemovedPayload?: CardsUserMemberRemovedPayload;
     WorkspaceBoardRestoredPayload?: UserWorkspaceBoardRestoredPayload;
+    WorkspaceBoardCreatedPayload?: WorkspaceBoardCreatedPayload;
     WorkspaceShareOfferCreatedPayload?: WorkspaceShareOfferCreatedPayload;
     WorkspaceShareOfferInviteAcceptedPayload?: WorkspaceShareOfferInviteAcceptedPayload;
     WorkspaceShareOfferInviteRejectedPayload?: WorkspaceShareOfferInviteRejectedPayload;
@@ -478,6 +479,11 @@ export type UserEventPayload = {
     WorkspaceMembershipPayload?: WorkspaceMembershipPayload;
     BoardMembershipPayload?: BoardMembershipPayload;
     BoardMemberRoleChangedPayload?: BoardMemberRoleChangedPayload;
+    WorkspaceMemberSuspensionUpdatedPayload?: WorkspaceMemberSuspensionUpdatedPayload;
+}
+
+export type WorkspaceMemberSuspensionUpdatedPayload = {
+    UserWorkspace: UserWorkspace;
 }
 
 export type WorkspaceMembershipPayload = {
@@ -949,6 +955,11 @@ export type UserWorkspaceBoardRestoredPayload = {
     UserID: string;
     Board: Board;
     UserBoard: UserBoard;
+}
+
+export type WorkspaceBoardCreatedPayload = {
+    Board: Board;
+    UserBoard?: UserBoard;
 }
 
 export type ChangeWorkspaceMemberRoleRequest = {

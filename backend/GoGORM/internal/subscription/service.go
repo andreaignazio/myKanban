@@ -6,6 +6,7 @@ import (
 	EventRegistry "GoGORM/internal/eventregistry"
 	"GoGORM/internal/guard"
 	"GoGORM/internal/rbac"
+	"GoGORM/internal/ws"
 	"GoGORM/models"
 	"context"
 	"errors"
@@ -244,6 +245,7 @@ func (s *SubscriptionService) persistSubscriptionEventAndFetch(ctx context.Conte
 		return nil, domainerr.Wrap(errors.New("provider workspace mismatch"), "subscription update returned mismatched workspace")
 	}
 
+	var reconcileResult ReconcileResult
 	if err := s.db.Transaction(func(tx *gorm.DB) error {
 		if err := s.SubscriptionRepo.UpsertFromWebhook(ctx, tx, workspaceID, event); err != nil {
 			return domainerr.Wrap(err, "failed to persist provider subscription state")
@@ -253,13 +255,16 @@ func (s *SubscriptionService) persistSubscriptionEventAndFetch(ctx context.Conte
 				return domainerr.Wrap(err, "failed to clear pending subscription change")
 			}
 		}
-		if err := s.reconcileWorkspaceSuspensionFromPersistedSubscriptionTx(ctx, tx, workspaceID); err != nil {
+		var err error
+		reconcileResult, err = s.reconcileWorkspaceSuspensionFromPersistedSubscriptionTx(ctx, tx, workspaceID)
+		if err != nil {
 			return domainerr.Wrap(err, "failed to reconcile workspace suspension state")
 		}
 		return nil
 	}); err != nil {
 		return nil, err
 	}
+	s.emitSuspensionUpdatedEvents(ctx, workspaceID, uuid.Nil, reconcileResult)
 
 	updatedSubscription, err := s.SubscriptionRepo.GetWorkspaceSubscription(ctx, workspaceID)
 	if err != nil {
@@ -270,14 +275,18 @@ func (s *SubscriptionService) persistSubscriptionEventAndFetch(ctx context.Conte
 }
 
 func (s *SubscriptionService) updatePendingChangeAndFetch(ctx context.Context, workspaceID uuid.UUID, pending PendingSubscriptionChange) (*models.WorkspaceSubscription, error) {
+	var reconcileResult ReconcileResult
 	if err := s.db.Transaction(func(tx *gorm.DB) error {
 		if err := s.SubscriptionRepo.UpdatePendingChange(ctx, tx, workspaceID, pending); err != nil {
 			return err
 		}
-		return s.reconcileWorkspaceSuspensionFromPersistedSubscriptionTx(ctx, tx, workspaceID)
+		var err error
+		reconcileResult, err = s.reconcileWorkspaceSuspensionFromPersistedSubscriptionTx(ctx, tx, workspaceID)
+		return err
 	}); err != nil {
 		return nil, domainerr.Wrap(err, "failed to persist pending subscription change")
 	}
+	s.emitSuspensionUpdatedEvents(ctx, workspaceID, uuid.Nil, reconcileResult)
 
 	updatedSubscription, err := s.SubscriptionRepo.GetWorkspaceSubscription(ctx, workspaceID)
 	if err != nil {
@@ -332,14 +341,113 @@ func (s *SubscriptionService) ReplaceBoardPendingSuspensionSelection(ctx context
 	if s.SuspensionService == nil {
 		return domainerr.New(nil, "workspace suspension service not configured")
 	}
-	return s.SuspensionService.ReplaceBoardPendingSuspensionSelection(ctx, workspaceID, actorUserID, markedBoardIDs, unmarkedBoardIDs)
+	if err := s.SuspensionService.ReplaceBoardPendingSuspensionSelection(ctx, workspaceID, actorUserID, markedBoardIDs, unmarkedBoardIDs); err != nil {
+		return err
+	}
+	changedBoards := make([]ReconcileBoardChange, 0, len(markedBoardIDs)+len(unmarkedBoardIDs))
+	for _, id := range markedBoardIDs {
+		changedBoards = append(changedBoards, ReconcileBoardChange{BoardID: id, IsPendingSuspend: true})
+	}
+	for _, id := range unmarkedBoardIDs {
+		changedBoards = append(changedBoards, ReconcileBoardChange{BoardID: id, IsPendingSuspend: false})
+	}
+	s.emitSuspensionUpdatedEvents(ctx, workspaceID, actorUserID, ReconcileResult{ChangedBoards: changedBoards})
+	return nil
 }
 
 func (s *SubscriptionService) ReplaceMemberPendingSuspensionSelection(ctx context.Context, workspaceID, actorUserID uuid.UUID, markedUserIDs, unmarkedUserIDs []uuid.UUID) error {
 	if s.SuspensionService == nil {
 		return domainerr.New(nil, "workspace suspension service not configured")
 	}
-	return s.SuspensionService.ReplaceMemberPendingSuspensionSelection(ctx, workspaceID, actorUserID, markedUserIDs, unmarkedUserIDs)
+	if err := s.SuspensionService.ReplaceMemberPendingSuspensionSelection(ctx, workspaceID, actorUserID, markedUserIDs, unmarkedUserIDs); err != nil {
+		return err
+	}
+	changedMembers := make([]ReconcileMemberChange, 0, len(markedUserIDs)+len(unmarkedUserIDs))
+	for _, id := range markedUserIDs {
+		changedMembers = append(changedMembers, ReconcileMemberChange{UserID: id, IsPendingSuspend: true})
+	}
+	for _, id := range unmarkedUserIDs {
+		changedMembers = append(changedMembers, ReconcileMemberChange{UserID: id, IsPendingSuspend: false})
+	}
+	s.emitSuspensionUpdatedEvents(ctx, workspaceID, actorUserID, ReconcileResult{ChangedMembers: changedMembers})
+	return nil
+}
+
+func (s *SubscriptionService) GetAllWorkspaceBoardsForSuspensionManagement(ctx context.Context, workspaceID, actorUserID uuid.UUID) ([]dto.BoardResponse, error) {
+	if err := guard.CheckUserMinWorkspaceRole(ctx, s.MembershipRepo, actorUserID, workspaceID, rbac.Admin, s.IncludeDeleted); err != nil {
+		return nil, err
+	}
+	var boards []models.Board
+	if err := s.db.WithContext(ctx).
+		Table("boards").
+		Where("workspace_id = ? AND deleted_at IS NULL", workspaceID).
+		Order("created_at ASC").
+		Find(&boards).Error; err != nil {
+		return nil, domainerr.Wrap(err, "failed to list workspace boards")
+	}
+	response := make([]dto.BoardResponse, 0, len(boards))
+	for i := range boards {
+		response = append(response, dto.BoardToResponse(&boards[i]))
+	}
+	return response, nil
+}
+
+func (s *SubscriptionService) FetchWorkspaceSubscriptionWithReconcile(ctx context.Context, workspaceID, actorUserID uuid.UUID) (*SubscriptionReconcileResponse, error) {
+	if err := guard.CheckUserMinWorkspaceRole(ctx, s.MembershipRepo, actorUserID, workspaceID, rbac.Admin, s.IncludeDeleted); err != nil {
+		return nil, err
+	}
+
+	var fetchReconcileResult ReconcileResult
+	if err := s.db.Transaction(func(tx *gorm.DB) error {
+		var err error
+		fetchReconcileResult, err = s.reconcileWorkspaceSuspensionFromPersistedSubscriptionTx(ctx, tx, workspaceID)
+		return err
+	}); err != nil {
+		return nil, domainerr.Wrap(err, "failed to reconcile workspace suspension state")
+	}
+	s.emitSuspensionUpdatedEvents(ctx, workspaceID, actorUserID, fetchReconcileResult)
+
+	subscription, err := s.SubscriptionRepo.GetWorkspaceSubscription(ctx, workspaceID)
+	if err != nil {
+		return nil, domainerr.Wrap(err, "failed to fetch workspace subscription")
+	}
+	if subscription == nil {
+		return nil, domainerr.WithKind(domainerr.New(nil, "workspace subscription not found"), domainerr.ErrNotFound)
+	}
+
+	members, err := s.SubscriptionRepo.ListWorkspaceMembersForSuspension(ctx, workspaceID)
+	if err != nil {
+		return nil, domainerr.Wrap(err, "failed to list workspace members")
+	}
+
+	boards, err := s.SubscriptionRepo.ListWorkspaceBoardsForSuspension(ctx, workspaceID)
+	if err != nil {
+		return nil, domainerr.Wrap(err, "failed to list workspace boards")
+	}
+
+	memberStates := make([]MemberSuspensionState, 0, len(members))
+	for _, m := range members {
+		memberStates = append(memberStates, MemberSuspensionState{
+			UserID:           m.UserID,
+			IsSuspended:      m.IsSuspended,
+			IsPendingSuspend: m.IsPendingSuspend,
+		})
+	}
+
+	boardStates := make([]BoardSuspensionState, 0, len(boards))
+	for _, b := range boards {
+		boardStates = append(boardStates, BoardSuspensionState{
+			BoardID:          b.ID,
+			IsSuspended:      b.IsSuspended,
+			IsPendingSuspend: b.IsPendingSuspend,
+		})
+	}
+
+	return &SubscriptionReconcileResponse{
+		Subscription: dto.WorkspaceSubscriptionToResponse(subscription),
+		MemberStates: memberStates,
+		BoardStates:  boardStates,
+	}, nil
 }
 
 func valueOrStringPtr(value *string) string {
@@ -367,12 +475,15 @@ func (s *SubscriptionService) HandleBillingWebhook(ctx context.Context,
 		return nil
 	}
 
+	var webhookReconcileResult ReconcileResult
 	err = s.db.Transaction(func(tx *gorm.DB) error {
 		if err := s.SubscriptionRepo.UpsertFromWebhook(ctx, tx, event.WorkspaceID, event); err != nil {
 			return domainerr.Wrap(err, "failed to upsert subscription from webhook")
 		}
-		if err := s.reconcileWorkspaceSuspensionFromPersistedSubscriptionTx(ctx, tx, event.WorkspaceID); err != nil {
-			return domainerr.Wrap(err, "failed to reconcile workspace suspension state")
+		var reconcileErr error
+		webhookReconcileResult, reconcileErr = s.reconcileWorkspaceSuspensionFromPersistedSubscriptionTx(ctx, tx, event.WorkspaceID)
+		if reconcileErr != nil {
+			return domainerr.Wrap(reconcileErr, "failed to reconcile workspace suspension state")
 		}
 		if err := s.WebhookInboxRepo.MarkProcessed(event.Provider, event.EventID, time.Now()); err != nil {
 			return domainerr.Wrap(err, "failed to mark webhook event as processed")
@@ -384,9 +495,86 @@ func (s *SubscriptionService) HandleBillingWebhook(ctx context.Context,
 		return domainerr.Wrap(err, "failed to process webhook event in transaction")
 	}
 
+	s.emitSuspensionUpdatedEvents(ctx, event.WorkspaceID, uuid.Nil, webhookReconcileResult)
 	s.emitSubscriptionRealtimeEvent(ctx, event)
 
 	return nil
+}
+
+func (s *SubscriptionService) emitSuspensionUpdatedEvents(ctx context.Context, workspaceID uuid.UUID, actorUserID uuid.UUID, result ReconcileResult) {
+	if s.EventRegistry == nil {
+		return
+	}
+
+	if len(result.ChangedMembers) > 0 {
+		changedUserIDs := make([]uuid.UUID, 0, len(result.ChangedMembers))
+		for _, m := range result.ChangedMembers {
+			changedUserIDs = append(changedUserIDs, m.UserID)
+		}
+
+		var userWorkspaces []models.UserWorkspace
+		if err := s.db.WithContext(ctx).
+			Table("user_workspaces").
+			Where("workspace_id = ? AND user_id IN ? AND deleted_at IS NULL", workspaceID, changedUserIDs).
+			Find(&userWorkspaces).Error; err != nil {
+			log.Printf("suspension RT emit: failed to query user_workspaces for workspace %s: %v", workspaceID, err)
+		} else if len(userWorkspaces) > 0 {
+			relations := make([]dto.UserWorkspaceResponse, 0, len(userWorkspaces))
+			for i := range userWorkspaces {
+				relations = append(relations, dto.UserWorkspaceToResponse(&userWorkspaces[i]))
+			}
+			userEventType := ws.EventUserWorkspaceMemberSuspensionUpdated
+			memberEvent := EventRegistry.DomainEvent{
+				Type:          EventRegistry.EventWorkspaceMemberSuspensionUpdated,
+				UserEventType: &userEventType,
+				WorkspaceID:   &workspaceID,
+				ActorUserID:   &actorUserID,
+				OccurredAt:    time.Now(),
+				Payload: EventRegistry.EventPayloadEnvelope{
+					StatePayload: &dto.BoardDetailResponse{
+						UserWorkspaceRelations: relations,
+					},
+				},
+			}
+			if emitErr := s.EventRegistry.Emit(ctx, s.db, memberEvent); emitErr != nil {
+				log.Printf("suspension RT emit: failed to emit member suspension update for workspace %s: %v", workspaceID, emitErr)
+			}
+		}
+	}
+
+	if len(result.ChangedBoards) > 0 {
+		changedBoardIDs := make([]uuid.UUID, 0, len(result.ChangedBoards))
+		for _, b := range result.ChangedBoards {
+			changedBoardIDs = append(changedBoardIDs, b.BoardID)
+		}
+
+		var boards []models.Board
+		if err := s.db.WithContext(ctx).
+			Table("boards").
+			Where("id IN ? AND deleted_at IS NULL", changedBoardIDs).
+			Find(&boards).Error; err != nil {
+			log.Printf("suspension RT emit: failed to query boards for workspace %s: %v", workspaceID, err)
+		} else if len(boards) > 0 {
+			boardsMap := make(map[uuid.UUID]dto.BoardResponse, len(boards))
+			for i := range boards {
+				boardsMap[boards[i].ID] = dto.BoardToResponse(&boards[i])
+			}
+			boardEvent := EventRegistry.DomainEvent{
+				Type:        EventRegistry.EventWorkspaceBoardSuspensionUpdated,
+				WorkspaceID: &workspaceID,
+				ActorUserID: &actorUserID,
+				OccurredAt:  time.Now(),
+				Payload: EventRegistry.EventPayloadEnvelope{
+					StatePayload: &dto.BoardDetailResponse{
+						Boards: boardsMap,
+					},
+				},
+			}
+			if emitErr := s.EventRegistry.Emit(ctx, s.db, boardEvent); emitErr != nil {
+				log.Printf("suspension RT emit: failed to emit board suspension update for workspace %s: %v", workspaceID, emitErr)
+			}
+		}
+	}
 }
 
 func (s *SubscriptionService) emitSubscriptionRealtimeEvent(ctx context.Context, event BillingWebhookEvent) {
@@ -468,20 +656,22 @@ func (s *SubscriptionService) CancelWorkspaceSubscription(ctx context.Context, w
 		return domainerr.Wrap(errors.New("provider workspace mismatch"), "cancel subscription returned mismatched workspace")
 	}
 
+	var cancelReconcileResult ReconcileResult
 	if err := s.db.Transaction(func(tx *gorm.DB) error {
 		if err := s.SubscriptionRepo.UpsertFromWebhook(ctx, tx, workspaceID, *event); err != nil {
 			return domainerr.Wrap(err, "failed to persist canceled subscription state")
 		}
-		if err := s.reconcileWorkspaceSuspensionFromPersistedSubscriptionTx(ctx, tx, workspaceID); err != nil {
-
+		var err error
+		cancelReconcileResult, err = s.reconcileWorkspaceSuspensionFromPersistedSubscriptionTx(ctx, tx, workspaceID)
+		if err != nil {
 			return domainerr.Wrap(err, "failed to reconcile workspace suspension state")
 		}
-
 		return nil
 	}); err != nil {
 		return domainerr.Wrap(err, "failed to cancel subscription in transaction")
 	}
 
+	s.emitSuspensionUpdatedEvents(ctx, workspaceID, actorUserID, cancelReconcileResult)
 	return nil
 }
 
@@ -524,11 +714,14 @@ func (s *SubscriptionService) ResumeWorkspaceSubscription(ctx context.Context, w
 		return domainerr.Wrap(errors.New("provider workspace mismatch"), "resume subscription returned mismatched workspace")
 	}
 
+	var resumeReconcileResult ReconcileResult
 	if err := s.db.Transaction(func(tx *gorm.DB) error {
 		if err := s.SubscriptionRepo.UpsertFromWebhook(ctx, tx, workspaceID, *event); err != nil {
 			return domainerr.Wrap(err, "failed to persist resumed subscription state")
 		}
-		if err := s.reconcileWorkspaceSuspensionFromPersistedSubscriptionTx(ctx, tx, workspaceID); err != nil {
+		var err error
+		resumeReconcileResult, err = s.reconcileWorkspaceSuspensionFromPersistedSubscriptionTx(ctx, tx, workspaceID)
+		if err != nil {
 			return domainerr.Wrap(err, "failed to reconcile workspace suspension state")
 		}
 		return nil
@@ -536,6 +729,7 @@ func (s *SubscriptionService) ResumeWorkspaceSubscription(ctx context.Context, w
 		return domainerr.Wrap(err, "failed to resume subscription in transaction")
 	}
 
+	s.emitSuspensionUpdatedEvents(ctx, workspaceID, actorUserID, resumeReconcileResult)
 	return nil
 }
 
@@ -562,13 +756,13 @@ func (s *SubscriptionService) releasePendingScheduleForDirectBillingChange(ctx c
 	return nil
 }
 
-func (s *SubscriptionService) reconcileWorkspaceSuspensionFromPersistedSubscriptionTx(ctx context.Context, tx *gorm.DB, workspaceID uuid.UUID) error {
+func (s *SubscriptionService) reconcileWorkspaceSuspensionFromPersistedSubscriptionTx(ctx context.Context, tx *gorm.DB, workspaceID uuid.UUID) (ReconcileResult, error) {
 	subscription, err := loadWorkspaceSubscriptionTx(ctx, tx, workspaceID)
 	if err != nil {
-		return err
+		return ReconcileResult{}, err
 	}
 	if subscription == nil {
-		return domainerr.WithKind(domainerr.New(nil, "workspace subscription not found"), domainerr.ErrNotFound)
+		return ReconcileResult{}, domainerr.WithKind(domainerr.New(nil, "workspace subscription not found"), domainerr.ErrNotFound)
 	}
 
 	return s.SuspensionService.ReconcileWorkspaceSuspensionTx(ctx, tx, workspaceID, providerSnapshotFromSubscription(subscription))

@@ -7,6 +7,7 @@ import (
 	"GoGORM/internal/subscriptionplan"
 	"GoGORM/models"
 	"context"
+	"log"
 	"sort"
 
 	"github.com/google/uuid"
@@ -37,14 +38,31 @@ func NewWorkspaceSuspensionService(db *gorm.DB, repo WorkspaceSuspensionRepo, me
 	}
 }
 
-func (s *WorkspaceSuspensionService) ReconcileWorkspaceSuspensionTx(ctx context.Context, tx *gorm.DB, workspaceID uuid.UUID, snapshot ProviderSubscriptionSnapshot) error {
+type ReconcileMemberChange struct {
+	UserID           uuid.UUID
+	IsSuspended      bool
+	IsPendingSuspend bool
+}
+
+type ReconcileBoardChange struct {
+	BoardID          uuid.UUID
+	IsSuspended      bool
+	IsPendingSuspend bool
+}
+
+type ReconcileResult struct {
+	ChangedMembers []ReconcileMemberChange
+	ChangedBoards  []ReconcileBoardChange
+}
+
+func (s *WorkspaceSuspensionService) ReconcileWorkspaceSuspensionTx(ctx context.Context, tx *gorm.DB, workspaceID uuid.UUID, snapshot ProviderSubscriptionSnapshot) (ReconcileResult, error) {
 	boardCandidates, err := s.Repo.ListWorkspaceBoardsForSuspension(ctx, workspaceID)
 	if err != nil {
-		return err
+		return ReconcileResult{}, err
 	}
 	memberCandidates, err := s.Repo.ListWorkspaceMembersForSuspension(ctx, workspaceID)
 	if err != nil {
-		return err
+		return ReconcileResult{}, err
 	}
 
 	boardLimit := workspaceBoardLimit(snapshot)
@@ -66,37 +84,90 @@ func (s *WorkspaceSuspensionService) ReconcileWorkspaceSuspensionTx(ctx context.
 	}
 
 	if err := s.Repo.ApplyWorkspaceBoardSuspensionState(ctx, tx, workspaceID, suspendedBoards, pendingBoards); err != nil {
-		return err
+		return ReconcileResult{}, err
 	}
 	if err := s.Repo.ApplyWorkspaceMemberSuspensionState(ctx, tx, workspaceID, suspendedMembers, pendingMembers); err != nil {
-		return err
+		return ReconcileResult{}, err
 	}
 
-	return nil
+	suspendedMemberSet := make(map[uuid.UUID]bool, len(suspendedMembers))
+	for _, id := range suspendedMembers {
+		suspendedMemberSet[id] = true
+	}
+	pendingMemberSet := make(map[uuid.UUID]bool, len(pendingMembers))
+	for _, id := range pendingMembers {
+		pendingMemberSet[id] = true
+	}
+
+	var changedMembers []ReconcileMemberChange
+	for _, c := range memberCandidates {
+		newIsSuspended := suspendedMemberSet[c.ID]
+		newIsPendingSuspend := pendingMemberSet[c.ID]
+		if newIsSuspended != c.IsSuspended || newIsPendingSuspend != c.IsPendingSuspend {
+			changedMembers = append(changedMembers, ReconcileMemberChange{
+				UserID:           c.UserID,
+				IsSuspended:      newIsSuspended,
+				IsPendingSuspend: newIsPendingSuspend,
+			})
+		}
+	}
+
+	suspendedBoardSet := make(map[uuid.UUID]bool, len(suspendedBoards))
+	for _, id := range suspendedBoards {
+		suspendedBoardSet[id] = true
+	}
+	pendingBoardSet := make(map[uuid.UUID]bool, len(pendingBoards))
+	for _, id := range pendingBoards {
+		pendingBoardSet[id] = true
+	}
+
+	var changedBoards []ReconcileBoardChange
+	for _, b := range boardCandidates {
+		newIsSuspended := suspendedBoardSet[b.ID]
+		newIsPendingSuspend := pendingBoardSet[b.ID]
+		if newIsSuspended != b.IsSuspended || newIsPendingSuspend != b.IsPendingSuspend {
+			changedBoards = append(changedBoards, ReconcileBoardChange{
+				BoardID:          b.ID,
+				IsSuspended:      newIsSuspended,
+				IsPendingSuspend: newIsPendingSuspend,
+			})
+		}
+	}
+
+	return ReconcileResult{ChangedMembers: changedMembers, ChangedBoards: changedBoards}, nil
 }
 
 func (s *WorkspaceSuspensionService) ReplaceBoardPendingSuspensionSelection(ctx context.Context, workspaceID, actorUserID uuid.UUID, markedBoardIDs, unmarkedBoardIDs []uuid.UUID) error {
 	if err := guard.CheckUserMinWorkspaceRole(ctx, s.MembershipRepo, actorUserID, workspaceID, rbac.Owner, s.IncludeDeleted); err != nil {
+		log.Printf("[DEBUG ReplaceBoardPendingSuspension] CheckUserMinWorkspaceRole failed: %v", err)
 		return err
 	}
 
 	return s.db.Transaction(func(tx *gorm.DB) error {
 		subscription, snapshot, err := s.pendingSelectionSnapshot(ctx, workspaceID)
 		if err != nil {
+			log.Printf("[DEBUG ReplaceBoardPendingSuspension] pendingSelectionSnapshot failed: %v", err)
 			return err
 		}
+		log.Printf("[DEBUG ReplaceBoardPendingSuspension] snapshot: plan=%s status=%s cancelAtPeriodEnd=%v pendingPlan=%v",
+			snapshot.PlanCode, snapshot.Status, snapshot.CancelAtPeriodEnd, subscription.PendingPlan)
 
 		boardCandidates, err := s.Repo.ListWorkspaceBoardsForSuspension(ctx, workspaceID)
 		if err != nil {
+			log.Printf("[DEBUG ReplaceBoardPendingSuspension] ListWorkspaceBoardsForSuspension failed: %v", err)
 			return err
 		}
-		needed := exceededCount(len(boardCandidates), workspaceBoardLimit(snapshot))
+		boardLimit := workspaceBoardLimit(snapshot)
+		needed := exceededCount(len(boardCandidates), boardLimit)
+		log.Printf("[DEBUG ReplaceBoardPendingSuspension] boardCandidates=%d boardLimit=%d needed=%d", len(boardCandidates), boardLimit, needed)
 		if err := validatePendingSelectionAllowed(subscription, snapshot, needed); err != nil {
+			log.Printf("[DEBUG ReplaceBoardPendingSuspension] validatePendingSelectionAllowed failed: %v", err)
 			return err
 		}
 
 		pendingIDs, err := validateBoardPendingSelection(boardCandidates, markedBoardIDs, unmarkedBoardIDs, needed)
 		if err != nil {
+			log.Printf("[DEBUG ReplaceBoardPendingSuspension] validateBoardPendingSelection failed: %v", err)
 			return err
 		}
 
@@ -365,7 +436,7 @@ func validateMemberPendingSelection(candidates []WorkspaceMemberSuspensionCandid
 
 func validateSelectionPartition(markedIDs, unmarkedIDs []uuid.UUID, allowed map[uuid.UUID]struct{}) (map[uuid.UUID]struct{}, error) {
 	markedSet := make(map[uuid.UUID]struct{}, len(markedIDs))
-	seen := make(map[uuid.UUID]struct{}, len(allowed))
+	seen := make(map[uuid.UUID]struct{}, len(markedIDs)+len(unmarkedIDs))
 
 	for _, id := range markedIDs {
 		if _, ok := allowed[id]; !ok {
@@ -386,10 +457,6 @@ func validateSelectionPartition(markedIDs, unmarkedIDs []uuid.UUID, allowed map[
 			return nil, domainerr.WithKind(domainerr.New(nil, "selection contains duplicate ids"), domainerr.ErrValidation)
 		}
 		seen[id] = struct{}{}
-	}
-
-	if len(seen) != len(allowed) {
-		return nil, domainerr.WithKind(domainerr.New(nil, "selection must cover all suspension candidates"), domainerr.ErrValidation)
 	}
 
 	return markedSet, nil

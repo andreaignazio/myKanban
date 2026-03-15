@@ -19,6 +19,8 @@ var ErrUnsupportedPolicy = errors.New("Unsupported policy")
 var ErrUnsupportedFact = errors.New("Unsupported fact")
 var ErrInvalidFactValue = errors.New("Invalid fact value")
 
+var ErrMemberSuspended = errors.New("workspace membership is suspended")
+
 var ErrInvalidSignature = errors.New("stripe: invalid signature")
 var ErrUnsupportedEvent = errors.New("stripe: unsupported event type")
 var ErrMissingPriceID = errors.New("stripe: missing price ID for the selected plan")

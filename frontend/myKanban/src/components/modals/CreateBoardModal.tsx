@@ -72,6 +72,9 @@ export const CreateBoardModal = forwardRef<HTMLDivElement, CreateBoardModalProps
             if (currentBoards < workspaceLimit) {
                 wsFlag = true;
             }
+            if (workspaceLimit === -1) {
+                wsFlag = true;
+            }
         }
         if (background || selectedImage) {
             bgFlag = true;
@@ -212,8 +215,8 @@ export const CreateBoardModal = forwardRef<HTMLDivElement, CreateBoardModalProps
 
                     <LabeledButtonPresetA label="Create Board" onClick={handleCreateBoard}
                         disabled={!canSubmit}
-                        className="bg-menubtn rounded-md !h-8 justify-center
-                    font-medium tracking-wide" />
+                        className={`${canSubmit ? "!bg-blue-500" : "bg-menubtn"} rounded-md !h-8 justify-center
+                    font-medium tracking-wide`} />
                 </div>
             </div>
 

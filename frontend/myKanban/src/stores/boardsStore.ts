@@ -28,7 +28,7 @@ type PendingWorkspaceBoardTargetsResponse = {
     ShareOffers: ShareOffer[];
 }
 
-export type BoardStatus = "locked" | "offered" | "requested" | null;
+export type BoardStatus = "locked" | "offered" | "requested" | "suspended" | "pending_suspension" | null;
 
 export type BoardsStore = {
     OpCounter: number;
@@ -73,6 +73,7 @@ export type BoardsStore = {
     removeUserBoardRelation: (boardID: string) => void;
     findWorkspaceIdByBoardId: (boardId: string) => string | undefined;
     mergeBoardsInWorkspace: (workspaceID: string, boards: Record<string, Board>) => void;
+    fetchSuspensionBoardCandidates: (workspaceId: string) => Promise<void>;
     applyOptimisticCloseBoard: (workspaceId: string, boardId: string) => void;
     closeBoardInWorkspace: (workspaceId: string, boardId: string, asyncKey?: AsyncRequestKey) => Promise<void>;
     replaceBoardPendingSuspensionSelection: (workspaceId: string, markedBoardIDs: string[], unmarkedBoardIDs: string[], asyncKey?: AsyncRequestKey) => Promise<void>;
@@ -302,6 +303,10 @@ export const useBoardsStore = create<BoardsStore>((set, get) => ({
         const resolvedWorkspaceId = workspaceId ?? get().findWorkspaceIdByBoardId(boardId);
         if (!resolvedWorkspaceId) return "locked";
 
+        const board = get().boardsById[boardId];
+        if (board?.IsSuspended) return "suspended";
+        if (board?.IsPendingSuspend) return "pending_suspension";
+
         const hasUserBoardRelation = !!get().userBoardsById[boardId];
         if (hasUserBoardRelation) return null;
 
@@ -495,13 +500,21 @@ export const useBoardsStore = create<BoardsStore>((set, get) => ({
             await run();
         }
     },
+    fetchSuspensionBoardCandidates: async (workspaceId: string) => {
+        const response = await api.get<Board[]>(`/workspaces/${workspaceId}/subscription/suspension/boards/candidates`);
+        const boardsMap: Record<string, Board> = {};
+        for (const board of response.data) {
+            boardsMap[board.ID] = board;
+        }
+        get().mergeBoardsInWorkspace(workspaceId, boardsMap);
+    },
     replaceBoardPendingSuspensionSelection: async (workspaceId, markedBoardIDs, unmarkedBoardIDs, asyncKey?) => {
         const run = async () => {
             await api.post(`/workspaces/${workspaceId}/subscription/suspension/boards`, {
                 MarkedBoardIDs: markedBoardIDs,
                 UnmarkedBoardIDs: unmarkedBoardIDs,
             });
-            await get().fetchBoardsForWorkspace(workspaceId);
+            await get().fetchSuspensionBoardCandidates(workspaceId);
         };
         if (asyncKey) {
             await useAsyncRequestStore.getState().execute(asyncKey, run, { successResetDelayMs: 1500 });

@@ -6,6 +6,7 @@ import type { Board, UserWorkspace } from "@/stores/types";
 import { useUserStore } from "@/stores/userStore";
 import type { AnyUser, User } from "@/stores/usertypes";
 import { useWsMembersStore } from "@/stores/wsMembersStore";
+import { useCurrentWorkspaceRole } from "@/hooks/useCurrentWorkspaceRole";
 import { ArrowsUpDownIcon, ExclamationCircleIcon } from "@heroicons/react/24/solid";
 import { Activity, useEffect, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
@@ -36,7 +37,14 @@ export const ManagaeMembersAndBoards = () => {
     const membersById = useWsMembersStore(useShallow((state) => state.userWorkspacesByWorkspaceId[workspaceID] ?? {}));
     const boardIds = useBoardsStore(useShallow((state) => state.boardIdsByWorkspaceId[workspaceID] ?? []));
     const boardsById = useBoardsStore(useShallow((state) => state.boardsById));
+    const fetchSuspensionBoardCandidates = useBoardsStore((state) => state.fetchSuspensionBoardCandidates);
     const usersById = useUserStore(useShallow((state) => state.usersById));
+    const { isAdminOrOwner } = useCurrentWorkspaceRole(workspaceID);
+
+    useEffect(() => {
+        if (!isAdminOrOwner) return;
+        void fetchSuspensionBoardCandidates(workspaceID);
+    }, [workspaceID, isAdminOrOwner]);
 
     useEffect(() => {
         setSelectedUserIDs(membersIds.filter((id) => membersById[id]?.IsPendingSuspend));
@@ -78,6 +86,7 @@ export const ManagaeMembersAndBoards = () => {
                     selectedUserIDs={selectedUserIDs}
                     setSelectedUserIDs={setSelectedUserIDs}
                     pendingSortMode={pendingSortMode}
+                    isAdminOrOwner={isAdminOrOwner}
                 />
             </Activity>
             <Activity name="boards" mode={activeTab === "boards" ? "visible" : "hidden"}>
@@ -88,6 +97,7 @@ export const ManagaeMembersAndBoards = () => {
                     selectedBoardIDs={selectedBoardIDs}
                     setSelectedBoardIDs={setSelectedBoardIDs}
                     pendingSortMode={pendingSortMode}
+                    isAdminOrOwner={isAdminOrOwner}
                 />
             </Activity>
         </div>
@@ -102,6 +112,7 @@ type SuspendMembersListProps = {
     selectedUserIDs: string[];
     setSelectedUserIDs: Dispatch<SetStateAction<string[]>>;
     pendingSortMode: PendingSortMode;
+    isAdminOrOwner: boolean;
 };
 
 const MEMBERSHIP_ROLE_ORDER: Record<string, number> = {
@@ -119,6 +130,7 @@ const SuspendMembersList = ({
     selectedUserIDs,
     setSelectedUserIDs,
     pendingSortMode,
+    isAdminOrOwner,
 }: SuspendMembersListProps) => {
     const replaceMemberPendingSuspensionSelection = useWsMembersStore((state) => state.replaceMemberPendingSuspensionSelection);
     const sortedMemberIDs = [...membersIds].sort((leftId, rightId) => {
@@ -158,6 +170,7 @@ const SuspendMembersList = ({
     const hasChanges = membersIds.some((id) => (membersById[id]?.IsPendingSuspend ?? false) !== selectedSet.has(id));
 
     const handleToggle = (userID: string) => {
+        if (!isAdminOrOwner) return;
         const member = membersById[userID];
         if (!member || member.IsSuspended || member.Role === "owner") {
             return;
@@ -176,14 +189,16 @@ const SuspendMembersList = ({
 
     return (
         <div className="mt-4 flex flex-col gap-4 px-2 py-4">
-            <InfoBox text="Choose the full member suspension set locally, then save it in one request." />
-            <SaveSelectionButton
-                className="sticky top-0"
-                disabled={!hasChanges || !selectedCountMatchesExpected}
-                selectedCount={selectedUserIDs.length}
-                expectedCount={expectedSelectedCount}
-                onClick={() => { void handleSave(); }}
-            />
+            {isAdminOrOwner && <InfoBox text="Choose the full member suspension set locally, then save it in one request." />}
+            {isAdminOrOwner && (
+                <SaveSelectionButton
+                    className="sticky top-0"
+                    disabled={!hasChanges || !selectedCountMatchesExpected}
+                    selectedCount={selectedUserIDs.length}
+                    expectedCount={expectedSelectedCount}
+                    onClick={() => { void handleSave(); }}
+                />
+            )}
             {sortedMemberIDs.map((id) => {
                 const member = membersById[id];
                 const user = usersById[id] as User | undefined;
@@ -203,7 +218,7 @@ const SuspendMembersList = ({
                         rowClassName={` transition-all ease-in-out duration-300
                             relative overflow-hidden shadow-md shadow-black/30
                             ${(isGoingToBeSuspended) ? "ring-2 ring-orange-500/50" : ""}
-                                ${(isCurrentlyPendingSuspension) ? "!text-neutral-500/20 opacity-50" : ""}
+                                ${(isCurrentlyPendingSuspension) ? "ring-1 ring-amber-500/40" : ""}
                                     ${(isGoingToBeReinstated) ? "bg-lime-500/20 ring-2 ring-lime-500/50" : ""}
                             `}
                         user={user}
@@ -215,8 +230,9 @@ const SuspendMembersList = ({
                              transition-colors pointer-events-none`} />
                         <SuspendButton onClick={() => handleToggle(id)}
                             isOwner={member.Role === "owner"}
-                            disabled={member.IsSuspended}
+                            disabled={member.IsSuspended || !isAdminOrOwner}
                             selected={isDraftSelected}
+                            isPendingAndSelected={isCurrentlyPendingSuspension}
                             isUnselecting={isGoingToBeReinstated || isGoingToBeSuspended}
                         />
                     </MemberRow>
@@ -233,6 +249,8 @@ type SuspendBoardsListProps = {
     selectedBoardIDs: string[];
     setSelectedBoardIDs: Dispatch<SetStateAction<string[]>>;
     pendingSortMode: PendingSortMode;
+    isAdminOrOwner: boolean;
+    onSaveSuccess?: () => void;
 };
 
 const SuspendBoardsList = ({
@@ -242,6 +260,8 @@ const SuspendBoardsList = ({
     selectedBoardIDs,
     setSelectedBoardIDs,
     pendingSortMode,
+    isAdminOrOwner,
+    onSaveSuccess,
 }: SuspendBoardsListProps) => {
     const replaceBoardPendingSuspensionSelection = useBoardsStore((state) => state.replaceBoardPendingSuspensionSelection);
     const sortedBoardIDs = [...boardIds].sort((leftId, rightId) => {
@@ -275,6 +295,7 @@ const SuspendBoardsList = ({
     const hasChanges = boardIds.some((id) => (boardsById[id]?.IsPendingSuspend ?? false) !== selectedSet.has(id));
 
     const handleToggle = (boardID: string) => {
+        if (!isAdminOrOwner) return;
         const board = boardsById[boardID];
         if (!board || board.IsSuspended) {
             return;
@@ -289,18 +310,21 @@ const SuspendBoardsList = ({
             boardIds.filter((id) => !selectedSet.has(id)),
             useAsyncKey("subscription:suspension:boards:save", workspaceID),
         );
+        onSaveSuccess?.();
     };
 
     return (
         <div className="mt-4 flex flex-col gap-4 px-2 py-4">
-            <InfoBox text="Choose the full board suspension set locally, then save it in one request." />
-            <SaveSelectionButton
-                className="sticky top-0"
-                disabled={!hasChanges || !selectedCountMatchesExpected}
-                selectedCount={selectedBoardIDs.length}
-                expectedCount={expectedSelectedCount}
-                onClick={() => { void handleSave(); }}
-            />
+            {isAdminOrOwner && <InfoBox text="Choose the full board suspension set locally, then save it in one request." />}
+            {isAdminOrOwner && (
+                <SaveSelectionButton
+                    className="sticky top-0"
+                    disabled={!hasChanges || !selectedCountMatchesExpected}
+                    selectedCount={selectedBoardIDs.length}
+                    expectedCount={expectedSelectedCount}
+                    onClick={() => { void handleSave(); }}
+                />
+            )}
             {sortedBoardIDs.map((boardID) => {
                 const board = boardsById[boardID];
                 if (!board) {
@@ -318,7 +342,7 @@ const SuspendBoardsList = ({
                     <div key={boardID} className={`group flex flex-row items-center justify-between gap-3 rounded-2xl border
                      border-amber-500/30 bg-neutral-500/20 px-4 py-3 transition-colors ease-in-out duration-300 shadow-md shadow-black/30
                      ${(isGoingToBeSuspended) ? "ring-2 ring-orange-500/50" : ""}
-                                ${(isCurrentlyPendingSuspension) ? "!text-neutral-500/20 opacity-50" : ""}
+                                ${(isCurrentlyPendingSuspension) ? "ring-1 ring-amber-500/40" : ""}
                                     ${(isGoingToBeReinstated) ? "bg-lime-500/20" : ""}
                      `}>
                         <div className="flex min-w-0 flex-col gap-1">
@@ -327,7 +351,7 @@ const SuspendBoardsList = ({
                         </div>
                         <div className="flex flex-row items-center gap-3">
                             {board.IsPendingSuspend && <ExclamationCircleIcon className="h-4 w-4 text-amber-500" />}
-                            <SuspendButton onClick={() => handleToggle(boardID)} disabled={board.IsSuspended} selected={isSelected} />
+                            <SuspendButton onClick={() => handleToggle(boardID)} disabled={board.IsSuspended || !isAdminOrOwner} selected={isSelected} isPendingAndSelected={isCurrentlyPendingSuspension} />
                         </div>
                     </div>
                 );
@@ -380,26 +404,32 @@ const SaveSelectionButton = ({ disabled, selectedCount, expectedCount, onClick, 
 
 type SuspendButtonProps = {
     onClick: () => void;
-
     selected?: boolean;
     isOwner?: boolean;
     disabled?: boolean;
     isUnselecting?: boolean;
+    isPendingAndSelected?: boolean;
 };
 
-const SuspendButton = ({ onClick, selected = false, isOwner = false, disabled = false, isUnselecting = false }: SuspendButtonProps) => {
-    const label = isUnselecting ? "Unselect" : "Select";
+const SuspendButton = ({ onClick, selected = false, isOwner = false, disabled = false, isUnselecting = false, isPendingAndSelected = false }: SuspendButtonProps) => {
+    const label = isPendingAndSelected ? "Reinstate" : isUnselecting ? "Unselect" : "Select";
     const isDisabled = isOwner || disabled;
-    const className = isDisabled ? "cursor-not-allowed bg-neutral-700/40 text-neutral-500"
 
-        : isUnselecting
-            ? "bg-neutral-600 text-white"
-            : "bg-amber-500/50 text-white";
+    let className: string;
+    if (isDisabled) {
+        className = "cursor-not-allowed bg-neutral-700/40 text-neutral-500";
+    } else if (isPendingAndSelected) {
+        className = "bg-lime-600/60 text-white hover:bg-lime-500/80";
+    } else if (isUnselecting) {
+        className = "bg-neutral-600 text-white hover:bg-amber-500/70";
+    } else {
+        className = "bg-amber-500/50 text-white hover:bg-amber-500/70";
+    }
 
     return (
         <div className="bg-menusec w-full h-fit rounded-full flex flex-row">
-            <button onClick={onClick} disabled={isDisabled} className={` ${(!isDisabled) ? "hover:bg-amber-500/70" : ""} transition-colors ease-in-out duration-300
-        w-full flex h-10 flex-row items-center justify-center gap-2 rounded-3xl px-3 text-xs font-semibold  ${className}`}>
+            <button onClick={onClick} disabled={isDisabled} className={`transition-colors ease-in-out duration-300
+        w-full flex h-10 flex-row items-center justify-center gap-2 rounded-3xl px-3 text-xs font-semibold ${className}`}>
                 <ExclamationCircleIcon className="inline-block h-4 w-4" />
                 {label}
             </button>

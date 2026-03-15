@@ -23,6 +23,7 @@ import { useBoardMembersStore } from "@/stores/boardMembersStore"
 import { useUserStore } from "@/stores/userStore"
 import { useUiStore } from "@/stores/uiStore"
 import { getWebSocketOrigin } from "@/config/runtime"
+import { useWsMembersStore } from "@/stores/wsMembersStore"
 
 type SharedWsState = {
     ws: WebSocket | null
@@ -130,6 +131,18 @@ export function useBoardWebSocket(workspaceID: string, boardID: string | null) {
         if (evt.Type.includes("workspace.user.shareoffer.") || evt.Type.includes("board.user.shareoffer.")) {
             applyShareOfferEvent(evt as UserEvent)
             console.debug("[ws] dispatch user share offer event", evt)
+            return
+        }
+
+        if (evt.Type === "workspace.user.member.suspension.updated") {
+            const payload = (evt as UserEvent).Payload?.WorkspaceMemberSuspensionUpdatedPayload
+            if (payload?.UserWorkspace) {
+                useWsMembersStore.getState().mergeUserWorkspaceRelation([payload.UserWorkspace])
+                if (payload.UserWorkspace.IsSuspended) {
+                    useUiStore.getState().setWorkspaceSuspendedModalOpen(true, payload.UserWorkspace.WorkspaceID)
+                }
+            }
+            console.debug("[ws] dispatch workspace user suspension updated", evt)
             return
         }
 

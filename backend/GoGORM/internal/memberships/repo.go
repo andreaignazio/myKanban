@@ -3,6 +3,7 @@ package memberships
 import (
 	"GoGORM/internal/dbx"
 	"GoGORM/internal/domainerr"
+	"GoGORM/internal/rbac"
 	"GoGORM/models"
 	"context"
 	"fmt"
@@ -253,6 +254,10 @@ func (r *GormRepo) GetUserWorkspaceRole(ctx context.Context, userID, workspaceID
 	}
 	if result.RowsAffected == 0 {
 		return "", domainerr.ErrNotFound
+	}
+
+	if userWorkspace.IsSuspended && userWorkspace.Role != rbac.Owner {
+		return "", domainerr.ErrMemberSuspended
 	}
 
 	return userWorkspace.Role.String(), nil

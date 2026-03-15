@@ -15,3 +15,21 @@ export type SubscriptionCheckoutResponse = {
     SessionID?: string
     Subscription?: WorkspaceSubscription
 }
+
+export type MemberSuspensionState = {
+    UserID: string
+    IsSuspended: boolean
+    IsPendingSuspend: boolean
+}
+
+export type BoardSuspensionState = {
+    BoardID: string
+    IsSuspended: boolean
+    IsPendingSuspend: boolean
+}
+
+export type SubscriptionReconcileResponse = {
+    Subscription: WorkspaceSubscription
+    MemberStates: MemberSuspensionState[]
+    BoardStates: BoardSuspensionState[]
+}

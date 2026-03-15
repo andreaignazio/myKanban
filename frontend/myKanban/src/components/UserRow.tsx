@@ -8,8 +8,16 @@ import { useAuthStore } from "@/stores/auth";
 import { useWorkspaceActionRegistry } from "@/actionRegistry/workspaceActionRegistry";
 import { LeaveRemoveMember } from "./common/leaveRemoveMember";
 import { UserIdentityRow } from "./common/UserIdentityRow";
+import { WorkspaceSuspensionBadge } from "./badges/WorkspaceSuspensionBadge";
 
-export function UserRow({ userID, workspaceId }: { userID: string; workspaceId: string }) {
+type UserRowProps = {
+    userID: string;
+    workspaceId: string;
+    showSuspendedStatus?: boolean;
+}
+
+
+export function UserRow({ userID, workspaceId, showSuspendedStatus }: UserRowProps) {
 
     const currentUserId = useAuthStore((state) => state.userID);
     const user = useUserStore((state) => state.usersById[userID]);
@@ -37,7 +45,8 @@ export function UserRow({ userID, workspaceId }: { userID: string; workspaceId: 
         <div>
             <div className="flex flex-row items-center justify-between gap-3">
                 <UserIdentityRow user={user} />
-                <div className="flex flex-row gap-4 items-center justify-center h-full +">
+                <div className="flex flex-row gap-4 items-center justify-center h-full">
+                    {showSuspendedStatus && <WorkspaceSuspensionBadge userWorkspace={membership} />}
                     <WorkspaceMembersDropdown userId={userID} workspaceID={workspaceId} isAdminOrOwner={isAdminOrOwner} isCurrentUser={isCurrentUser}
                         showChevron={!isLocked}
                         chevronClassName="h-5"

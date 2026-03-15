@@ -120,6 +120,49 @@ func (h *SubscriptionHandler) ResumeWorkspaceSubscription(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.WorkspaceSubscriptionToResponse(subscription))
 }
 
+func (h *SubscriptionHandler) GetWorkspaceSubscription(c *gin.Context) {
+	ctx := c.Request.Context()
+	workspaceID, ok := parseWorkspaceID(c)
+	if !ok {
+		return
+	}
+	userID := c.MustGet("userID").(uuid.UUID)
+
+	if h.Service == nil {
+		httperr.WriteOp(c, errors.New("subscription service not configured"), "subscription.handler.GetWorkspaceSubscription")
+		return
+	}
+
+	result, err := h.Service.FetchWorkspaceSubscriptionWithReconcile(ctx, workspaceID, userID)
+	if err != nil {
+		httperr.WriteOp(c, err, "subscription.handler.GetWorkspaceSubscription")
+		return
+	}
+
+	c.JSON(http.StatusOK, result)
+}
+
+func (h *SubscriptionHandler) GetAllWorkspaceBoardsForSuspensionManagement(c *gin.Context) {
+	ctx := c.Request.Context()
+	workspaceID, ok := parseWorkspaceID(c)
+	if !ok {
+		return
+	}
+	userID := c.MustGet("userID").(uuid.UUID)
+
+	if h.Service == nil {
+		httperr.WriteOp(c, errors.New("subscription service not configured"), "subscription.handler.GetAllWorkspaceBoardsForSuspensionManagement")
+		return
+	}
+
+	boards, err := h.Service.GetAllWorkspaceBoardsForSuspensionManagement(ctx, workspaceID, userID)
+	if err != nil {
+		httperr.WriteOp(c, err, "subscription.handler.GetAllWorkspaceBoardsForSuspensionManagement")
+		return
+	}
+	c.JSON(http.StatusOK, boards)
+}
+
 func (h *SubscriptionHandler) ReplaceBoardPendingSuspensionSelection(c *gin.Context) {
 	ctx := c.Request.Context()
 	workspaceID, ok := parseWorkspaceID(c)

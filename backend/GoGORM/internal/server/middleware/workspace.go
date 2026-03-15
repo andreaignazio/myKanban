@@ -72,3 +72,71 @@ func ResolveWorkspaceFromBoardID(db *gorm.DB) gin.HandlerFunc {
 		c.Next()
 	}
 }
+
+// RequireMemberNotSuspended blocks requests from workspace members whose
+// membership has been suspended (is_suspended = true). It resolves the
+// workspaceID from (in order of preference):
+//  1. Gin context key "workspaceID" set by ResolveWorkspaceFromBoardID (board-scoped routes)
+//  2. Path param ":workspaceID" (workspace-scoped routes like /workspaces/:workspaceID/...)
+//
+// Routes without any workspaceID are transparently skipped.
+// Workspace owners are never blocked.
+func RequireMemberNotSuspended(db *gorm.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var workspaceID uuid.UUID
+
+		if val, exists := c.Get("workspaceID"); exists {
+			if id, ok := val.(uuid.UUID); ok && id != uuid.Nil {
+				workspaceID = id
+			}
+		}
+		if workspaceID == uuid.Nil {
+			if raw := c.Param("workspaceID"); raw != "" {
+				if id, err := uuid.Parse(raw); err == nil && id != uuid.Nil {
+					workspaceID = id
+				}
+			}
+		}
+		if workspaceID == uuid.Nil {
+			c.Next()
+			return
+		}
+
+		userIDVal, exists := c.Get("userID")
+		if !exists {
+			c.Next()
+			return
+		}
+		userID, ok := userIDVal.(uuid.UUID)
+		if !ok || userID == uuid.Nil {
+			c.Next()
+			return
+		}
+
+		var row struct {
+			Role        string `gorm:"column:role"`
+			IsSuspended bool   `gorm:"column:is_suspended"`
+		}
+		err := db.WithContext(c.Request.Context()).
+			Table("user_workspaces").
+			Select("role, is_suspended").
+			Where("user_id = ? AND workspace_id = ? AND deleted_at IS NULL", userID, workspaceID).
+			Limit(1).
+			Take(&row).Error
+		if err != nil {
+			// Not a member or DB error — let the handler deal with auth.
+			c.Next()
+			return
+		}
+
+		if row.IsSuspended && row.Role != "owner" {
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
+				"Code":    "member_suspended",
+				"Message": "your workspace membership is suspended",
+			})
+			return
+		}
+
+		c.Next()
+	}
+}

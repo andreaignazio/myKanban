@@ -6,6 +6,7 @@ import { useShallow } from "zustand/react/shallow";
 import { useCacheStore } from "@/stores/cacheStore";
 import { GridBuilder, ActionComponent, type ColumnDefinition } from "@/components/OffersLists/UserBoardOutgoingRequests";
 
+
 type OutletCtx = { showOnlyFiltered: boolean }
 
 export function WorkspaceInbox() {
@@ -53,11 +54,9 @@ export function WorkspaceInbox() {
     ]
 
     return (
-        <div className="w-full h-full flex flex-col items-center justify-start p-6 font-grotesk">
-            <div className="w-full max-w-5xl flex flex-col gap-2 mb-4">
-                <p className="text-2xl font-semibold tracking-tight text-text">Inbox</p>
-                <p className="text-sm text-text/70">Richieste di accesso al workspace ricevute dagli utenti.</p>
-            </div>
+        <div className="w-full h-full flex flex-col items-center justify-start p-0 font-grotesk">
+
+
 
             <div className="w-full max-w-5xl flex flex-col gap-3 animate-rise-in">
                 <GridBuilder

@@ -143,6 +143,8 @@ func NewRouter(db *gorm.DB,
 
 	r.POST("/webhooks/stripe", subscriptionHandler.HandleStripeBillingWebhook)
 
+	registerDebugRoutes(r, subscriptionHandler)
+
 	api := r.Group("/api", middleware.AuthFromHeader(authenticator), middleware.CorrelationID())
 	api.Use(middleware.ResolveWorkspaceFromBoardID(db))
 	{
@@ -175,6 +177,7 @@ func NewRouter(db *gorm.DB,
 		}
 
 		boards := api.Group("/boards")
+		boards.Use(middleware.RequireMemberNotSuspended(db))
 		{
 			boards.GET("", workspacesHandler.GetWorkspacesBoardsForUserID)
 			boards.POST("", boardsHandler.CreateBoard)
@@ -350,6 +353,7 @@ func NewRouter(db *gorm.DB,
 				//cards.GET("/:cardID", cardsHandler.GetCardDetails)
 			}
 			workspaces := api.Group("/workspaces")
+			workspaces.Use(middleware.RequireMemberNotSuspended(db))
 			{
 				workspaces.POST("", workspacesHandler.CreateUserWorkspace)
 				workspaces.GET("", workspacesHandler.GetUserWorkspaces)
@@ -378,8 +382,10 @@ func NewRouter(db *gorm.DB,
 				workspaces.GET("/:workspaceID/shareoffers", shareHandler.GetWorkspaceOutgoingShareOffers)
 
 				workspaces.POST("/:workspaceID/subscription/checkout", subscriptionHandler.StartCheckoutForWorkspace)
+				workspaces.GET("/:workspaceID/subscription", subscriptionHandler.GetWorkspaceSubscription)
 				workspaces.POST("/:workspaceID/subscription/cancel", subscriptionHandler.CancelWorkspaceSubscription)
 				workspaces.POST("/:workspaceID/subscription/resume", subscriptionHandler.ResumeWorkspaceSubscription)
+				workspaces.GET("/:workspaceID/subscription/suspension/boards/candidates", subscriptionHandler.GetAllWorkspaceBoardsForSuspensionManagement)
 				workspaces.POST("/:workspaceID/subscription/suspension/boards", subscriptionHandler.ReplaceBoardPendingSuspensionSelection)
 				workspaces.POST("/:workspaceID/subscription/suspension/members", subscriptionHandler.ReplaceMemberPendingSuspensionSelection)
 			}

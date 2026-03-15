@@ -52,6 +52,10 @@ type UiStore = {
     lostWorkspaceAccessWorkspaceId?: string
     setLostWorkspaceAccessModalOpen: (open: boolean, workspaceId?: string) => void
 
+    workspaceSuspendedModalOpen: boolean
+    workspaceSuspendedModalWorkspaceId?: string
+    setWorkspaceSuspendedModalOpen: (open: boolean, workspaceId?: string) => void
+
     lostBoardAccessModalOpen: boolean
     lostBoardAccessBoardId?: string
     lostBoardAccessWorkspaceId?: string
@@ -103,6 +107,8 @@ export const useUiStore = create<UiStore>((set, get) => ({
     deletedCardId: undefined,
     lostWorkspaceAccessModalOpen: false,
     lostWorkspaceAccessWorkspaceId: undefined,
+    workspaceSuspendedModalOpen: false,
+    workspaceSuspendedModalWorkspaceId: undefined,
     lostBoardAccessModalOpen: false,
     lostBoardAccessBoardId: undefined,
     lostBoardAccessWorkspaceId: undefined,
@@ -145,6 +151,12 @@ export const useUiStore = create<UiStore>((set, get) => ({
         set(() => ({
             lostWorkspaceAccessModalOpen: open,
             lostWorkspaceAccessWorkspaceId: open ? workspaceId : undefined,
+        }))
+    },
+    setWorkspaceSuspendedModalOpen: (open, workspaceId) => {
+        set(() => ({
+            workspaceSuspendedModalOpen: open,
+            workspaceSuspendedModalWorkspaceId: open ? workspaceId : undefined,
         }))
     },
     setLostBoardAccessModalOpen: (open, boardId, workspaceId) => {

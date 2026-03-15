@@ -4,7 +4,7 @@ import { useWorkspaceSubscriptionBilling } from "@/hooks/useWorkspaceSubscriptio
 import { useDateTimeParser } from "@/hooks/useDateTimeParser";
 import { useWorkspaceStore } from "@/stores/workspaceStore";
 import { useWsMembersStore } from "@/stores/wsMembersStore";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useShallow } from "zustand/react/shallow";
 import { useBoardsStore } from "@/stores/boardsStore";
@@ -16,7 +16,12 @@ export const WorkspaceSubscriptionManage = () => {
     const subscription = useWorkspaceStore((state) => state.wSubscriptionsById[workspaceID]);
     const cancelWorkspaceSubscription = useWorkspaceStore((state) => state.cancelWorkspaceSubscription);
     const resumeWorkspaceSubscription = useWorkspaceStore((state) => state.resumeWorkspaceSubscription);
+    const fetchWorkspaceSubscription = useWorkspaceStore((state) => state.fetchWorkspaceSubscription);
     const [isSubmittingSubscriptionChange, setIsSubmittingSubscriptionChange] = useState(false);
+
+    useEffect(() => {
+        fetchWorkspaceSubscription(workspaceID);
+    }, [workspaceID]);
     const currentPlan = subscription?.Plan ?? "free";
     const cancelAtPeriodEnd = subscription?.CancelAtPeriodEnd ?? false;
     const pendingPlan = subscription?.PendingPlan;

@@ -33,6 +33,8 @@ export default function AppLayout() {
     const hydrateWorkspaces = useWorkspaceStore((state) => state.hydrateWorkspaces)
     const hasHydratedWorkspaces = useWorkspaceStore((state) => state.hasHydratedWorkspaces)
     const getWorkspaceStatus = useWorkspaceStore((state) => state.getWorkspaceStatus)
+    const getMyWorkspaceMemberStatus = useWorkspaceStore((state) => state.getMyWorkspaceMemberStatus)
+    const workspaceIds = useWorkspaceStore((state) => state.workspaceIds)
     const fetchBoardsForWorkspace = useBoardsStore((state) => state.fetchBoardsForWorkspace)
     const fetchWorkspaceMembers = useWsMembersStore((state) => state.fetchWorkspaceMembers)
     const fetchedWorkspaceBoardsRef = useRef<Set<string>>(new Set())
@@ -98,8 +100,21 @@ export default function AppLayout() {
         }
         if (getWorkspaceStatus(routeWorkspaceID) !== "accessible") {
             navigate("/workspaces", { replace: true })
+            return
         }
-    }, [hasHydratedWorkspaces, routeWorkspaceID, getWorkspaceStatus, navigate])
+        if (getMyWorkspaceMemberStatus(routeWorkspaceID) === "suspended") {
+            const firstAvailable = workspaceIds.find(
+                (id) => id !== routeWorkspaceID
+                    && getWorkspaceStatus(id) === "accessible"
+                    && getMyWorkspaceMemberStatus(id) !== "suspended"
+            )
+            if (firstAvailable) {
+                navigate(`/workspaces/${firstAvailable}/boards`, { replace: true })
+            } else {
+                navigate("/workspaces", { replace: true })
+            }
+        }
+    }, [hasHydratedWorkspaces, routeWorkspaceID, workspaceIds, getWorkspaceStatus, getMyWorkspaceMemberStatus, navigate])
 
     useEffect(() => {
         if (!hasHydratedWorkspaces || !routeWorkspaceID) {
@@ -199,6 +214,9 @@ export default function AppLayout() {
     const setDeletedCardModalOpen = useUiStore((state) => state.setDeletedCardModalOpen)
     const lostWorkspaceAccessModalOpen = useUiStore((state) => state.lostWorkspaceAccessModalOpen)
     const setLostWorkspaceAccessModalOpen = useUiStore((state) => state.setLostWorkspaceAccessModalOpen)
+    const workspaceSuspendedModalOpen = useUiStore((state) => state.workspaceSuspendedModalOpen)
+    const workspaceSuspendedModalWorkspaceId = useUiStore((state) => state.workspaceSuspendedModalWorkspaceId)
+    const setWorkspaceSuspendedModalOpen = useUiStore((state) => state.setWorkspaceSuspendedModalOpen)
     const lostBoardAccessModalOpen = useUiStore((state) => state.lostBoardAccessModalOpen)
     const lostBoardAccessWorkspaceId = useUiStore((state) => state.lostBoardAccessWorkspaceId)
     const setLostBoardAccessModalOpen = useUiStore((state) => state.setLostBoardAccessModalOpen)
@@ -324,6 +342,38 @@ export default function AppLayout() {
             onAutoClose: redirectToWorkspaceBoards,
         })
     }, [lostBoardAccessModalOpen, lostBoardAccessWorkspaceId, workspaceID, setDomainModalOpen, setLostBoardAccessModalOpen, navigate])
+
+    useEffect(() => {
+        if (!workspaceSuspendedModalOpen) return
+
+        const targetWorkspaceID = workspaceSuspendedModalWorkspaceId ?? workspaceID
+        const fallbackRoute = "/workspaces"
+        const targetRoute = targetWorkspaceID ? `/workspaces/${targetWorkspaceID}/boards` : fallbackRoute
+
+        const redirectToWorkspaceBoards = () => {
+            setDomainModalOpen(false)
+            setWorkspaceSuspendedModalOpen(false)
+            navigate(targetRoute, { replace: true })
+        }
+
+        setDomainModalOpen(true, {
+            componentent: () => (
+                <HeadlessTimedNoticeMenu
+                    title="Workspace suspended"
+                    description="Your account in this workspace has been suspended. You will be redirected to the workspace boards."
+                    actionLabel="Go now"
+                    onAction={redirectToWorkspaceBoards}
+                />
+            ),
+            anchorRef: null,
+            renderType: "virtual",
+            virtual: "viewport-center",
+            closeOnClickOutside: false,
+            closeOnEscape: false,
+            autoCloseMs: 7000,
+            onAutoClose: redirectToWorkspaceBoards,
+        })
+    }, [workspaceSuspendedModalOpen, workspaceSuspendedModalWorkspaceId, workspaceID, setDomainModalOpen, setWorkspaceSuspendedModalOpen, navigate])
 
     const isBoardViewV2 = useMatch("/workspaces/:workspaceId/boards/*")
     const isSingleMode = !isBoardViewV2

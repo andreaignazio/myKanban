@@ -87,4 +87,7 @@ const (
 	AuditTemplateWorkspaceSubscriptionCreated  AuditTemplateKey = "audit.workspace.subscription.created"
 	AuditTemplateWorkspaceSubscriptionUpdated  AuditTemplateKey = "audit.workspace.subscription.updated"
 	AuditTemplateWorkspaceSubscriptionCanceled AuditTemplateKey = "audit.workspace.subscription.canceled"
+
+	AuditTemplateWorkspaceMemberSuspensionUpdated AuditTemplateKey = "audit.workspace.member.suspension.updated"
+	AuditTemplateWorkspaceBoardSuspensionUpdated  AuditTemplateKey = "audit.workspace.board.suspension.updated"
 )

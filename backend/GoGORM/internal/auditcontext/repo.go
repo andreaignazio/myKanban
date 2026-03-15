@@ -26,6 +26,7 @@ type Reader interface {
 	GetUsersByIDs(ctx context.Context, userIDs []uuid.UUID) ([]*models.User, error)
 	GetUserLite(ctx context.Context, userID uuid.UUID) (*models.UserLite, error)
 	GetBoardListsByBoardID(ctx context.Context, boardID uuid.UUID) ([]models.BoardList, error)
+	GetWorkspaceAdminOwnerUserIDs(ctx context.Context, workspaceID uuid.UUID) ([]uuid.UUID, error)
 }
 
 type AuditContextRepo struct {
@@ -295,4 +296,15 @@ func (r *AuditContextRepo) GetBoardListsByBoardID(ctx context.Context, boardID u
 		return nil, dbx.WrapDBErr(err, "auditcontext: error fetching board lists by board ID")
 	}
 	return boardLists, nil
+}
+
+func (r *AuditContextRepo) GetWorkspaceAdminOwnerUserIDs(ctx context.Context, workspaceID uuid.UUID) ([]uuid.UUID, error) {
+	var userIDs []uuid.UUID
+	if err := r.db.WithContext(ctx).
+		Table("user_workspaces").
+		Where("workspace_id = ? AND role IN ? AND deleted_at IS NULL", workspaceID, []string{"admin", "owner"}).
+		Pluck("user_id", &userIDs).Error; err != nil {
+		return nil, dbx.WrapDBErr(err, "auditcontext: error fetching workspace admin/owner user IDs")
+	}
+	return userIDs, nil
 }

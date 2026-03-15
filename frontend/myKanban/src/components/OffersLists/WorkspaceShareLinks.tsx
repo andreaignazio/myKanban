@@ -89,10 +89,7 @@ export const WorkspaceShareLinks = forwardRef<HTMLDivElement, { showOnlyActive?:
             items-center justify-start  
             font-grotesk text-neutral-200"
         >
-            <div className="w-full max-w-5xl flex flex-col gap-2 mb-4">
-                <p className="text-2xl font-semibold tracking-tight text-text">Public Links</p>
-                <p className="text-sm text-zinc-400 max-w-xl">Shareable links let anyone with the URL join this workspace — no invitation required. Each link can be scoped to a specific role and optionally set to expire. Revoke a link at any time to block future access.</p>
-            </div>
+
 
             <div className="w-full max-w-5xl flex flex-col gap-3 animate-rise-in">
                 <div className="flex justify-end">

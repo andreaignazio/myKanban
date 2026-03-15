@@ -60,7 +60,9 @@ export type WorkspaceEventTypes =
     | "workspace.sharelink.revoked"
     | "workspace.subscription.created"
     | "workspace.subscription.updated"
-    | "workspace.subscription.canceled";
+    | "workspace.subscription.canceled"
+    | "workspace.member.suspension.updated"
+    | "workspace.board.suspension.updated";
 
 
 
@@ -142,6 +144,7 @@ export type UserEventTypes =
     | "board.user.shareoffer.nonadmin.invite.rejected"
     | "board.user.shareoffer.admin.invite.revoked"
     | "board.user.shareoffer.nonadmin.invite.revoked"
+    | "workspace.user.member.suspension.updated"
 
 export type BoardListEventTypes =
     | "board.list.created"

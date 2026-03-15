@@ -45,11 +45,8 @@ export function WorkspaceOutbox() {
     ]
 
     return (
-        <div className="w-full h-full flex flex-col items-center justify-start p-6 font-grotesk">
-            <div className="w-full max-w-5xl flex flex-col gap-2 mb-4">
-                <p className="text-2xl font-semibold tracking-tight text-text">Outbox</p>
-                <p className="text-sm text-text/70">Condivisoni inviate, stato e destinatari in un colpo d'occhio.</p>
-            </div>
+        <div className="w-full h-full flex flex-col items-center justify-start p-0 font-grotesk">
+
 
             <div className="w-full max-w-5xl flex flex-col gap-3 animate-rise-in">
                 <GridBuilder

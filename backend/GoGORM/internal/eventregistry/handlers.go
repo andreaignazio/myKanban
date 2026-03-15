@@ -38,6 +38,7 @@ func buildHandlers(auditRepo auditcontext.Reader) map[DomainEventType]EventHandl
 		EventCardMirroredTarget:                 NewCardMirrorHandler(auditRepo),
 		EventCardMirroredSource:                 NewCardMirrorHandler(auditRepo),
 		EventWorkspaceBoardCreated:              NewWorkspaceBoardCreatedHandler(auditRepo),
+		EventWorkspaceBoardCreatedPrivate:       NewWorkspaceBoardCreatedPrivateHandler(auditRepo),
 		EventWorkspaceBoardClosed:               NewWorkspaceBoardClosedHandler(auditRepo),
 		EventWorkspaceBoardRestored:             NewWorkspaceBoardRestoredHandler(auditRepo),
 		EventWorkspaceBoardPurged:               NewWorkspaceBoardPurgedHandler(auditRepo),
@@ -86,6 +87,8 @@ func buildHandlers(auditRepo auditcontext.Reader) map[DomainEventType]EventHandl
 		EventWorkspaceSubscriptionCreated:       NewWorkspaceSubscriptionHandler(),
 		EventWorkspaceSubscriptionUpdated:       NewWorkspaceSubscriptionHandler(),
 		EventWorkspaceSubscriptionCanceled:      NewWorkspaceSubscriptionHandler(),
+		EventWorkspaceMemberSuspensionUpdated:   NewWorkspaceMemberSuspensionHandler(),
+		EventWorkspaceBoardSuspensionUpdated:    NewWorkspaceBoardSuspensionHandler(),
 	}
 }
 

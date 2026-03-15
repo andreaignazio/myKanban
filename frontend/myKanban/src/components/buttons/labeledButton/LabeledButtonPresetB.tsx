@@ -27,7 +27,7 @@ export const LabeledButtonPresetB = ({ label, onClick, onClickCapture, onPointer
             disabled={disabled}
             iconAtLeft={iconAtLeft}
             style={style}
-            className={`bg-menubtn rounded-[4px] h-[32px] justify-center
+            className={`bg-menubtn rounded-[4px] h-[32px] justify-center transition-all duration-300 ease-in-out
                     ${disabled ? " opacity-50 " : "hover:bg-gray-500/30"}
                                font-medium text-[14px] tracking-wide ${className}`} >
             {children}

@@ -70,6 +70,7 @@ type WorkspaceRepo interface {
 	GetUserWorkspacesByIDs(ctx context.Context, userID uuid.UUID, workspaceDs []uuid.UUID) ([]models.UserWorkspace, error)
 
 	GetWorkspaceBoardsForUserID(ctx context.Context, userID, workspaceID uuid.UUID) ([]boards.UserBoardRow, error)
+	GetAllWorkspaceBoardsForAdmin(ctx context.Context, userID uuid.UUID, workspaceIDs []uuid.UUID) ([]boards.UserBoardRow, error)
 	GetUserWorkspace(ctx context.Context, userID, workspaceID uuid.UUID) (*models.UserWorkspace, error)
 	GetWorkspaceMembersByWorkspaceID(ctx context.Context, workspaceID uuid.UUID, includeDeleted bool) ([]WorkspaceMemberRow, error)
 	SearchPublicWorkspaces(ctx context.Context, query string, page, limit int, sort string, includeDeleted bool) ([]models.Workspace, int64, error)
@@ -350,18 +351,27 @@ func (s *WorkspaceService) GetWorkspaceBoardsForUserID(ctx context.Context, user
 		return nil, nil, domainerr.ErrForbidden
 	}
 
-	rows, err := s.WorkspaceRepo.GetWorkspaceBoardsForUserID(ctx, userID, workspaceID)
+	isAdminOrOwner := rbac.AtLeast(userworkspace.Role, rbac.Admin)
+
+	var rows []boards.UserBoardRow
+	if isAdminOrOwner {
+		rows, err = s.WorkspaceRepo.GetAllWorkspaceBoardsForAdmin(ctx, userID, []uuid.UUID{workspaceID})
+	} else {
+		rows, err = s.WorkspaceRepo.GetWorkspaceBoardsForUserID(ctx, userID, workspaceID)
+	}
 	if err != nil {
 		return nil, nil, err
 	}
-	boards, userboards := boards.UserBoardRowsToModels(rows)
+	boardModels, userboards := boards.UserBoardRowsToModels(rows)
 
-	boardResponses := make([]dto.BoardResponse, 0, len(boards))
+	boardResponses := make([]dto.BoardResponse, 0, len(boardModels))
 	userBoardResponses := make([]dto.UserBoardResponse, 0, len(userboards))
 
-	for i := range boards {
-		boardResponses = append(boardResponses, dto.BoardToResponse(&boards[i]))
-		userBoardResponses = append(userBoardResponses, dto.UserBoardToResponse(&userboards[i]))
+	for i := range boardModels {
+		boardResponses = append(boardResponses, dto.BoardToResponse(&boardModels[i]))
+		if userboards[i].UserID != uuid.Nil {
+			userBoardResponses = append(userBoardResponses, dto.UserBoardToResponse(&userboards[i]))
+		}
 	}
 
 	return boardResponses, userBoardResponses, nil
@@ -383,28 +393,48 @@ func (s *WorkspaceService) GetWorkspacesBoardsForUserID(ctx context.Context, use
 
 	userWorkspaces, err := s.WorkspaceRepo.GetUserWorkspacesByIDs(ctx, userID, workspaceIds)
 
-	for _, userWorkspace := range userWorkspaces {
-
-		if !rbac.AtLeast(userWorkspace.Role, rbac.Viewer) {
+	adminWorkspaceIDs := make([]uuid.UUID, 0)
+	regularWorkspaceIDs := make([]uuid.UUID, 0)
+	for _, uw := range userWorkspaces {
+		if !rbac.AtLeast(uw.Role, rbac.Viewer) {
 			return nil, domainerr.ErrForbidden
+		}
+		if rbac.AtLeast(uw.Role, rbac.Admin) {
+			adminWorkspaceIDs = append(adminWorkspaceIDs, uw.WorkspaceID)
+		} else {
+			regularWorkspaceIDs = append(regularWorkspaceIDs, uw.WorkspaceID)
 		}
 	}
 
-	rows, err := s.WorkspaceRepo.GetWorkspacesBoardsForUserID(ctx, userID, workspaceIds)
-	if err != nil {
-		return nil, err
+	var allRows []boards.UserBoardRow
+	if len(regularWorkspaceIDs) > 0 {
+		regularRows, err := s.WorkspaceRepo.GetWorkspacesBoardsForUserID(ctx, userID, regularWorkspaceIDs)
+		if err != nil {
+			return nil, err
+		}
+		allRows = append(allRows, regularRows...)
 	}
-	boards, userboards := boards.UserBoardRowsToModels(rows)
+	if len(adminWorkspaceIDs) > 0 {
+		adminRows, err := s.WorkspaceRepo.GetAllWorkspaceBoardsForAdmin(ctx, userID, adminWorkspaceIDs)
+		if err != nil {
+			return nil, err
+		}
+		allRows = append(allRows, adminRows...)
+	}
 
-	boardResponses := make([]dto.BoardResponse, 0, len(boards))
-	userBoardResponses := make([]dto.UserBoardResponse, 0, len(userboards))
+	boardModels, userboards := boards.UserBoardRowsToModels(allRows)
 
-	for i := range boards {
-		boardResponses = append(boardResponses, dto.BoardToResponse(&boards[i]))
-		userBoardResponses = append(userBoardResponses, dto.UserBoardToResponse(&userboards[i]))
+	boardResponses := make([]dto.BoardResponse, 0, len(boardModels))
+	userBoardResponses := make([]dto.UserBoardResponse, 0)
+
+	for i := range boardModels {
+		boardResponses = append(boardResponses, dto.BoardToResponse(&boardModels[i]))
+		if userboards[i].UserID != uuid.Nil {
+			userBoardResponses = append(userBoardResponses, dto.UserBoardToResponse(&userboards[i]))
+		}
 	}
 	BoardIDsByWorkspaceID := make(map[uuid.UUID][]uuid.UUID)
-	for _, board := range boards {
+	for _, board := range boardModels {
 		BoardIDsByWorkspaceID[board.WorkspaceID] = append(BoardIDsByWorkspaceID[board.WorkspaceID], board.ID)
 	}
 
@@ -506,8 +536,13 @@ func (s *WorkspaceService) CreateBoardInWorkspace(ctx context.Context, userID, w
 		},
 	}
 
+	eventType := EventRegistry.EventWorkspaceBoardCreated
+	if board.Visibility == models.BoardVisibilityPrivate {
+		eventType = EventRegistry.EventWorkspaceBoardCreatedPrivate
+	}
+
 	domainEvent := EventRegistry.DomainEvent{
-		Type:          EventRegistry.EventWorkspaceBoardCreated,
+		Type:          eventType,
 		BoardID:       &board.ID,
 		WorkspaceID:   &workspaceID,
 		ActorUserID:   &userID,

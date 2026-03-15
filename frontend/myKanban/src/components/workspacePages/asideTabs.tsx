@@ -1,3 +1,4 @@
+import type { IconId } from "@/icons/iconCatalog";
 import { ChevronRight } from "lucide-react";
 
 export type AsideTabs = {
@@ -6,6 +7,9 @@ export type AsideTabs = {
     type: "page" | "divider";
     href?: string;
     onClick?: (e: React.MouseEvent<HTMLDivElement>) => void;
+    pageTitle?: string;
+    pageDescription?: string;
+    pageIconId?: IconId
 }
 
 

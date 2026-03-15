@@ -8,18 +8,26 @@ import { useEffect, useState } from "react";
 import { useMatch, useParams } from "react-router-dom";
 import { useShallow } from "zustand/shallow";
 
-type SortMode = "hierarchy" | "name-asc" | "name-desc";
+type SortMode = "hierarchy" | "name-asc" | "name-desc" | "effective-role";
 
 const nextSortMode: Record<SortMode, SortMode> = {
     hierarchy: "name-asc",
     "name-asc": "name-desc",
-    "name-desc": "hierarchy",
+    "name-desc": "effective-role",
+    "effective-role": "hierarchy",
 };
 
 const sortModeLabel: Record<SortMode, string> = {
     hierarchy: "Role + Date",
     "name-asc": "Name A→Z",
     "name-desc": "Name Z→A",
+    "effective-role": "Effective Role",
+};
+
+const suspensionOrder = (m: UserWorkspace): number => {
+    if (m.IsSuspended) return 2;
+    if (m.IsPendingSuspend) return 1;
+    return 0;
 };
 
 const roleOrder: Record<string, number> = {
@@ -36,7 +44,7 @@ export function WorkspaceMembersMain() {
 
     const [visibleIds, setVisibleIds] = useState<string[]>(membersIds);
     const [currentSearch, setCurrentSearch] = useState("");
-    const [sortMode, setSortMode] = useState<SortMode>("hierarchy");
+    const [sortMode, setSortMode] = useState<SortMode>("effective-role");
 
     const isMembersRoute = useMatch("/workspaces/:workspaceId/members/");
     const isGuestsRoute = useMatch("/workspaces/:workspaceId/members/guests/*");
@@ -84,6 +92,13 @@ export function WorkspaceMembersMain() {
                     const cmp = nameA.localeCompare(nameB);
                     return sortMode === "name-asc" ? cmp : -cmp;
                 }
+                if (sortMode === "effective-role") {
+                    const roleDiff = (roleOrder[a.Role] ?? 99) - (roleOrder[b.Role] ?? 99);
+                    if (roleDiff !== 0) return roleDiff;
+                    const suspDiff = suspensionOrder(a) - suspensionOrder(b);
+                    if (suspDiff !== 0) return suspDiff;
+                    return new Date(a.CreatedAt).getTime() - new Date(b.CreatedAt).getTime();
+                }
                 return 0;
             });
 
@@ -92,20 +107,11 @@ export function WorkspaceMembersMain() {
         handleSearch();
     }, [membersIds, membersById, currentSearch, isMembersRoute, isGuestsRoute, sortMode]);
 
-    const label = isMembersRoute ? "Workspace members" : isGuestsRoute ? "Guests" : "Members and guests";
-
-    const description = isMembersRoute ? "Workspace members can view and join all Workspace visible boards and create new boards in the Workspace." :
-        isGuestsRoute ? "Guests can only access specific boards they have been invited to. They cannot create new boards in the Workspace." :
-            "Members can view and join all Workspace visible boards and create new boards in the Workspace. Guests can only access specific boards they have been invited to. They cannot create new boards in the Workspace."
 
 
     return (
-        <div className="rounded-lg bg-transparent p-4 h-full flex flex-col ">
-            <div className="flex flex-row items-center justify-start gap-2 mb-4">
-                <h2 className="text-lg font-bold">{label}</h2>
-                <BriefcaseBusiness className="h-4 aspect-square text-neutral-400" />
-            </div>
-            <p className="text-sm text-neutral-500 ">{description}</p>
+        <div className="rounded-lg bg-transparent p-0 h-full flex flex-col ">
+
 
             <div className="flex flex-row justify-between items-center gap-2 mt-4 mb-3">
                 <CustomInput
@@ -128,7 +134,7 @@ export function WorkspaceMembersMain() {
             </div>
             {visibleIds.length === 0 && <div className="w-full h-px bg-neutral-700 my-1" />}
 
-            <div className="flex-1 min-h-0 pb-12 overflow-y-auto scrollbar-hidden">
+            <div className="flex-1 min-h-0 pb-40 overflow-y-auto scrollbar-hidden">
                 {visibleIds.length === 0 && (
 
                     <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
@@ -158,7 +164,9 @@ export function WorkspaceMembersMain() {
                 {visibleIds?.map((memberID) => (
                     <>
                         <div key={`divider-${memberID}`} className="w-full h-px bg-neutral-700 my-1" />
-                        <UserRow key={memberID} userID={memberID} workspaceId={workspaceID} />
+                        <UserRow
+                            showSuspendedStatus={true}
+                            key={memberID} userID={memberID} workspaceId={workspaceID} />
                     </>
                 ))}
                 <div className="w-full h-px bg-neutral-700 my-1" />
