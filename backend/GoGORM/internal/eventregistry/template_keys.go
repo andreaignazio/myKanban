@@ -83,4 +83,8 @@ const (
 	AuditTemplateBoardShareLinkRevoked     AuditTemplateKey = "audit.board.sharelink.revoked"
 	AuditTemplateWorkspaceShareLinkCreated AuditTemplateKey = "audit.workspace.sharelink.created"
 	AuditTemplateWorkspaceShareLinkRevoked AuditTemplateKey = "audit.workspace.sharelink.revoked"
+
+	AuditTemplateWorkspaceSubscriptionCreated  AuditTemplateKey = "audit.workspace.subscription.created"
+	AuditTemplateWorkspaceSubscriptionUpdated  AuditTemplateKey = "audit.workspace.subscription.updated"
+	AuditTemplateWorkspaceSubscriptionCanceled AuditTemplateKey = "audit.workspace.subscription.canceled"
 )

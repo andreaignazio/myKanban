@@ -289,7 +289,7 @@ function SidebarFooter() {
     const isAuthenticated = useAuthStore((state) => !!state.userID)
     const clearAuthSession = useAuthStore((state) => state.clearAuthSession)
 
-    const { subscription } = useResolveSubscriptionPlan()
+    const { subscription, nextPlan } = useResolveSubscriptionPlan()
 
     async function handleLogout() {
         clearAuthSession()
@@ -308,7 +308,11 @@ function SidebarFooter() {
                 </button>
             )}
             <div className="flex flex-row items-center justify-between">
-                <SubscriptionBadge plan={subscription} />
+                <SubscriptionBadge
+                    showNextPlan={true}
+                    plan={subscription}
+                    nextPlan={nextPlan}
+                />
                 <CardRowMenuBtn
                     renderType="virtual"
                     menuComponent={({ onClose, ref }) => <SearchWorkspaceOverlay onClose={onClose} ref={ref} />}

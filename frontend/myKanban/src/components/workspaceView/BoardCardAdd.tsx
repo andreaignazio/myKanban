@@ -44,6 +44,17 @@ export function BoardCardAdd({ workspaceId }: BoardRowProps) {
         onOpenOverlay(descriptor);
     }
 
+    const resolveAvailableBoards = (max: number, current: number) => {
+        if (max === -1) {
+            return "∞"
+        }
+        return `${current}/${max} boards`
+
+
+    }
+
+    const availableBoardsLabel = resolveAvailableBoards(maxBoards, availableBoards)
+
 
 
     return (
@@ -59,7 +70,7 @@ export function BoardCardAdd({ workspaceId }: BoardRowProps) {
                     className="flex flex-col h-full min-h-0 items-center justify-center text-center"
                 >
                     <h3 className="text-sm font-normal">Add Board</h3>
-                    <p className="text-xs text-gray-400 mt-1">{availableBoards}/{maxBoards} boards</p>
+                    <p className="text-xs text-gray-400 mt-1">{availableBoardsLabel}</p>
                 </div>
 
             </BoardCardWrapper>

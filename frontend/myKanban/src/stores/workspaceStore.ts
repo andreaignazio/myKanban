@@ -405,6 +405,21 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
                 useUserStore.getState().mergeUsers([user])
                 break
             }
+            case "workspace.subscription.created":
+            case "workspace.subscription.updated":
+            case "workspace.subscription.canceled": {
+                const subscription = (evt as WorkspaceEvent).Payload?.RealtimePayload as WorkspaceSubscription | undefined
+                if (!subscription || !evt.WorkspaceID) {
+                    break
+                }
+                set((state) => ({
+                    wSubscriptionsById: {
+                        ...state.wSubscriptionsById,
+                        [evt.WorkspaceID]: subscription,
+                    }
+                }))
+                break
+            }
 
         }
     },

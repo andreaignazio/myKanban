@@ -57,7 +57,10 @@ export type WorkspaceEventTypes =
     | "workspace.shareoffer.request.rejected"
     | "workspace.shareoffer.request.revoked"
     | "workspace.sharelink.created"
-    | "workspace.sharelink.revoked";
+    | "workspace.sharelink.revoked"
+    | "workspace.subscription.created"
+    | "workspace.subscription.updated"
+    | "workspace.subscription.canceled";
 
 
 

@@ -85,7 +85,7 @@ export function WorkspaceMembers() {
                                 </LabeledButtonPresetA>
                             </CardRowMenuBtn>}
                         </div>
-                        <div className="flex-1 min-h-0 overflow-y-auto scrollbar-hidden">
+                        <div className="flex flex-col h-full scrollbar-hidden">
                             <Outlet context={{ showOnlyFiltered }} />
                         </div>
                     </>

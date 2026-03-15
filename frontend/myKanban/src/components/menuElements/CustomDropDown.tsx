@@ -154,12 +154,23 @@ export const DropDownMenu = forwardRef<HTMLDivElement, DropDownMenuProps>((props
     }
     const selectedId = disableGlobalState ? activeId : (activeMenuItem[btnId] ?? activeId);
     // const activeId = "ws2";
+    const resolveAvailableBoards = (item: MenuItem | WorkspaceMenuItem) => {
+        if ("availableBoards" in item) {
+            if (item.availableBoards.max === -1) {
+                return "∞"
+            }
+            return `${item.availableBoards.current}/${item.availableBoards.max}`
+        } return undefined;
+
+    }
     return (
         <div
             ref={ref}
             style={style}
 
-            className={`theme-dark w-[200px] h-full text-neutral-300 bg-menusec rounded-md ${className}`}>
+            className={`theme-dark w-[200px]
+            overflow-hidden py-2
+            h-full text-neutral-300 bg-menusec rounded-md ${className}`}>
             <div className="flex flex-col">
                 {items.length > 0 && items.map((item) => (
                     <div key={item.id}
@@ -172,14 +183,17 @@ export const DropDownMenu = forwardRef<HTMLDivElement, DropDownMenuProps>((props
                      ${item.disabled ? "opacity-50 cursor-not-allowed" : "hover:bg-neutral-700 hover:border-opacity-100 hover:border-[rgba(102,157,241,1)] cursor-pointer"}
                      ${item.id === selectedId ? "bg-[#123263] border-s-2 border-opacity-100 border-[rgba(102,157,241,1)] text-[#669df1]" : ""}
                      `}>
-                        <div className="flex flex-row items-center gap-4">
-                            {item.icon}
-                            <div className="flex flex-col">
-                                <span className="text-sm">{item.label}</span>
-                                {item.description && <span className="text-xs text-neutral-500">{item.description}</span>}
+                        <div className="flex flex-row justify-between w-full items-center gap-4">
+                            <div className="flex flex-row items-center gap-4">
+                                {item.icon}
+                                <div className="flex flex-col">
+                                    <span className="text-sm">{item.label}</span>
+                                    {item.description && <span className="text-xs text-neutral-500">{item.description}</span>}
+                                </div>
+
                             </div>
-                            <div className="rounded-full bg-neutral-400 bg-opacity-20 px-2 text-xs ml-auto text-black font-medium">
-                                {("availableBoards" in item) && `${item.availableBoards.current}/${item.availableBoards.max}`}
+                            <div className="rounded-full bg-neutral-400 w-12 flex justify-center bg-opacity-20 px-2 text-xs ml-auto text-black font-medium">
+                                {resolveAvailableBoards(item)}
                             </div>
                         </div>
                     </div>

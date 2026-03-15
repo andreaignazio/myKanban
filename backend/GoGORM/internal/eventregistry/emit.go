@@ -280,13 +280,15 @@ func (s *EventRegistryService) Emit(ctx context.Context, tx *gorm.DB, event Doma
 		}
 
 		workspacePayload := EventPayloadEnvelope{
-			StatePayload: buildResult.StatePayload,
-			FeedPayload:  buildResult.FeedPayload,
+			StatePayload:    buildResult.StatePayload,
+			RealtimePayload: buildResult.RealtimePayload,
+			FeedPayload:     buildResult.FeedPayload,
 		}
 		if len(invalidatedListCardIDs) > 0 {
 			workspacePayload.Invalidations = &EventInvalidations{RootBoardListCardIds: invalidatedListCardIDs}
 		}
 
+		fmt.Println("Workspace event payload for WebSocket:", event.Type, "payload:", workspacePayload)
 		wsEvent := ws.WorkspaceEvent{
 			Type:          string(event.Type),
 			WorkspaceID:   *event.WorkspaceID,
@@ -317,8 +319,9 @@ func (s *EventRegistryService) Emit(ctx context.Context, tx *gorm.DB, event Doma
 		}
 
 		workspacePayload := EventPayloadEnvelope{
-			StatePayload: buildResult.StatePayload,
-			FeedPayload:  buildResult.FeedPayload,
+			StatePayload:    buildResult.StatePayload,
+			RealtimePayload: buildResult.RealtimePayload,
+			FeedPayload:     buildResult.FeedPayload,
 		}
 		if len(invalidatedListCardIDs) > 0 {
 			workspacePayload.Invalidations = &EventInvalidations{RootBoardListCardIds: invalidatedListCardIDs}

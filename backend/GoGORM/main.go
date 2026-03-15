@@ -216,7 +216,8 @@ func main() {
 	stripeBuillingProvider := subscription.NewStripeProvider(os.Getenv("STRIPE_SECRET_KEY"), os.Getenv("STRIPE_WEBHOOK_SECRET"), nil)
 
 	webhookRepo := subscription.NewGormWebhookInboxRepo(db)
-	subscriptionService := subscription.NewSubscriptionService(db, subscriptionRepo, membarshipsRepo, stripeBuillingProvider, webhookRepo, false)
+	subscriptionService := subscription.NewSubscriptionService(db, subscriptionRepo, membarshipsRepo, stripeBuillingProvider, webhookRepo, false).
+		WithEventRegistry(eventRegistryService)
 
 	positionGenerator := rank.NewRankGenerator()
 	positionService := pos.NewPositionService(positionGenerator, linksRepo, listCardsRepo, membarshipsRepo, workspacesRepo)

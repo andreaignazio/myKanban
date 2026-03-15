@@ -88,6 +88,10 @@ const (
 	EventWorkspaceShareLinkCreated DomainEventType = "workspace.sharelink.created"
 	EventBoardShareLinkRevoked     DomainEventType = "board.sharelink.revoked"
 	EventWorkspaceShareLinkRevoked DomainEventType = "workspace.sharelink.revoked"
+
+	EventWorkspaceSubscriptionCreated  DomainEventType = "workspace.subscription.created"
+	EventWorkspaceSubscriptionUpdated  DomainEventType = "workspace.subscription.updated"
+	EventWorkspaceSubscriptionCanceled DomainEventType = "workspace.subscription.canceled"
 )
 
 func (e DomainEventType) IsValidEventType() bool {
@@ -169,7 +173,10 @@ func (e DomainEventType) IsValidEventType() bool {
 		EventBoardShareLinkCreated,
 		EventWorkspaceShareLinkCreated,
 		EventBoardShareLinkRevoked,
-		EventWorkspaceShareLinkRevoked:
+		EventWorkspaceShareLinkRevoked,
+		EventWorkspaceSubscriptionCreated,
+		EventWorkspaceSubscriptionUpdated,
+		EventWorkspaceSubscriptionCanceled:
 
 		return true
 	default:
@@ -279,7 +286,10 @@ func (e DomainEventType) IsWorkspaceCoreToastEvent() bool {
 		EventBoardMemberRoleChanged,
 		EventListPatched,
 		EventWorkspaceShareLinkCreated,
-		EventWorkspaceShareLinkRevoked:
+		EventWorkspaceShareLinkRevoked,
+		EventWorkspaceSubscriptionCreated,
+		EventWorkspaceSubscriptionUpdated,
+		EventWorkspaceSubscriptionCanceled:
 		return true
 	default:
 		return false

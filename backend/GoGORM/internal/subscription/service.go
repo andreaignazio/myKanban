@@ -3,6 +3,7 @@ package subscription
 import (
 	"GoGORM/internal/domainerr"
 	"GoGORM/internal/dto"
+	EventRegistry "GoGORM/internal/eventregistry"
 	"GoGORM/internal/guard"
 	"GoGORM/internal/rbac"
 	"GoGORM/models"
@@ -22,6 +23,7 @@ type SubscriptionService struct {
 	MembershipRepo    MembershipRepo
 	BillingProvider   BillingProvider
 	WebhookInboxRepo  WebhookInboxRepo
+	EventRegistry     *EventRegistry.EventRegistryService
 	IncludeDeleted    bool
 }
 
@@ -77,6 +79,11 @@ func NewSubscriptionService(
 	}
 	svc.SuspensionService = NewWorkspaceSuspensionService(db, subscriptionRepo, membershipRepo, includeDeleted)
 	return svc
+}
+
+func (s *SubscriptionService) WithEventRegistry(er *EventRegistry.EventRegistryService) *SubscriptionService {
+	s.EventRegistry = er
+	return s
 }
 
 func (s *SubscriptionService) CheckWorkspaceMembershipLimit(ctx context.Context, userID uuid.UUID) (bool, error) {
@@ -377,7 +384,45 @@ func (s *SubscriptionService) HandleBillingWebhook(ctx context.Context,
 		return domainerr.Wrap(err, "failed to process webhook event in transaction")
 	}
 
+	s.emitSubscriptionRealtimeEvent(ctx, event)
+
 	return nil
+}
+
+func (s *SubscriptionService) emitSubscriptionRealtimeEvent(ctx context.Context, event BillingWebhookEvent) {
+	if s.EventRegistry == nil {
+		return
+	}
+	subscription, err := s.SubscriptionRepo.GetWorkspaceSubscription(ctx, event.WorkspaceID)
+	if err != nil || subscription == nil {
+		log.Printf("subscription RT emit: failed to fetch subscription for workspace %s: %v", event.WorkspaceID, err)
+		return
+	}
+
+	var domainEventType EventRegistry.DomainEventType
+	switch ProviderEventTypes(event.EventType) {
+	case CustomerSubscriptionCreated:
+		domainEventType = EventRegistry.EventWorkspaceSubscriptionCreated
+	case CustomerSubscriptionDeleted:
+		domainEventType = EventRegistry.EventWorkspaceSubscriptionCanceled
+	default:
+		domainEventType = EventRegistry.EventWorkspaceSubscriptionUpdated
+	}
+
+	subscriptionDTO := dto.WorkspaceSubscriptionToResponse(subscription)
+	actorID := uuid.Nil
+	domainEvent := EventRegistry.DomainEvent{
+		Type:        domainEventType,
+		WorkspaceID: &event.WorkspaceID,
+		ActorUserID: &actorID,
+		OccurredAt:  event.OccurredAt,
+		Payload: EventRegistry.EventPayloadEnvelope{
+			RealtimePayload: subscriptionDTO,
+		},
+	}
+	if emitErr := s.EventRegistry.Emit(ctx, s.db, domainEvent); emitErr != nil {
+		log.Printf("subscription RT emit: failed to emit %s for workspace %s: %v", domainEventType, event.WorkspaceID, emitErr)
+	}
 }
 
 func (s *SubscriptionService) ChangeSeatQuantity(ctx context.Context, workspaceID uuid.UUID, actorUserID uuid.UUID, newSeats int) error {

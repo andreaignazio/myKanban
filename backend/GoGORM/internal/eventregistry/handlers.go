@@ -83,6 +83,9 @@ func buildHandlers(auditRepo auditcontext.Reader) map[DomainEventType]EventHandl
 		EventWorkspaceShareLinkCreated:          NewWorkspaceShareLinkCreatedHandler(auditRepo),
 		EventBoardShareLinkRevoked:              NewBoardShareLinkRevokedHandler(auditRepo),
 		EventWorkspaceShareLinkRevoked:          NewWorkspaceShareLinkRevokedHandler(auditRepo),
+		EventWorkspaceSubscriptionCreated:       NewWorkspaceSubscriptionHandler(),
+		EventWorkspaceSubscriptionUpdated:       NewWorkspaceSubscriptionHandler(),
+		EventWorkspaceSubscriptionCanceled:      NewWorkspaceSubscriptionHandler(),
 	}
 }
 
