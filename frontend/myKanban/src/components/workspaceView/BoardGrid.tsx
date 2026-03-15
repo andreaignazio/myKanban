@@ -16,10 +16,11 @@ import { BoardCardViewer } from "./BoardCardViewer";
 type BoardGridProps = {
     overrideWorkspaceId?: string;
     className?: string;
+    overrideClassName?: boolean; // If true, will not apply default grid column class
 
 }
 
-export const BoardGrid = forwardRef<HTMLDivElement, BoardGridProps>(({ overrideWorkspaceId, className }: BoardGridProps, ref) => {
+export const BoardGrid = forwardRef<HTMLDivElement, BoardGridProps>(({ overrideWorkspaceId, className, overrideClassName }: BoardGridProps, ref) => {
     const workspaceId = overrideWorkspaceId ?? (useParams().workspaceId as string);
     const gridColumnsClassName = className?.includes("grid-cols-")
         ? ""
@@ -70,7 +71,7 @@ export const BoardGrid = forwardRef<HTMLDivElement, BoardGridProps>(({ overrideW
         <div
             ref={ref}
             className={`w-full grid 
-                        ${gridColumnsClassName}
+                        ${overrideClassName ? "" : gridColumnsClassName}
                         justify-start items-start gap-4 ${className ?? ""}`}>
             <AnimatePresence mode="popLayout">
                 {isFetching && sortedBoardIds.length === 0 && Array.from({ length: 4 }).map((_, i) => (
@@ -102,4 +103,39 @@ export const BoardGrid = forwardRef<HTMLDivElement, BoardGridProps>(({ overrideW
         </div>
     )
 
+})
+
+type BoardGridFlatProps = {
+    workspaceIdByBoardId: Record<string, string>;
+    boardIds: string[];
+    className?: string;
+    gridColumnsClassName?: string;
+}
+
+
+export const BoardGridFlat = forwardRef<HTMLDivElement, BoardGridFlatProps>(({ workspaceIdByBoardId, boardIds, className, gridColumnsClassName }: BoardGridFlatProps, ref) => {
+
+    return (
+        <div
+            ref={ref}
+            className={`w-full grid 
+                        ${gridColumnsClassName}
+                        justify-start items-start gap-4 ${className ?? ""}`}>
+
+            <AnimatePresence mode="popLayout">
+                {boardIds.map((boardId: string, i: number) => (
+                    <motion.div
+                        key={boardId}
+                        layout
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0, transition: { duration: 0.22, ease: "easeOut", delay: Math.min(i * 0.05, 0.3) } }}
+                        exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.15 } }}
+                    >
+                        <BoardCard boardID={boardId} workspaceId={workspaceIdByBoardId[boardId]} />
+                    </motion.div>
+                ))}
+            </AnimatePresence>
+        </div>
+
+    )
 })

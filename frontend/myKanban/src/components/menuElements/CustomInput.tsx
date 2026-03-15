@@ -13,6 +13,7 @@ type CustomInputProps = {
     textAreaClassName?: string;
     onFocus?: () => void;
     danger?: boolean;
+    focusColorClass?: string;
 }
 
 export type CustomInputHandle = {
@@ -21,7 +22,7 @@ export type CustomInputHandle = {
     getElement: () => HTMLInputElement | HTMLTextAreaElement | null;
 }
 
-export const CustomInput = forwardRef<CustomInputHandle, CustomInputProps>(({ danger, children, onInputChange, className, placeholder, value, onBlur, isDisabled, paddingLeft, useTextArea, textAreaClassName, onFocus }, ref) => {
+export const CustomInput = forwardRef<CustomInputHandle, CustomInputProps>(({ danger, children, onInputChange, className, placeholder, value, onBlur, isDisabled, paddingLeft, useTextArea, textAreaClassName, onFocus, focusColorClass }, ref) => {
     const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
     const [isFocused, setIsFocused] = useState(false);
 
@@ -63,12 +64,14 @@ export const CustomInput = forwardRef<CustomInputHandle, CustomInputProps>(({ da
         }
     };
 
+
+
     return (
         <div className={`flex flex-row overflow-hidden font-inter trnasition-all duration-200
                         ${danger ? "ring-red-500 ring-1 ring-inset !border-red-500/50" : ""} 
                         bg-menusec w-full text-white  rounded-[4px] ${useTextArea ? " " : "h-11"} ${className}
                         ${isDisabled ? 'border-none bg-neutral-600/20 text-neutral-400' : isFocused ?
-                'border border-blue-500 ring-inset ring-2 ring-opacity-75 ring-blue-500'
+                `border  ring-inset ring-2 ring-opacity-75 ring-blue-500 border-blue-500 ${focusColorClass}`
                 : 'border border-neutral-500 border-opacity-85'}`}
         >
             <div

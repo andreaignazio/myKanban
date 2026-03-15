@@ -35,10 +35,11 @@ export const InboxView = ({ draggedRootListCardId = null }: InboxViewProps) => {
          rounded-2xl shadow">
             <div
                 style={{ paddingInline: PADDING_X }}
-                className={`flex flex-col min-h-0 h-full w-full px-[${PADDING_X}px] overflow-hidden gap-4 pb-3`}>
+                className={`flex flex-col min-h-0 h-full w-full px-[${PADDING_X}px] overflow-hidden 
+                gap-0 pb-8`}>
                 <div
                     style={{ marginInline: `calc(${PADDING_X}px * -1)`, width: `calc(100% + ${PADDING_X * 2}px)` }}
-                    className="shrink-0 flex items-center gap-2 mb-4 bg-[#142137] h-14 w-full py-2 px-4 rounded">
+                    className="shrink-0 flex items-center gap-2 mb-2 bg-[#142137] h-14 w-full py-2 px-4 rounded">
                     <WalletCardsIcon className="w-4 h-4" />
                     <span className="text-md tracking-wide font-bold !font-manrope">Inbox</span>
                 </div>
@@ -46,7 +47,7 @@ export const InboxView = ({ draggedRootListCardId = null }: InboxViewProps) => {
 
 
                 <div
-                    className="relative flex-1 min-h-0 w-full overflow-hidden"
+                    className="relative flex-1 min-h-0 w-full overflow-hidden "
                 >
 
                     <Droppable droppableId={"inbox"} type="card" isDropDisabled={alreadyContainsDraggedRootCard}>
@@ -54,9 +55,10 @@ export const InboxView = ({ draggedRootListCardId = null }: InboxViewProps) => {
                             <div
                                 ref={provided.innerRef}
                                 {...provided.droppableProps}
-                                className="flex h-full min-h-full w-full flex-col overflow-y-auto overflow-x-hidden  pt-2 pb-6 scrollbar-hidden">
+                                className="flex h-full min-h-full w-full flex-col 
+                                overflow-y-auto overflow-x-hidden  pt-2 pb-6 scrollbar-hidden">
 
-                                <div className="flex flex-col gap-2 min-h-full w-full">
+                                <div className="flex flex-col gap-0  min-h-full w-full">
                                     {inboxCardIds.length > 0 && inboxCardIds.map((id, index) => {
                                         const inboxCard = inboxCardById[id]
                                         if (!inboxCard) return null
@@ -108,9 +110,9 @@ const InboxAddCard = () => {
     const resolvedPlaceholder = isEditing ? "Enter a title for this card..." : "Add card to inbox"
     const buttonClass = "h-full !font-medium !px-4 !w-full !rounded-xl transition-all ease-in-out duration-300"
     return (
-        <div className="flex flex-col items-center gap-0 cursor-pointer pe-1 ps-1">
+        <div className="flex mb-2  flex-col items-center gap-0 cursor-pointer pe-1 ps-1">
             <CustomInput ref={inputRef} placeholder={resolvedPlaceholder}
-                className={"rounded-xl border-none shadow-md shadow-black/20"}
+                className={"rounded-lg border-none shadow-md shadow-black/20"}
                 onFocus={() => setIsEditing(true)} onInputChange={(inputRef) => setNewCardTitle(inputRef?.current?.value ?? "  ")} />
             <div className={` w-full flex flex-row gap-2  ${isEditing ? "h-10 opacity-100 mt-2" : "h-0 opacity-0 mt-0"} transition-all duration-300 ease-in-out`}>
                 <LabeledButtonPresetBSubmit

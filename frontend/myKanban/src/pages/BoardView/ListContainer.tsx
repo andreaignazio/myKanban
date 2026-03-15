@@ -19,6 +19,9 @@ type ListContainerProps = {
     draggedSourceBoardListId?: string | null
 }
 
+export const LIST_CONTAINER_TOP_PADDING = 12
+export const LIST_CONTAINER_BOTTOM_PADDING = 255
+
 export const ListContainer = ({ draggedCardId = null, draggedSourceBoardListId = null }: ListContainerProps) => {
     const boardId = useParams().boardId as string
     const boardListIds = useBoardDetailStore(useShallow((state) => (
@@ -55,8 +58,8 @@ export const ListContainer = ({ draggedCardId = null, draggedSourceBoardListId =
                 <div
                     {...provided.droppableProps}
                     ref={provided.innerRef}
-
-                    className="relative flex h-full min-h-0 w-full flex-row items-start pt-2 pb-2 mb-1
+                    style={{ paddingTop: LIST_CONTAINER_TOP_PADDING }}
+                    className="relative flex h-full min-h-0 w-full flex-row items-start
                      
                              overflow-y-hidden scrollbar-hidden "
                 >

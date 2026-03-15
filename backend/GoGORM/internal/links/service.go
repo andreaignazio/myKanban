@@ -295,7 +295,7 @@ func (s *LinksService) MoveListInBoard(ctx context.Context,
 	req MoveListInBoardDTO,
 	correlationID uuid.UUID) (*models.BoardList, error) {
 
-	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Admin, s.IncludeDeleted); err != nil {
+	if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Member, s.IncludeDeleted); err != nil {
 		return nil, err
 	}
 	boardLists, err := s.LinksRepo.GetListsInBoard(ctx, boardID, s.IncludeDeleted)

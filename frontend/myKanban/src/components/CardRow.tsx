@@ -275,7 +275,7 @@ export const CardRow = ({ boardID, listId, listCardID: listCardID, cardId, index
                             {...provided.draggableProps}
                             {...provided.dragHandleProps}
                             ref={provided.innerRef}
-                            className="flex flex-col pb-2"
+                            className={`flex flex-col ${isMirrorCard ? "pb-3" : "pb-2"}`}
                             style={{
                                 ...provided.draggableProps.style,
                                 zIndex: snapshot.isDragging ? 9999 : undefined,
@@ -388,7 +388,7 @@ export const CardRow = ({ boardID, listId, listCardID: listCardID, cardId, index
                         width: saveButtonRect.width,
                         zIndex: 1100,
                     }}
-                    className={`flex flex-row justify-start items-start ps-1
+                    className={`flex flex-row justify-start items-start ps-0 pt-1
                         ${canEdit ? "" : "filter grayscale brightness-50 pointer-events-none"}`}
                 >
                     <LabeledButtonPresetBSubmit

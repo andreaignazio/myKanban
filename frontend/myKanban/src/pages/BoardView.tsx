@@ -219,7 +219,7 @@ export default function BoardView() {
         { id: "Planner", label: "Planner", icon: <Calendar className="w-4 h-4" /> },
         { id: "Board", label: "Board", icon: <Columns3Icon className="w-4 h-4" /> },
         { id: "divider1", label: "", type: "divider" },
-        { id: "SwitchBoard", label: "Switch Board", icon: <TableColumnsSplit className="w-4 h-4" />, onClick: () => handleOpenSwitchMenu() },
+        { id: "SwitchBoard", label: "Switch Board", type: "action", icon: <TableColumnsSplit className="w-4 h-4" />, onClick: () => handleOpenSwitchMenu() },
     ]
     const [activeFloatingTab, setActiveFloatingTab] = useState("Board")
     const isInboxActive = activeFloatingTab === "Inbox"
@@ -505,12 +505,12 @@ export default function BoardView() {
                                     height: isInboxActive ? "calc(100% - 40px)" : "100%",
                                     paddingBottom: isInboxActive ? 40 : 0, borderRadius: isInboxActive ? 20 : 0, overflow: "hidden"
                                 }}
-                                className={`absolute inset-0 transition-all w-full min-h-0   `}>
+                                className={`absolute inset-0 transition-all w-full min-h-0 pointer-events-none  `}>
                                 <BoardBackgroundTransition target={targetBackground} />
                             </div>
 
                             <div
-                                style={{ paddingTop: 10, paddingBottom: 70, }}
+                                style={{ paddingTop: 0, paddingBottom: 0, }}
                                 className={`
                                
                                 flex-1 min-h-0 w-full ps-4 pe-2 scrollbar-hidden `}>

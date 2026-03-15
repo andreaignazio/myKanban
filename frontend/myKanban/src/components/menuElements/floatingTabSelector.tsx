@@ -1,5 +1,5 @@
 
-export type TabType = "standart" | "divider" | "fixed";
+export type TabType = "standart" | "divider" | "fixed" | "action";
 
 export type Tab = {
     id: string;
@@ -38,6 +38,10 @@ export const FloatingTabSelector = <TTab extends string,>({ activeTab, setActive
 
                         onClick={() => {
                             if (tab.type === "fixed") return;
+                            if (tab.type === "action") {
+                                tab.onClick?.();
+                                return;
+                            }
                             setActiveTab(tab.id);
                             tab.onClick?.();
                         }}
@@ -49,7 +53,7 @@ export const FloatingTabSelector = <TTab extends string,>({ activeTab, setActive
                      absolute rounded-full w-4 h-1 bottom-0 bg-[#5887d0]`}></div>
                     </div>)}
 
-                    {tab.type === "divider" && <div className="w-px self-stretch my-1 shrink-0 bg-gray-600/80" />}
+                    {tab.type === "divider" && <div className="w-px h-6 self-stretch my-1 shrink-0 bg-gray-600/80" />}
                 </div>
             ))}
         </div>

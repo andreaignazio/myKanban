@@ -26,6 +26,7 @@ import { useAsyncKey } from "@/stores/asyncRequestStore"
 import { useAsyncRequest } from "@/hooks/useAsyncRequest"
 import { AnimatePresence, motion } from "motion/react"
 import { flushSync } from "react-dom"
+import { LIST_CONTAINER_BOTTOM_PADDING } from "@/pages/BoardView/ListContainer"
 
 type ListRowProps = {
     boardID: string
@@ -73,7 +74,7 @@ export function ListRow({ boardID: boardID, boardListID: boardListID, index: ind
         return () => ro.disconnect()
     }, [])
     // chrome = topbar(48) + boardTopBar(60) + containerPads(80) + listPadding(17) + listHeader(48) + safety(16) = 269
-    const maxCardsAreaHeight = Math.max(60, windowHeight - 269 - footerHeight)
+    const maxCardsAreaHeight = Math.max(60, windowHeight - LIST_CONTAINER_BOTTOM_PADDING - footerHeight)
 
     const cardsMeasureRef = useRef<HTMLDivElement>(null)
     const [cardsNatHeight, setCardsNatHeight] = useState(0)
@@ -177,7 +178,7 @@ export function ListRow({ boardID: boardID, boardListID: boardListID, index: ind
                                                 className="scrollbar-hidden"
                                                 style={{ height: cardsAreaHeight, overflowY: cardsNatHeight >= (maxCardsAreaHeight) ? "auto" : "hidden" }}>
 
-                                                <div ref={cardsMeasureRef} className="flex flex-col pt-0 pb-1">
+                                                <div ref={cardsMeasureRef} className="flex flex-col pt-1 pb-1">
                                                     {listCardIds && (
                                                         listCardIds.map((listCardID, cardIndex) => {
                                                             return (
