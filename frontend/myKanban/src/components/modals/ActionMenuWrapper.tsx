@@ -34,9 +34,10 @@ type ActionMenuWrapperProps = {
     maxWidth?: number;
     requestGroups?: RequestGroup[];
     hideX?: boolean;
+    isLoading?: boolean;
 }
 
-export const ActionMenuWrapper = forwardRef<HTMLDivElement, ActionMenuWrapperProps>(({ children, Title, onClose, onBack, width, titleStyle, style, requestKey, minLoadingMs, minSuccessMs, maxSuccessMs, maxErrorMs, show, maxWidth, requestGroups, hideX = false }, ref) => {
+export const ActionMenuWrapper = forwardRef<HTMLDivElement, ActionMenuWrapperProps>(({ children, Title, onClose, onBack, width, titleStyle, style, requestKey, minLoadingMs, minSuccessMs, maxSuccessMs, maxErrorMs, show, maxWidth, requestGroups, hideX = false, isLoading = false }, ref) => {
 
     const resolvedStyle: React.CSSProperties = {
         ...style,
@@ -52,8 +53,15 @@ export const ActionMenuWrapper = forwardRef<HTMLDivElement, ActionMenuWrapperPro
             ? <MenuStateIndicator requestKey={requestKey} minLoadingMs={minLoadingMs} minSuccessMs={minSuccessMs} maxSuccessMs={maxSuccessMs} maxErrorMs={maxErrorMs} show={show} maxWidth={maxWidth} />
             : null;
 
+    const loadingOverlay = isLoading ? (
+        <div
+            style={{ zIndex: 3000, cursor: "url('/cursors/loading.svg') 14 14, wait" }}
+            className="absolute inset-0 rounded-xl bg-black/30 pointer-events-auto" />
+    ) : null;
+
     const menuInner = (
         <>
+            {loadingOverlay}
             {!hideX && <div onClick={onClose} className="absolute top-3 right-3 rounded-md p-1 hover:bg-gray-500 hover:bg-opacity-20 cursor-pointer">
                 <XMarkIcon className="w-5 h-5 text-white" />
             </div>}

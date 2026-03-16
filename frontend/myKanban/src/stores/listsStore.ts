@@ -24,6 +24,7 @@ type ListsStore = {
     mergeLists: (lists: List[]) => void
     removeLists: (listIds: string[]) => void
     createList: (payload: CreateListRequest, boardID: string, key?: AsyncRequestKey) => Promise<CreateListInBoardResponse | null>
+    copyBulkLists: (boardID: string, payload: BulkCopyListsRequest) => Promise<BulkCopyListsResponse | null>
     copyBulkListsRaw: (boardID: string, payload: BulkCopyListsRequest) => Promise<BulkCopyListsResponse | null>
     moveBoardList: (sourceBoardID: string, listID: string, payload: MoveBoardListRequest) => Promise<MoveBoardListResponse | null>
     mirrorBoardList: (sourceBoardID: string, listID: string, payload: MirrorBoardListRequest) => Promise<MirrorBoardListResponse | null>
@@ -31,7 +32,7 @@ type ListsStore = {
     patchListDetails: (listID: string, boardID: string, payload: { Title?: string }) => Promise<void | null>
     patchListProps: (listID: string, boardID: string, payload: { Props: Record<string, unknown> }) => Promise<void | null>
     patchListAccessMode: (listID: string, boardID: string, payload: PatchListAccessModeRequest) => Promise<void | null>
-
+    createListRaw: (payload: CreateListRequest, boardID: string) => Promise<CreateListInBoardResponse | null>
 }
 
 export const useListsStore = create<ListsStore>((set, get) => ({
@@ -97,10 +98,22 @@ export const useListsStore = create<ListsStore>((set, get) => ({
         }
         return null
     },
-    copyBulkListsRaw: async (boardID: string, payload: BulkCopyListsRequest) => {
+
+    createListRaw: async (payload: CreateListRequest, boardID: string) => {
+        try {
+            const response = await api.post(`/boards/${boardID}/lists`, payload)
+            return response ? (response.data as CreateListInBoardResponse) : null
+        } catch (error) {
+            console.error("Error in createListRaw:", error)
+            throw error
+        }
+    },
+
+    copyBulkLists: async (boardID: string, payload: BulkCopyListsRequest) => {
         const res = await useAsyncRequestStore.getState().execute(
             "list:copy:bulk",
             async () => {
+                await new Promise((resolve) => setTimeout(resolve, 10))
                 const response = await api.post(`/boards/${boardID}/lists/copybulk`, payload)
                 return response.data as BulkCopyListsResponse
             },
@@ -108,6 +121,17 @@ export const useListsStore = create<ListsStore>((set, get) => ({
         )
         return res as BulkCopyListsResponse
     },
+    copyBulkListsRaw: async (boardID: string, payload: BulkCopyListsRequest) => {
+        try {
+            const response = await api.post(`/boards/${boardID}/lists/copybulk`, payload)
+            return response.data as BulkCopyListsResponse
+        }
+        catch (error) {
+            console.error("Error in copyBulkListsRaw:", error)
+            throw error
+        }
+    },
+
     moveBoardList: async (sourceBoardID: string, listID: string, payload: MoveBoardListRequest) => {
         const res = await useAsyncRequestStore.getState().execute(
             useAsyncKey("list:move", listID),
@@ -133,7 +157,10 @@ export const useListsStore = create<ListsStore>((set, get) => ({
     detatchList: async (listID: string, boardID: string) => {
         await useAsyncRequestStore.getState().execute(
             useAsyncKey("list:detach", listID),
-            () => api.delete(`/boards/${boardID}/lists/${listID}`),
+            async () => {
+                await new Promise((resolve) => setTimeout(resolve, 2000))
+                return api.delete(`/boards/${boardID}/lists/${listID}`)
+            },
             { successResetDelayMs: 2000 }
         )
     },

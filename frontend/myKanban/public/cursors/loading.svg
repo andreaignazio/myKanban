@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 28 28">
+  <!-- Dark pill background -->
+  <circle cx="14" cy="14" r="13" fill="rgba(10,10,18,0.82)" stroke="rgba(120,120,160,0.35)" stroke-width="1"/>
+  <!-- Track ring -->
+  <circle cx="14" cy="14" r="8.5" fill="none" stroke="rgba(120,120,160,0.25)" stroke-width="2.2"/>
+  <!-- Arc: ~270° sweep, indigo highlight -->
+  <path
+    d="M14 5.5 a8.5 8.5 0 1 1 -8.49 8.52"
+    fill="none"
+    stroke="#818cf8"
+    stroke-width="2.2"
+    stroke-linecap="round"/>
+  <!-- Small bright dot at arc head -->
+  <circle cx="14" cy="5.5" r="1.5" fill="#c7d2fe"/>
+</svg>

@@ -416,7 +416,7 @@ const ListHeader = ({
 
                 <CardRowMenuBtn
                     customId={menuId}
-                    menuComponent={({ ref, onClose }) => <ListActionsMenu listID={listID} ref={ref} onClose={onClose} />}
+                    menuComponent={({ ref, onClose }) => <ListActionsMenu listID={listID} ref={ref} onClose={onClose} overlayId={menuId} />}
                     desiredBackdropOpacity={0.0}
                     placement="bottom-start"
                 >

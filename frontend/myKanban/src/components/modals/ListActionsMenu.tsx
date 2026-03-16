@@ -14,6 +14,9 @@ import { useBoardDetailStore } from "@/stores/boardDetailStore";
 import { useUserWatchStore } from "@/stores/userWatchStore";
 import { useShallow } from "zustand/shallow";
 import { CheckIcon } from "@heroicons/react/24/solid";
+import { useAsyncRequestGroup } from "@/hooks/useAsyncRequestGroup";
+import { useAsyncKey } from "@/stores/asyncRequestStore";
+import { useOverlayStore } from "@/overlays/overlayStore";
 
 export { ActionMenuWrapper } from "./ActionMenuWrapper";
 export { ListColorSelector } from "./ListColorSelector";
@@ -21,9 +24,10 @@ export { ListColorSelector } from "./ListColorSelector";
 type ListActionsMenuProps = {
     onClose: () => void;
     listID: string;
+    overlayId?: string;
 }
 
-export const ListActionsMenu = forwardRef<HTMLDivElement, ListActionsMenuProps>(({ onClose, listID }, ref) => {
+export const ListActionsMenu = forwardRef<HTMLDivElement, ListActionsMenuProps>(({ onClose, listID, overlayId }, ref) => {
     const boardID = useParams().boardId as string;
     const listActions = useListActionRegistry();
     const isWatched = useUserWatchStore((state) => state.isListWatched(listID));
@@ -40,24 +44,39 @@ export const ListActionsMenu = forwardRef<HTMLDivElement, ListActionsMenuProps>(
     const currentAccessMode: BoardListAccessMode = boardListRelationAccessMode === "readonly" ? "readonly" : "editable"
     const isReadonly = currentAccessMode === "readonly"
     const canPatchAccessMode = visibilityRole === "admin" || visibilityRole === "owner"
-
+    // const { executeCopyListOptimistic } = useListCopyOptimistic(listID, boardID)
     const [activeTab, setActiveTab] = useState<"main" | "copyList" | "moveList" | "mirrorList" | "moveAllCards" | "accessMode">("main")
+
+    const asyncKeys = [
+        useAsyncKey("list:copy:bulk", listID),
+        useAsyncKey("list:move", listID),
+        useAsyncKey("list:mirror", listID),
+        useAsyncKey("list:detach", listID),
+        useAsyncKey("list:edit:props", listID),
+        useAsyncKey("list:edit:access", listID),
+        useAsyncKey("card:detach:bulk", listID),
+        useAsyncKey("card:move"),
+    ] as const
+    const { isLoading } = useAsyncRequestGroup([...asyncKeys])
 
 
 
     const CLOSE_TIMEOUT = 200;
     const scheduleClose = (timeout: number = CLOSE_TIMEOUT) => {
+        if (overlayId) useOverlayStore.getState().freezeAnchor(overlayId);
         setTimeout(() => {
             onClose();
         }, timeout)
     }
 
     const handleCopyList = async (title: string) => {
+        //executeCopyListOptimistic(title)
         const result = await listActions.copySingleListAfterSelf(boardID, listID, { title, keepMembers: false })
         if (result !== null) scheduleClose(600)
     }
 
     const handleMoveList = async (payload: MoveBoardListRequest) => {
+        if (overlayId) useOverlayStore.getState().freezeAnchor(overlayId);
         onClose()
         const result = await listActions.moveBoardList(boardID, listID, payload)
         if (result !== null) { }
@@ -74,7 +93,9 @@ export const ListActionsMenu = forwardRef<HTMLDivElement, ListActionsMenuProps>(
     }
 
     const handleArchiveList = async () => {
-        onClose()
+        if (overlayId) useOverlayStore.getState().freezeAnchor(overlayId);
+
+        // scheduleClose(600)
         const result = await listActions.archiveList(boardID, listID)
         if (result !== null) onClose()
     }
@@ -129,13 +150,12 @@ export const ListActionsMenu = forwardRef<HTMLDivElement, ListActionsMenuProps>(
                 requestGroups={[
                     {
                         requestKey: ["list:copy:bulk", "list:mirror",
-                            "list:detach", "list:edit:props", "list:edit:access",
+                            "list:edit:props", "list:edit:access",
                             "card:detach:bulk", "card:move:bulk"],
                         minLoadingMs: 0, maxErrorMs: 3000, minSuccessMs: 1000, show: ["loading", "success", "error"]
                     },
                     { requestKey: [], minLoadingMs: 0, maxErrorMs: 3000, minSuccessMs: 1000, show: ["loading", "error"] },
-                ]}
-                onBack={activeTab !== "main" ? () => setActiveTab("main") : undefined}
+                ]} isLoading={isLoading} onBack={activeTab !== "main" ? () => setActiveTab("main") : undefined}
                 width={300}
                 Title={Title} onClose={onClose}>
                 <div className={`text-neutral-300 ${activeTab !== "main" ? "opacity-0 h-0 pointer-events-none" : "opacity-100 h-[455px]"} transition-all duration-200`}>

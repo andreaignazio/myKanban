@@ -4,64 +4,17 @@ import { useOverlayStore, type OverlayDescriptor } from "@/overlays/overlayStore
 import { useAsyncRequestGroup } from "@/hooks/useAsyncRequestGroup"
 import type { AsyncRequestKey } from "@/stores/asyncRequestTypes"
 import { motion } from "motion/react"
-import type { AsyncRequestState } from "@/stores/asyncRequestStore"
+import { useAsyncRequestStore, type AsyncRequestState } from "@/stores/asyncRequestStore"
 import type { RequestGroup } from "../modals/ActionMenuWrapper"
 
 
 type AsyncRequestToasterProps = {
-    keys: AsyncRequestKey[];
-    show?: AsyncRequestState[];
-    // You can add props here if needed, such as a list of request keys to monitor
+    requestGroups: RequestGroup[];
 }
 
 
 
 const AsyncRequestToaster = forwardRef<HTMLDivElement, AsyncRequestToasterProps>((props, ref) => {
-
-    const requestGroup: RequestGroup[] = [
-        {
-            requestKey: props.keys,
-            minLoadingMs: 0,
-            minSuccessMs: 3000,
-            maxErrorMs: 3000,
-            show: ["success"],
-        },
-        {
-            requestKey: ["card:copy", "card:move", "card:mirror", "card:create", "card:edit:title:inline", "card:edit:dates:add:editmodal"],
-            minLoadingMs: 0,
-            minSuccessMs: 3000,
-            maxErrorMs: 3000,
-            show: ["error", "loading", "success"],
-        },
-        {
-            requestKey: ["card:create", "workspace:create", "list:create", "list:move:dnd", "card:move:dnd"],
-            minLoadingMs: 0,
-            minSuccessMs: 3000,
-            maxErrorMs: 3000,
-            show: ["error"],
-        },
-        {
-            requestKey: ["card:delete", "list:detach", "board:archive:list:purge", "board:archive:card:purge"],
-            minLoadingMs: 0,
-            minSuccessMs: 3000,
-            maxErrorMs: 3000,
-            show: ["error", "loading", "success"],
-        },
-        {
-            requestKey: ["watch:add:board", "watch:add:list", "watch:patch:board", "watch:patch:list"],
-            minLoadingMs: 0,
-            minSuccessMs: 3000,
-            maxErrorMs: 3000,
-            show: ["error", "loading", "success"],
-        },
-        {
-            requestKey: ["board:sharelink:revoke", "workspace:sharelink:revoke", "workspace:member:role:update"],
-            minLoadingMs: 0,
-            minSuccessMs: 3000,
-            maxErrorMs: 3000,
-            show: ["error", "loading", "success"],
-        }
-    ]
 
 
 
@@ -80,33 +33,12 @@ const AsyncRequestToaster = forwardRef<HTMLDivElement, AsyncRequestToasterProps>
         shadow-lg shadow-black/20">
             <>
                 <AsyncRequestOverlayGroups
-                    requestGroups={requestGroup}
+                    requestGroups={props.requestGroups}
                     variant="banner"
                     className="w-full justify-center"
                     coloredBackground={true}
                     easeIn={false}
                 />
-
-                {/*<AsyncRequestOverlayA
-                requestKey={props.keys}
-                show={["success"]}
-                minLoadingMs={0}
-                minSuccessMs={3000}
-                maxErrorMs={3000}
-                variant="banner"
-                className="w-full justify-center"
-                coloredBackground={true}
-            />
-            <AsyncRequestOverlayA
-                requestKey={["card:copy", "card:move", "card:mirror"]}
-                show={["success"]}
-                minLoadingMs={0}
-                minSuccessMs={3000}
-                maxErrorMs={3000}
-                variant="banner"
-                className="w-full justify-center"
-                coloredBackground={true}
-            />*/}
             </>
         </motion.div>
 
@@ -114,14 +46,26 @@ const AsyncRequestToaster = forwardRef<HTMLDivElement, AsyncRequestToasterProps>
 })
 
 export const AsyncRequestToasterController = () => {
-    const keys: AsyncRequestKey[] = ["list:detach", "list:move", "card:move:bulk",
-        "card:edit:dates:editmodal"]
+    const keysLSE: AsyncRequestKey[] = [
+        "card:copy", "card:move", "card:mirror", "card:create", "card:edit:title:inline", "card:edit:dates:add:editmodal",
+        "card:delete", "list:detach", "board:archive:list:purge", "board:archive:card:purge",
+        "watch:add:board", "watch:add:list", "watch:patch:board", "watch:patch:list", "list:create",
+        "board:sharelink:revoke", "workspace:sharelink:revoke", "workspace:member:role:update",
+    ]
+    const keysLS: AsyncRequestKey[] = ["list:detach", "list:move", "card:move:bulk", "card:edit:dates:editmodal"]
+    const keysLE: AsyncRequestKey[] = ["card:create", "workspace:create", "list:move:dnd", "card:move:dnd"]
+    const keysL: AsyncRequestKey[] = ["list:move:dnd", "card:move:dnd"]
+    const keysS: AsyncRequestKey[] = ["list:copy:bulk", "list:mirror", "list:edit:props", "list:edit:access"]
+    const keysE: AsyncRequestKey[] = ["board:archive:list:restore", "board:archive:card:restore", "board:archive:list:purge", "board:archive:card:purge"]
 
-    const keysCard: AsyncRequestKey[] = ["card:copy", "card:move", "card:mirror", "card:create", "card:edit:title:inline", "card:edit:dates:add:editmodal"]
-    const keysCardB: AsyncRequestKey[] = ["card:create", "workspace:create", "list:create", "list:move:dnd", "card:move:dnd"]
-    const keysArchive: AsyncRequestKey[] = ["card:delete", "list:detach", "board:archive:list:purge", "board:archive:card:purge"]
-    const keysWatchBoardList: AsyncRequestKey[] = ["watch:add:board", "watch:add:list", "watch:patch:board", "watch:patch:list"]
-    const keysShareLink: AsyncRequestKey[] = ["board:sharelink:revoke", "workspace:sharelink:revoke", "workspace:member:role:update"]
+    const toasterGroups: RequestGroup[] = [
+        { requestKey: keysLSE, minLoadingMs: 0, minSuccessMs: 3000, maxErrorMs: 3000, show: ["loading", "success", "error"] },
+        { requestKey: keysLS, minLoadingMs: 0, minSuccessMs: 3000, maxErrorMs: 3000, show: ["loading", "success"] },
+        { requestKey: keysLE, minLoadingMs: 0, minSuccessMs: 3000, maxErrorMs: 3000, show: ["loading", "error"] },
+        { requestKey: keysL, minLoadingMs: 0, minSuccessMs: 3000, maxErrorMs: 3000, show: ["loading"] },
+        { requestKey: keysS, minLoadingMs: 0, minSuccessMs: 3000, maxErrorMs: 3000, show: ["success"] },
+        { requestKey: keysE, minLoadingMs: 0, minSuccessMs: 3000, maxErrorMs: 3000, show: ["error"] },
+    ]
 
 
 
@@ -129,25 +73,23 @@ export const AsyncRequestToasterController = () => {
     const openOverlay = useOverlayStore((state) => state.open)
     const closeOverlay = useOverlayStore((state) => state.close)
 
-    const { isLoading, isSuccessful, errorMessage } = useAsyncRequestGroup(keys)
-    const { isLoading: isLoadingCard, isSuccessful: isSuccessfulCard, errorMessage: errorMessageCard } = useAsyncRequestGroup(keysCard)
-    const { isLoading: isLoadingCardB, isSuccessful: isSuccessfulCardB, errorMessage: errorMessageCardB } = useAsyncRequestGroup(keysCardB)
-    const { isLoading: isLoadingArchive, isSuccessful: isSuccessfulArchive, errorMessage: errorMessageArchive } = useAsyncRequestGroup(keysArchive)
-    const { isLoading: isLoadingWatchBoardList, isSuccessful: isSuccessfulWatchBoardList, errorMessage: errorMessageWatchBoardList } = useAsyncRequestGroup(keysWatchBoardList)
-    const { isLoading: isLoadingShareLink, isSuccessful: isSuccessfulShareLink, errorMessage: errorMessageShareLink } = useAsyncRequestGroup(keysShareLink)
+    const stateLSE = useAsyncRequestGroup(keysLSE)
+    const stateLS = useAsyncRequestGroup(keysLS)
+    const stateLE = useAsyncRequestGroup(keysLE)
+    const stateL = useAsyncRequestGroup(keysL)
+    const stateS = useAsyncRequestGroup(keysS)
+    const stateE = useAsyncRequestGroup(keysE)
 
 
 
 
     const asycRequestToastRef = useRef<HTMLDivElement>(null)
     const asyncToasId = "async-toast-menu";
-    function handleOpenToastNotification(keysA?: AsyncRequestKey[]) {
-
-        console.log("Opening async request toast notification with state:", { isLoading, isSuccessful, errorMessage });
+    function handleOpenToastNotification(groups: RequestGroup[]) {
 
         const descriptor: OverlayDescriptor = {
             id: asyncToasId,
-            render: () => <AsyncRequestToaster ref={asycRequestToastRef} keys={keys} />,
+            render: () => <AsyncRequestToaster ref={asycRequestToastRef} requestGroups={groups} />,
             panelRef: asycRequestToastRef,
             type: "modal",
             renderType: "virtual",
@@ -169,62 +111,77 @@ export const AsyncRequestToasterController = () => {
     }
 
     const timeOutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const lastOpenSignatureRef = useRef<string>("")
+
+    const isGroupActive = (group: RequestGroup, state: AsyncRequestState) => {
+        const show = group.show ?? ["loading", "success", "error"]
+        return (show.includes("loading") && state.isLoading)
+            || (show.includes("success") && state.isSuccessful === true)
+            || (show.includes("error") && !!state.errorMessage)
+    }
+
+    const hasTerminalState = (group: RequestGroup, state: AsyncRequestState) => {
+        const show = group.show ?? ["loading", "success", "error"]
+        return (show.includes("success") && state.isSuccessful === true)
+            || (show.includes("error") && !!state.errorMessage)
+    }
 
     useEffect(() => {
-        if (isSuccessful) {
-            handleOpenToastNotification();
-            if (isSuccessful || errorMessage) {
-                scheduleCloseOverlay();
-            }
+        const entries: Array<{ group: RequestGroup, state: AsyncRequestState }> = [
+            { group: toasterGroups[0], state: stateLSE },
+            { group: toasterGroups[1], state: stateLS },
+            { group: toasterGroups[2], state: stateLE },
+            { group: toasterGroups[3], state: stateL },
+            { group: toasterGroups[4], state: stateS },
+            { group: toasterGroups[5], state: stateE },
+        ]
+
+        const activeEntries = entries.filter(({ group, state }) => isGroupActive(group, state))
+        if (activeEntries.length === 0) {
+            lastOpenSignatureRef.current = ""
+            return
         }
-        // Do NOT close on idle — state resets to idle before scheduleCloseOverlay fires,
-        // so closing here would prematurely dismiss the toast.
-    }, [isSuccessful, isLoading, errorMessage])
+
+        const signature = activeEntries
+            .map(({ group, state }) => {
+                const keys = Array.isArray(group.requestKey) ? group.requestKey : [group.requestKey]
+                const show = (group.show ?? ["loading", "success", "error"]).join("|")
+                return `${keys.join(",")}:${show}:${state.updatedAt ?? 0}`
+            })
+            .join(";;")
+
+        if (lastOpenSignatureRef.current !== signature) {
+            handleOpenToastNotification(activeEntries.map(({ group }) => group))
+            lastOpenSignatureRef.current = signature
+        }
+
+        const shouldScheduleClose = activeEntries.some(({ group, state }) => hasTerminalState(group, state))
+        if (shouldScheduleClose) {
+            scheduleCloseOverlay()
+        }
+    }, [
+        stateLSE.isLoading, stateLSE.isSuccessful, stateLSE.errorMessage, stateLSE.updatedAt,
+        stateLS.isLoading, stateLS.isSuccessful, stateLS.errorMessage, stateLS.updatedAt,
+        stateLE.isLoading, stateLE.isSuccessful, stateLE.errorMessage, stateLE.updatedAt,
+        stateL.isLoading, stateL.isSuccessful, stateL.errorMessage, stateL.updatedAt,
+        stateS.isLoading, stateS.isSuccessful, stateS.errorMessage, stateS.updatedAt,
+        stateE.isLoading, stateE.isSuccessful, stateE.errorMessage, stateE.updatedAt,
+    ])
 
     useEffect(() => {
-        if (isLoadingCard || isSuccessfulCard || errorMessageCard) {
-            handleOpenToastNotification(keysCard);
-            if (isSuccessfulCard || errorMessageCard) {
-                scheduleCloseOverlay();
+        const allMonitoredKeys = Array.from(new Set(toasterGroups.flatMap((g) => Array.isArray(g.requestKey) ? g.requestKey : [g.requestKey])))
+        return () => {
+            if (timeOutRef.current) {
+                clearTimeout(timeOutRef.current)
+                timeOutRef.current = null
+            }
+            closeOverlay(asyncToasId)
+            const resetRequest = useAsyncRequestStore.getState().resetRequest
+            for (const key of allMonitoredKeys) {
+                resetRequest(key)
             }
         }
-    }, [isLoadingCard, isSuccessfulCard, errorMessageCard]);
-
-    useEffect(() => {
-        if (errorMessageCardB) {
-            handleOpenToastNotification(keysCardB);
-            if (isSuccessfulCardB || errorMessageCardB) {
-                scheduleCloseOverlay();
-            }
-        }
-    }, [isLoadingCardB, isSuccessfulCardB, errorMessageCardB]);
-
-    useEffect(() => {
-        if (isLoadingArchive || isSuccessfulArchive || errorMessageArchive) {
-            handleOpenToastNotification(keysArchive);
-            if (isSuccessfulArchive || errorMessageArchive) {
-                scheduleCloseOverlay();
-            }
-        }
-    }, [isLoadingArchive, isSuccessfulArchive, errorMessageArchive]);
-
-    useEffect(() => {
-        if (isLoadingWatchBoardList || isSuccessfulWatchBoardList || errorMessageWatchBoardList) {
-            handleOpenToastNotification(keysWatchBoardList);
-            if (isSuccessfulWatchBoardList || errorMessageWatchBoardList) {
-                scheduleCloseOverlay();
-            }
-        }
-    }, [isLoadingWatchBoardList, isSuccessfulWatchBoardList, errorMessageWatchBoardList]);
-
-    useEffect(() => {
-        if (isLoadingShareLink || isSuccessfulShareLink || errorMessageShareLink) {
-            handleOpenToastNotification(keysShareLink);
-            if (isSuccessfulShareLink || errorMessageShareLink) {
-                scheduleCloseOverlay();
-            }
-        }
-    }, [isLoadingShareLink, isSuccessfulShareLink, errorMessageShareLink]);
+    }, [closeOverlay])
 
     const scheduleCloseOverlay = () => {
         if (timeOutRef.current) {

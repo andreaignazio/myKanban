@@ -4,7 +4,7 @@ import { AddForm } from "./common/AddForm"
 import { useState } from "react"
 import { useBoardDetailStore } from "@/stores/boardDetailStore"
 import type { BoardList, CreateListInBoardResponse, List } from "@/stores/types"
-import { useAsyncKey } from "@/stores/asyncRequestStore"
+import { useAsyncKey, useAsyncRequestStore } from "@/stores/asyncRequestStore"
 
 
 type ListAddProps = {
@@ -16,13 +16,14 @@ type ListAddProps = {
 export const ListAdd = ({ boardID, setShouldAnimate }: ListAddProps) => {
     const [isAdding, setIsAdding] = useState(false)
     // const boardID = useBoardDetailStore((state) => state.currentBoardId)
-    const createList = useListsStore((state) => state.createList)
+    const createListRaw = useListsStore((state) => state.createListRaw)
+    const execute = useAsyncRequestStore((state) => state.execute)
 
-    function handleAdd(title: string) {
+    async function handleAdd(title: string) {
         try {
             if (!boardID) return
-            handleAddList(title)
-            //createList({ Title: title, AfterID: null, InsertAt: "end" }, boardID)
+            await handleAddList(title)
+
             setIsAdding(false)
         }
         catch (error) {
@@ -51,25 +52,31 @@ export const ListAdd = ({ boardID, setShouldAnimate }: ListAddProps) => {
         // setShouldAnimate && setShouldAnimate(true)
         const tempID = `temp-${Date.now()}`
         // setTempID(tempID)
-        addListOptimistic(tempID, boardID, title)
         const key = getRequestKey(tempID)
-        //setRequestKey(key)
+        await execute(key, async () => {
+            await new Promise((resolve) => setTimeout(resolve, 1))
+            return await executeAddList(title, boardID, tempID)
+        })
 
-        try {
-            await createList({ Title: title, AfterID: null, InsertAt: "end" }, boardID, key).then((res) => {
-                if (res) {
-                    reconcileAddList(res, tempID, boardID)
-                } else {
-                    rollbackAddList(tempID, boardID)
-                }
-            })
-        } catch (error) {
-            console.error("Error creating list:", error)
-            rollbackAddList(tempID, boardID)
-        } finally {
-            //setTempID(null)
-            //setRequestKey(null)
-            // setShouldAnimate && setShouldAnimate(false)
+        async function executeAddList(title: string, boardID: string, tempID: string) {
+            addListOptimistic(tempID, boardID, title)
+
+            try {
+                await createListRaw({ Title: title, AfterID: null, InsertAt: "end" }, boardID).then((res) => {
+                    if (res) {
+                        reconcileAddList(res, tempID, boardID)
+                    } else {
+                        rollbackAddList(tempID, boardID)
+                        throw new Error("Failed to create list")
+                    }
+                })
+            } catch (error) {
+                console.error("Error creating list:", error)
+                rollbackAddList(tempID, boardID)
+                throw error
+            } finally {
+
+            }
         }
 
 

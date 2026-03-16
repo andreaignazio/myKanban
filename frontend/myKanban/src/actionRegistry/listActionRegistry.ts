@@ -71,7 +71,7 @@ export function useListActionRegistry() {
     }
 
     function copyBulkListsRaw(boardId: string, payload: BulkCopyListsRequest): Promise<BulkCopyListsResponse | null> {
-        return listStore.copyBulkListsRaw(boardId, payload)
+        return listStore.copyBulkLists(boardId, payload)
     }
 
     function copySingleListAfterSelf(boardId: string, listId: string, input?: CopySingleListInput): Promise<BulkCopyListsResponse | null> {
@@ -85,7 +85,7 @@ export function useListActionRegistry() {
         if (typeof input?.keepMembers === "boolean") {
             payload.KeepMembers = input.keepMembers
         }
-        return listStore.copyBulkListsRaw(boardId, payload)
+        return listStore.copyBulkLists(boardId, payload)
     }
 
     function moveBoardList(sourceBoardId: string, listId: string, payload: MoveBoardListRequest): Promise<MoveBoardListResponse | null> {

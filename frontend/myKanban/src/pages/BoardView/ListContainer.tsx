@@ -9,9 +9,10 @@ import { useAsyncRequest } from "@/hooks/useAsyncRequest"
 import { useBoardsStore } from "@/stores/boardsStore"
 
 import { Droppable } from "@hello-pangea/dnd"
-import { use, useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import type { AsyncRequestKey } from "@/stores/asyncRequestTypes"
 import { useAsyncRequestGroup } from "@/hooks/useAsyncRequestGroup"
+import { flushSync } from "react-dom"
 
 const EMPTY_LIST_IDS: string[] = []
 const SKELETON_CARD_COUNTS = [3, 4, 2]
@@ -43,8 +44,8 @@ export const ListContainer = ({ draggedCardId = null, draggedSourceBoardListId =
 
     const [shouldAnimate, setShouldAnimate] = useState(true);
 
-    const animatedKeys: AsyncRequestKey[] = ["list:copy:bulk"]
-    const { isLoading: isAnimating } = useAsyncRequestGroup(animatedKeys)
+    const animatedKeys: AsyncRequestKey[] = ["list:copy:bulk", "list:detach", "list:create", "list:create:optimistic"]
+    const { isLoading: isAnimating, isSuccessful: isAnimationSuccessful, errorMessage: animationErrorMessage } = useAsyncRequestGroup(animatedKeys)
 
     const timeOutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -59,16 +60,26 @@ export const ListContainer = ({ draggedCardId = null, draggedSourceBoardListId =
 
 
     useEffect(() => {
-        if (isAnimating) {
-            setShouldAnimate(true);
-            if (timeOutRef.current) {
-                clearTimeout(timeOutRef.current);
+        flushSync(() => {
+            if (isAnimating) {
+                setShouldAnimate(true);
+                if (timeOutRef.current) {
+                    clearTimeout(timeOutRef.current);
+                }
+                timeOutRef.current = setTimeout(() => {
+                    setShouldAnimate(false);
+                }, 10000);
             }
-            timeOutRef.current = setTimeout(() => {
-                setShouldAnimate(false);
-            }, 2000);
-        }
-    }, [isAnimating]);
+            if (isAnimationSuccessful || animationErrorMessage) {
+                if (timeOutRef.current) {
+                    clearTimeout(timeOutRef.current);
+                }
+                timeOutRef.current = setTimeout(() => {
+                    setShouldAnimate(false);
+                }, 2000);
+            }
+        });
+    }, [isAnimating, isAnimationSuccessful, animationErrorMessage]);
 
 
     return (
@@ -86,6 +97,8 @@ export const ListContainer = ({ draggedCardId = null, draggedSourceBoardListId =
                     <AnimatePresence mode="popLayout">
                         {showSkeletons && SKELETON_CARD_COUNTS.map((cardCount, i) => (
                             <motion.div
+                                layout={shouldAnimate}
+                                layoutCrossfade
                                 key={`list-skeleton-${i}`}
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1, transition: { duration: 0.2, delay: i * 0.07 } }}
@@ -106,6 +119,8 @@ export const ListContainer = ({ draggedCardId = null, draggedSourceBoardListId =
                         ))}
                         {uniqueBoardListIds.map((boardListId: string, index: number) => (
                             <motion.div
+                                layout={shouldAnimate}
+                                layoutCrossfade
                                 key={boardListId}
                                 initial={shouldAnimate ? { opacity: 0, y: +12, } : undefined}
                                 animate={shouldAnimate ? {
@@ -127,10 +142,12 @@ export const ListContainer = ({ draggedCardId = null, draggedSourceBoardListId =
                         ))}
                         {provided.placeholder}
                         <motion.div
+                            layout={shouldAnimate}
+                            layoutCrossfade
                             key="list-add"
                             initial={{ opacity: 0 }}
-                            animate={{ opacity: 1, transition: { duration: 0.2 } }}
-                            exit={{ opacity: 0, transition: { duration: 0.15 } }}
+                            animate={{ opacity: 1, transition: { duration: 1 } }}
+                            exit={{ opacity: 0, transition: { duration: 0.95 } }}
                             className="shrink-0"
                         >
                             <ListAdd boardID={boardId} setShouldAnimate={setShouldAnimate} />

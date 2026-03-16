@@ -28,6 +28,7 @@ export const ASYNC_REQUEST_BASE_KEYS = [
     "board:archive:list:purge",
     "board:archive:card:purge",
     "list:create",
+    "list:create:optimistic",
     "list:copy:bulk",
     "list:move",
     "list:move:dnd",
