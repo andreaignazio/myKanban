@@ -134,7 +134,7 @@ export const useListsStore = create<ListsStore>((set, get) => ({
 
     moveBoardList: async (sourceBoardID: string, listID: string, payload: MoveBoardListRequest) => {
         const res = await useAsyncRequestStore.getState().execute(
-            useAsyncKey("list:move", listID),
+            useAsyncKey("list:move:crossboard", listID),
             async () => {
                 const response = await api.patch(`/boards/${sourceBoardID}/lists/${listID}/moveto`, payload)
                 return response.data as MoveBoardListResponse

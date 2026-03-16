@@ -52,7 +52,7 @@ export const AsyncRequestToasterController = () => {
         "watch:add:board", "watch:add:list", "watch:patch:board", "watch:patch:list", "list:create",
         "board:sharelink:revoke", "workspace:sharelink:revoke", "workspace:member:role:update",
     ]
-    const keysLS: AsyncRequestKey[] = ["list:detach", "list:move", "card:move:bulk", "card:edit:dates:editmodal"]
+    const keysLS: AsyncRequestKey[] = ["list:detach", "card:move:bulk", "card:edit:dates:editmodal"]
     const keysLE: AsyncRequestKey[] = ["card:create", "workspace:create", "list:move:dnd", "card:move:dnd"]
     const keysL: AsyncRequestKey[] = ["list:move:dnd", "card:move:dnd"]
     const keysS: AsyncRequestKey[] = ["list:copy:bulk", "list:mirror", "list:edit:props", "list:edit:access"]

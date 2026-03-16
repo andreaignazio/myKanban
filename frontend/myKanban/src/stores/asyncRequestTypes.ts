@@ -30,7 +30,7 @@ export const ASYNC_REQUEST_BASE_KEYS = [
     "list:create",
     "list:create:optimistic",
     "list:copy:bulk",
-    "list:move",
+    "list:move:crossboard",
     "list:move:dnd",
     "card:move:dnd",
     "list:mirror",

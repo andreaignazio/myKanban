@@ -49,7 +49,7 @@ export const ListActionsMenu = forwardRef<HTMLDivElement, ListActionsMenuProps>(
 
     const asyncKeys = [
         useAsyncKey("list:copy:bulk", listID),
-        useAsyncKey("list:move", listID),
+        useAsyncKey("list:move:crossboard", listID),
         useAsyncKey("list:mirror", listID),
         useAsyncKey("list:detach", listID),
         useAsyncKey("list:edit:props", listID),
@@ -77,9 +77,9 @@ export const ListActionsMenu = forwardRef<HTMLDivElement, ListActionsMenuProps>(
 
     const handleMoveList = async (payload: MoveBoardListRequest) => {
         if (overlayId) useOverlayStore.getState().freezeAnchor(overlayId);
-        onClose()
+        // onClose()
         const result = await listActions.moveBoardList(boardID, listID, payload)
-        if (result !== null) { }
+        if (result !== null) scheduleClose(300)
     }
 
     const handleMirrorList = async (payload: MirrorBoardListRequest) => {

@@ -44,7 +44,7 @@ export const ListContainer = ({ draggedCardId = null, draggedSourceBoardListId =
 
     const [shouldAnimate, setShouldAnimate] = useState(true);
 
-    const animatedKeys: AsyncRequestKey[] = ["list:copy:bulk", "list:detach", "list:create", "list:create:optimistic"]
+    const animatedKeys: AsyncRequestKey[] = ["list:copy:bulk", "list:detach", "list:create", "list:create:optimistic", "list:move:crossboard"]
     const { isLoading: isAnimating, isSuccessful: isAnimationSuccessful, errorMessage: animationErrorMessage } = useAsyncRequestGroup(animatedKeys)
 
     const timeOutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
