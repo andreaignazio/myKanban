@@ -15,25 +15,30 @@ import { CatalogIcon, iconCatalog, type IconId } from "@/icons/iconCatalog";
 import type { WorkspaceProps } from "@/stores/types";
 import { useWorkspaceStore } from "@/stores/workspaceStore";
 import { forwardRef, useEffect, useMemo, useState } from "react";
+import { Separator } from "@/components/common/Separator";
 
 type WorkspaceIconEditorProps = {
     workspaceID?: string;
+    initialIconId?: IconId;
+    initialBgToken?: string;
+    initialBorderToken?: string;
     onClose: () => void;
     onLocalSubmit?: (iconId: IconId, bgToken: string, borderToken: string) => void;
 };
 
-export const WorkspaceIconEditor = forwardRef<HTMLDivElement, WorkspaceIconEditorProps>(({ workspaceID, onClose, onLocalSubmit }, ref) => {
+export const WorkspaceIconEditor = forwardRef<HTMLDivElement, WorkspaceIconEditorProps>(({ workspaceID, initialIconId, initialBgToken, initialBorderToken, onClose, onLocalSubmit }, ref) => {
     const workspaceActions = useWorkspaceActionRegistry();
     const workspace = useWorkspaceStore((state) => state.workspacesById[workspaceID ?? ""]);
     const [isSaving, setIsSaving] = useState(false);
 
     const iconIds = useMemo(() => Object.keys(iconCatalog) as IconId[], []);
     const workspaceBgTokens = useMemo(() => [...workspaceGradientColorTokens, ...workspaceFlatColorTokens], []);
-    const [selectedIconId, setSelectedIconId] = useState<IconId>("boards");
-    const [iconBgToken, setIconBgToken] = useState<string>("ws_flat_slate");
-    const [iconBorderToken, setIconBorderToken] = useState<string>("ws_border_none");
+    const [selectedIconId, setSelectedIconId] = useState<IconId>(initialIconId ?? "boards");
+    const [iconBgToken, setIconBgToken] = useState<string>(initialBgToken ?? "ws_flat_slate");
+    const [iconBorderToken, setIconBorderToken] = useState<string>(initialBorderToken ?? "ws_border_none");
 
     useEffect(() => {
+        if (!workspaceID) return;
         const iconId = workspace?.Props?.IconID;
         if (iconId && iconId in iconCatalog) {
             setSelectedIconId(iconId as IconId);
@@ -87,35 +92,42 @@ export const WorkspaceIconEditor = forwardRef<HTMLDivElement, WorkspaceIconEdito
     return (
         <CommonMenuWrapper ref={ref}>
             <div className="flex w-[360px] flex-col gap-3 p-4">
-                <span className="text-lg font-semibold text-neutral-300">Select workspace icon</span>
+                <span className="text-lg font-semibold text-neutral-300">Workspace icon</span>
 
-                <div className="flex w-full items-center justify-center py-2">
-                    <div className={`rounded-2xl p-4 ${hasBorder ? "border-2" : "border-0"} ${iconBgTokenClass}`} style={hasBorder ? { borderColor: iconBorderColor } : undefined}>
-                        <CatalogIcon id={selectedIconId} className="h-8 w-8 text-neutral-200" />
+                <div className="
+                z-0
+                flex w-full bg-zinc-900 rounded-xl  items-center justify-center py-8 mb-0">
+                    <div className={`rounded-3xl p-4 ${hasBorder ? "border-2" : "border-0"} ${iconBgTokenClass}`}
+                        style={hasBorder ? { borderColor: iconBorderColor } : undefined}>
+                        <CatalogIcon id={selectedIconId} className="h-16 w-16 text-neutral-200" />
                     </div>
                 </div>
+                <div style={{ zIndex: 2000 }}
+                    className=" bg-zinc-900/30 border-zinc-400/20  p-3 py-4 rounded-xl shadow-md shadow-black/10" >
+                    <TokenizedColorSelector
+                        label="Icon background"
+                        menuId="workspace-icon-bg-selector"
+                        quickTokens={workspaceBgTokens}
+                        menuGradients={workspaceGradientColorTokens}
+                        menuColors={workspaceFlatColorTokens}
+                        selectedToken={resolveToken(iconBgToken)}
+                        onSelectToken={(color) => setIconBgToken(color.token)}
+                        className=" filter saturate-150 brightness-110"
+                    />
+                    <Separator className="my-6 mb-4" />
 
-                <TokenizedColorSelector
-                    label="Icon background"
-                    menuId="workspace-icon-bg-selector"
-                    quickTokens={workspaceBgTokens}
-                    menuGradients={workspaceGradientColorTokens}
-                    menuColors={workspaceFlatColorTokens}
-                    selectedToken={resolveToken(iconBgToken)}
-                    onSelectToken={(color) => setIconBgToken(color.token)}
-                />
-
-                <TokenizedColorSelector
-                    label="Icon border"
-                    menuId="workspace-icon-border-selector"
-                    quickTokens={workspaceBorderColorTokens}
-                    menuGradients={[]}
-                    menuColors={workspaceBorderColorTokens}
-                    selectedToken={resolveToken(iconBorderToken)}
-                    onSelectToken={(color) => setIconBorderToken(color.token)}
-                />
-
-                <div className="grid grid-cols-4 gap-2">
+                    <TokenizedColorSelector
+                        label="Icon border"
+                        menuId="workspace-icon-border-selector"
+                        quickTokens={workspaceBorderColorTokens}
+                        menuGradients={[]}
+                        menuColors={workspaceBorderColorTokens}
+                        selectedToken={resolveToken(iconBorderToken)}
+                        onSelectToken={(color) => setIconBorderToken(color.token)}
+                    />
+                </div>
+                <Separator className="my-1" />
+                <div className="grid grid-cols-6 gap-2">
                     {iconIds.map((iconId) => {
                         const isSelected = selectedIconId === iconId;
 
@@ -125,8 +137,11 @@ export const WorkspaceIconEditor = forwardRef<HTMLDivElement, WorkspaceIconEdito
                                 type="button"
                                 onClick={() => setSelectedIconId(iconId)}
                                 disabled={isSaving}
-                                className={`flex h-14 w-full items-center justify-center rounded-lg border transition
-                                    ${isSelected ? "border-neutral-200 bg-neutral-700/50" : "border-neutral-500/40 bg-neutral-800/40 hover:bg-neutral-700/35"}
+                                className={`flex h-12 aspect-square
+                                     w-12 items-center justify-center rounded-lg border transition ease-in-out
+                                    ${isSelected
+                                        ? "border-zinc-200 bg-zinc-700/50"
+                                        : "border-neutral-500/0 bg-zinc-900/30 hover:bg-zinc-700/35"}
                                     ${isSaving ? "opacity-60" : ""}`}
                                 title={iconId}
                             >
@@ -136,6 +151,12 @@ export const WorkspaceIconEditor = forwardRef<HTMLDivElement, WorkspaceIconEdito
                     })}
                 </div>
 
+
+
+
+                <Separator className="mt-1" />
+
+
                 <SubmitFooter
                     show={true}
                     onCancel={onClose}
@@ -143,7 +164,7 @@ export const WorkspaceIconEditor = forwardRef<HTMLDivElement, WorkspaceIconEdito
                     isSaving={isSaving}
                     flipButtons={true}
                     className="!w-full !justify-end"
-                    buttonsClassName="!px-5 !rounded"
+                    buttonsClassName="!px-5 !rounded-lg !h-12 !w-full !px-8"
                 />
             </div>
         </CommonMenuWrapper>
@@ -158,21 +179,25 @@ type TokenizedColorSelectorProps = {
     menuColors: ColorToken[];
     selectedToken: ColorToken | null;
     onSelectToken: (color: ColorToken) => void;
+    className?: string;
 };
 
-function TokenizedColorSelector({ label, menuId, quickTokens, menuGradients, menuColors, selectedToken, onSelectToken }: TokenizedColorSelectorProps) {
+function TokenizedColorSelector({ label, menuId, quickTokens, menuGradients, menuColors, selectedToken, onSelectToken, className }: TokenizedColorSelectorProps) {
 
     return (
         <div className="flex w-full flex-col gap-1">
-            <span className="text-xs text-neutral-400">{label}</span>
-            <div className="grid grid-cols-7 gap-1">
+            <span className="text-sm font-semibold text-gray-300">{label}</span>
+            <div className="grid grid-cols-7 gap-1.5">
                 {quickTokens.map((token) => {
                     const isSelected = selectedToken?.token === token.token;
                     return (
                         <div
                             key={token.token}
                             onClick={() => onSelectToken(token)}
-                            className={`relative h-8 w-full cursor-pointer rounded-[4px] ${token.className} ${isSelected ? "ring-1 ring-neutral-100" : ""}`}
+                            className={`relative h-8 w-full cursor-pointer rounded-[4px] ${token.className} 
+                            ${className}
+                            transition-all duration-200 ease-in-out
+                            ${isSelected ? "ring-1 ring-neutral-100" : ""}`}
                         >
                             <ButtonHoverInset onClick={() => { }} />
                         </div>

@@ -3,9 +3,10 @@ import type { AsideTabs } from "@/components/workspacePages/asideTabs"
 import { SettingsPageWrapper } from "@/components/workspacePages/SettingsPageWrapper"
 import { useSyncTabRouter } from "@/hooks/useSyncTabRouter";
 import { useWorkspaceStore } from "@/stores/workspaceStore";
-import { Building2 } from "lucide-react";
+
 import { Outlet, useNavigate, useParams } from "react-router-dom";
-import { UserPagesWrapper } from "../User/userPagesWrapper";
+
+import { WorkspacePageHeader } from "@/components/workspacePages/WorkspacePageHeader";
 
 export const WorkspaceSubscriptionMain = () => {
     const workspaceID = useParams().workspaceId as string;
@@ -25,9 +26,13 @@ export const WorkspaceSubscriptionMain = () => {
     }
 
     const links = asideTabs(workspaceID)
-    const isGoingToCancel = subscription?.CancelAtPeriodEnd ?? false;
+    //const isGoingToCancel = subscription?.CancelAtPeriodEnd ?? false;
 
-    const status = isGoingToCancel ? "pending_cancel" : subscription?.Status ?? "inactive";
+    //const status = isGoingToCancel ? "pending_cancel" : subscription?.Status ?? "inactive";
+
+    const getTabData = (tabId: string | null): AsideTabs | undefined => {
+        return links.find(link => link.id === tabId);
+    }
 
     return (
 
@@ -46,17 +51,16 @@ export const WorkspaceSubscriptionMain = () => {
                 </>
             }
 
-            mainHeader={
-                <UserPagesWrapper DoNotShowTitle className="h-full !mt-0" maxWidth="950px">
-                    <div className="flex flex-col items-start justify-start gap-4 mt-20">
-                        <div className="flex flex-row items-center justify-center gap-2">
-                            <Building2 className="h-5 w-5 -translate-y-[2px] text-neutral-400" />
-                            <div className="text-lg font-bold text-neutral-300"> Subscriptions</div>
-                            <StatusBadge status={status} />
-                        </div>
-                    </div>
+            mainHeader={<>
+                <div className="flex flex-col h-full p-6 overflow-hidden scrollbar-hidden">
+                    <WorkspacePageHeader title={getTabData(activeTab)?.pageTitle ?? ""}
+                        description={getTabData(activeTab)?.pageDescription ?? ""}
+                        iconId={getTabData(activeTab)?.pageIconId ?? "default"} />
                     <Outlet />
-                </UserPagesWrapper>
+                </div>
+
+            </>
+
 
             }
         />
@@ -67,12 +71,22 @@ export const WorkspaceSubscriptionMain = () => {
 
 function asideTabs(workspaceID: string): AsideTabs[] {
     return [
-        { id: "manage", label: "Manage Subscription", href: `/workspaces/${workspaceID}/settings/subscription`, type: "page" },
-        { id: "upgrade", label: "Upgrade Plan", href: `/workspaces/${workspaceID}/settings/subscription/upgrade`, type: "page" },
+        {
+            id: "manage", label: "Manage Subscription", href: `/workspaces/${workspaceID}/settings/subscription`, type: "page",
+            pageTitle: "Manage Subscription",
+            pageDescription: "View your current subscription details, manage your billing information, and see your billing history.",
+            pageIconId: "subscription"
+        },
+        {
+            id: "upgrade", label: "Upgrade Plan", href: `/workspaces/${workspaceID}/settings/subscription/upgrade`, type: "page",
+            pageTitle: "Upgrade Plan",
+            pageDescription: "Upgrade your current subscription plan to access additional features and benefits.",
+            pageIconId: "upgrade"
+        },
     ]
 }
 
-const StatusBadge = ({ status }: { status: string }) => {
+/*const StatusBadge = ({ status }: { status: string }) => {
     let color = "bg-green-500";
     switch (status) {
         case "active":
@@ -99,4 +113,4 @@ const StatusBadge = ({ status }: { status: string }) => {
             {resolvedLabel}
         </div>
     );
-}
+}*/

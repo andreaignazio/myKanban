@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xargs grep:*)",
+      "Bash(find /d/SoftwareDevelopment/MYTRELLO/models -name *.go -type f)",
+      "Bash(find d:/SoftwareDevelopment/MYTRELLO/backend/GoGORM/internal/authzdto -name *.go)",
+      "Bash(npm view:*)",
+      "Bash(node -e \"const v=require\\(''''fs''''\\).readFileSync\\(''''/dev/stdin'''',''''utf8''''\\); const arr=JSON.parse\\(v\\); console.log\\(arr.slice\\(-10\\).join\\(''''\\\\n''''\\)\\)\")",
+      "Bash(grep -n \"isAdminOrOwner\\\\|canManageWorkspace\\\\|role.*admin\\\\|role.*owner\" /d/SoftwareDevelopment/MYTRELLO/frontend/myKanban/src/pages/WorkspaceSettings/*.tsx)",
+      "Bash(npm run:*)"
+    ]
+  }
+}

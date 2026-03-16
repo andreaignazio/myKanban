@@ -170,6 +170,8 @@ export type ShareLinkTargetLite = {
     EntityType: "board" | "workspace";
     Name: string;
     Description?: string;
+    CreatedAt?: string;
+    OwnerName?: string;
 };
 
 export type ShareLinkPublicPreviewResponse = {
@@ -182,6 +184,8 @@ export type ShareLinkTokenEntityData = {
     EntityType: "board" | "workspace";
     Name: string;
     Description?: string;
+    CreatedAt?: string;
+    OwnerName?: string;
 };
 
 export type ShareLinkAuthenticatedResponse = {
@@ -886,7 +890,20 @@ export type InboxCard = {
     CardID: string
     Position: string
     SourceBoardID: string | null
-    RootListCardID: string
+    RootListCardID: string | null
+    Mirrors: string[]
+    CreatedAt: string
+    UpdatedAt: string
+    DeletedAt: string | null
+}
+
+export type SingleInboxCardResponse = {
+    ID: string
+    UserID: string
+    CardID: string
+    Pos: string
+    SourceBoardID: string | null
+    RootListCardID: string | null
     Mirrors: string[]
     CreatedAt: string
     UpdatedAt: string

@@ -12,7 +12,7 @@ import { useRef } from "react";
 import { StarIcon } from "@heroicons/react/24/outline";
 import { LockKeyholeIcon } from "lucide-react";
 import { useOverlayStore, type OverlayDescriptor } from "@/overlays/overlayStore";
-import { ShareActionModal } from "@/components/modals/ShareActionModal";
+import { RequestAccessModal } from "@/components/modals/RequestAccessModal";
 import { gradientColorTokens, getClassNamesForColorToken } from "@/domain/colorTokens";
 import { InfoIcon } from "lucide-react";
 import { RoundButton } from "../buttons/RoundButton";
@@ -40,23 +40,24 @@ export function BoardCard({ boardID: boardID, workspaceId: overrideWorkspaceId }
     const isOffered = boardStatus === "offered"
     const isSuspended = boardStatus === "suspended"
     const isPendingSuspension = boardStatus === "pending_suspension"
+    const isAccessiblePendingSuspension = boardStatus === "accessible_pending_suspension"
     const pendingAccessRequestsCount = useShareOffersStore((state) => {
         const ids = state.boardReceivedRequestsIdsByBoardId[boardID] ?? [];
         const offerById = useCacheStore.getState().offerById;
         return ids.filter((id) => offerById[id]?.Status === "pending").length;
     });
 
-    const isLocked = boardStatus !== null;
+    const isLocked = boardStatus !== null && boardStatus !== "accessible_pending_suspension";
     const navigate = useNavigate()
 
     const { open: openMenu, close: onMenuClose } = useOverlayStore()
-    const shareActionModalRef = useRef<HTMLDivElement>(null)
+    const requestAccessModalRef = useRef<HTMLDivElement>(null)
     const shareOfferDetailsRef = useRef<HTMLDivElement>(null)
 
     const workspaceId = overrideWorkspaceId ?? (useParams().workspaceId as string);
     const handleOpenBoard = () => {
 
-        if (isSuspended || isPendingSuspension) {
+        if (isSuspended) {
             return
         }
         if (isLocked) {
@@ -95,12 +96,11 @@ export function BoardCard({ boardID: boardID, workspaceId: overrideWorkspaceId }
     }
 
     function handleOpenRevokeModal(boardId: string) {
-        //console.log("Opening revoke modal for share offer", boardId);
         const id = "boardCreateRequest-" + boardId;
         const descriptor: OverlayDescriptor = {
             id: id,
-            render: () => <ShareActionModal ref={shareActionModalRef} targetID={boardId} actionType="createAccessRequest" onClose={() => onMenuClose(id)} />,
-            panelRef: shareActionModalRef,
+            render: () => <RequestAccessModal ref={requestAccessModalRef} targetType="board" targetID={boardId} onClose={() => onMenuClose(id)} />,
+            panelRef: requestAccessModalRef,
             type: "modal",
             renderType: "virtual",
             exclusiveGroup: "share-action-modal",
@@ -140,7 +140,7 @@ export function BoardCard({ boardID: boardID, workspaceId: overrideWorkspaceId }
                     ${isRequested ? "ring-2 hover:ring-fuchsia-500/80" : ""}
                     ${isOffered ? "ring-2 ring-yellow-500/80" : ""}
                     ${isSuspended ? "ring-2 ring-red-500/60 opacity-60" : ""}
-                    ${isPendingSuspension ? "ring-2 ring-orange-400/60 opacity-75" : ""}
+                    ${(isPendingSuspension || isAccessiblePendingSuspension) ? "ring-2 ring-orange-400/60 opacity-75" : ""}
                     `}
             >
                 <CardRowMenuBtn
@@ -163,22 +163,37 @@ export function BoardCard({ boardID: boardID, workspaceId: overrideWorkspaceId }
                 {(isLocked || isSuspended || isPendingSuspension) && (
                     <div
                         onClick={() => handleOpenBoard()}
-                        className="absolute inset-0 z-10 
+                        className="absolute inset-0 z-10
                         group-hover:backdrop-blur-sm transition-all ease-in-out duration-300
                         bg-gradient-to-t from-black/60 to-transparent
                          flex items-center justify-center" >
                         <LockKeyholeIcon
                             className={` absolute
-                                h-7 w-7 text-gray-300 
+                                h-7 w-7 text-gray-300
                         group-hover:opacity-0
                          transition-all ease-in-out duration-300`}
                             strokeWidth={3} />
-                        <span className=" absolute mt-2 text-sm font-medium
-                         text-gray-300 opacity-0 
-                         group-hover:opacity-100 transition-opacity">
-                            {isRequested ? "Access requested" : isOffered ? "Access offered" : isSuspended ? "Board suspended" : isPendingSuspension ? "Suspension pending" : "Request access"}
+                        <span className=" absolute mt-2 flex flex-col items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <span className="text-sm font-medium text-gray-300">
+                                {isRequested ? "Access requested" : isOffered ? "Access offered" : isSuspended ? "Board suspended" : "Request access"}
+                            </span>
+                            {isPendingSuspension && (
+                                <span className="text-xs text-orange-400/80">Suspension pending</span>
+                            )}
                         </span>
-
+                    </div>
+                )}
+                {isAccessiblePendingSuspension && (
+                    <div
+                        onClick={() => handleOpenBoard()}
+                        className="absolute inset-0 z-10
+                        group-hover:backdrop-blur-sm transition-all ease-in-out duration-300
+                        bg-gradient-to-t from-black/60 to-transparent
+                        flex items-center justify-center">
+                        <span className="absolute mt-2 flex flex-col items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <span className="text-sm font-medium text-gray-300">Access</span>
+                            <span className="text-xs text-orange-400/80">Suspension pending</span>
+                        </span>
                     </div>
                 )}
                 <div

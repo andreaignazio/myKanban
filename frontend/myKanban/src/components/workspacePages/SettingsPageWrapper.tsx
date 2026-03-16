@@ -40,7 +40,9 @@ export const SettingsPageWrapper = ({ asideHeader, asideLinks, activeTab, handle
                 <AsideTabsBar asideLinks={asideLinks} activeTab={activeTab} handleNavigate={handleNavigate} width={widthAside} />
             </div>
 
-            <div className="flex flex-col flex-1 min-h-0 px-4 xl:px-12 xl:mt-2">
+            <div className="
+            flex flex-col flex-1 min-h-0 px-4 xl:px-12 xl:mt-2">
+
                 {mainHeader}
             </div>
 

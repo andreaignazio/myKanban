@@ -27,9 +27,11 @@ type PublicShareLinkResponse struct {
 }
 
 type ShareLinkTargetLiteResponse struct {
-	EntityType  string `json:"EntityType"`
-	Name        string `json:"Name"`
-	Description string `json:"Description,omitempty"`
+	EntityType  string    `json:"EntityType"`
+	Name        string    `json:"Name"`
+	Description string    `json:"Description,omitempty"`
+	CreatedAt   time.Time `json:"CreatedAt"`
+	OwnerName   string    `json:"OwnerName,omitempty"`
 }
 
 type PublicShareLinkPreviewResponse struct {

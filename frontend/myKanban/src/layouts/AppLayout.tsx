@@ -52,14 +52,15 @@ export default function AppLayout() {
     const layoutBgClass = isBoardView ? "bg-transparent" : "bg-main"
     const fetchUserWatches = useUserWatchStore((state) => state.fetchUserWatches)
 
-    const isSignedIn = useAuth().isSignedIn
+    const { isSignedIn, isLoaded: clerkIsLoaded } = useAuth()
     const publicPaths = ["/sign-in", "/sign-up", "/login", "/"]
     const isPublicPath = publicPaths.some(p => location.pathname === p || location.pathname.startsWith(p + "/"))
     useEffect(() => {
+        if (!clerkIsLoaded) return
         if (!isSignedIn && !isPublicPath) {
             navigate("/", { replace: true })
         }
-    }, [isSignedIn, isPublicPath, navigate])
+    }, [clerkIsLoaded, isSignedIn, isPublicPath, navigate])
 
     useEffect(() => {
         const locked = isOverlayLocked()

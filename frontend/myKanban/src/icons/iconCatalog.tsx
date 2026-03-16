@@ -1,5 +1,5 @@
 import { Cog6ToothIcon, Squares2X2Icon, UsersIcon, CreditCardIcon, } from "@heroicons/react/24/solid";
-import { CircleUser, ListTodo, Eye, LayoutList, Building2, BriefcaseBusiness, MailOpen, Link2 } from "lucide-react";
+import { CircleUser, ListTodo, Eye, LayoutList, Building2, BriefcaseBusiness, MailOpen, Link2, ChartNoAxesCombined } from "lucide-react";
 import type { ComponentProps } from "react";
 
 export const iconCatalog = {
@@ -18,7 +18,9 @@ export const iconCatalog = {
     default: Squares2X2Icon,
     letterSent: MailOpen,
     letterReceived: MailOpen,
-    link: Link2
+    link: Link2,
+    subscription: ChartNoAxesCombined,
+    upgrade: ChartNoAxesCombined,
 
 
 } as const;

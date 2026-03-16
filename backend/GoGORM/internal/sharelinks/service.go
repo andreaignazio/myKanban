@@ -493,6 +493,7 @@ func (s *ShareLinkService) GetPublicShareLinkByToken(ctx context.Context, token 
 	}
 
 	target := ShareLinkTargetLiteResponse{EntityType: shareLink.TargetType}
+	var ownerUserID uuid.UUID
 	switch shareLink.TargetType {
 	case "board":
 		board, err := s.repo.GetBoardByID(ctx, shareLink.TargetID, s.IncludeDeleted)
@@ -501,6 +502,8 @@ func (s *ShareLinkService) GetPublicShareLinkByToken(ctx context.Context, token 
 		}
 		target.Name = board.Name
 		target.Description = extractDescription(board.Props)
+		target.CreatedAt = board.CreatedAt
+		ownerUserID = board.CreatedByUserID
 	case "workspace":
 		workspace, err := s.repo.GetWorkspaceByID(ctx, shareLink.TargetID, s.IncludeDeleted)
 		if err != nil {
@@ -508,8 +511,16 @@ func (s *ShareLinkService) GetPublicShareLinkByToken(ctx context.Context, token 
 		}
 		target.Name = workspace.Name
 		target.Description = extractDescription(workspace.Props)
+		target.CreatedAt = workspace.CreatedAt
+		ownerUserID = workspace.CreatedByUserID
 	default:
 		return nil, domainerr.ErrValidation
+	}
+
+	if ownerUserID != uuid.Nil {
+		if owners, err := s.MembershipRepo.GetUsersByIDs(ctx, []uuid.UUID{ownerUserID}); err == nil && len(owners) > 0 {
+			target.OwnerName = owners[0].Name
+		}
 	}
 
 	response := &PublicShareLinkPreviewResponse{

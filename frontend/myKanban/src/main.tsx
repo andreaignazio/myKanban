@@ -17,7 +17,23 @@ if (!clerkPublishableKey) {
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <ClerkProvider publishableKey={clerkPublishableKey}>
+    <ClerkProvider publishableKey={clerkPublishableKey} appearance={{
+      variables: {
+        colorBackground: "#212126",
+        colorNeutral: "white",
+        colorPrimary: "#3f3f46",
+        colorPrimaryForeground: "white",
+        colorForeground: "white",
+        colorInputForeground: "white",
+        colorInput: "#26262B",
+        colorInputBackground: "#26262B",
+      },
+      elements: {
+        providerIcon__github: { filter: "invert(1)" },
+        providerIcon__apple: { filter: "invert(1)" },
+        input: { backgroundColor: "#26262B", color: "white" },
+      },
+    }}>
       <ClerkAuthBridge />
       <RouterProvider router={router} />
     </ClerkProvider>

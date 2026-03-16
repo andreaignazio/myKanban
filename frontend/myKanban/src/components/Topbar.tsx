@@ -62,6 +62,7 @@ import { useIsOverlayActive } from "@/hooks/useIsOverlayActive"
 import { CardRowMenuBtn } from "./cardMenus/cardRowMenus"
 import { useShareOffersStore } from "@/stores/shareOffersStore"
 import { UnreadCounter } from "./common/UnreadCounter"
+import { UserActionMenu } from "./modals/UserActionMenu"
 
 
 function UserHeader({ context }: { context: string | null }) {
@@ -121,14 +122,25 @@ function UserHeader({ context }: { context: string | null }) {
                 />
             </motion.div>
 
-            <MemberRow
-                onClickCapture={() => { }}
-                compact={context === "board"}
-                rowClassName="!w-fit"
-                avatarSize={context === "board" ? 32 : 38}
-                showEndRow={false}
-                user={user as User} showRole={false} flip={true}
-            />
+            <CardRowMenuBtn
+                customId="user-menu"
+                renderType="anchored"
+                exclusiveGroup="user-topbar-modal"
+                menuComponent={
+                    ({ onClose, ref }) => <UserActionMenu ref={ref} onClose={onClose} />
+                }
+                desiredBackdropOpacity={0.5}
+            >
+                <MemberRow
+                    onClickCapture={() => { }}
+                    compact={context === "board"}
+                    rowClassName="!w-fit"
+                    avatarSize={context === "board" ? 32 : 38}
+                    showEndRow={false}
+                    user={user as User} showRole={false} flip={true}
+                    showRowHoverEffect={true}
+                />
+            </CardRowMenuBtn>
 
 
         </motion.div>

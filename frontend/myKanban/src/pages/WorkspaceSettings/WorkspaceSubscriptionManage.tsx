@@ -1,10 +1,10 @@
-import { LabeledButtonPresetA } from "@/components/buttons/labeledButton";
+
 import { ProgressBar } from "@/components/common/progressBar";
 import { useWorkspaceSubscriptionBilling } from "@/hooks/useWorkspaceSubscriptionBilling";
 import { useDateTimeParser } from "@/hooks/useDateTimeParser";
 import { useWorkspaceStore } from "@/stores/workspaceStore";
 import { useWsMembersStore } from "@/stores/wsMembersStore";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { useShallow } from "zustand/react/shallow";
 import { useBoardsStore } from "@/stores/boardsStore";
@@ -14,10 +14,10 @@ export const WorkspaceSubscriptionManage = () => {
 
     const workspaceID = useParams().workspaceId as string;
     const subscription = useWorkspaceStore((state) => state.wSubscriptionsById[workspaceID]);
-    const cancelWorkspaceSubscription = useWorkspaceStore((state) => state.cancelWorkspaceSubscription);
-    const resumeWorkspaceSubscription = useWorkspaceStore((state) => state.resumeWorkspaceSubscription);
+    //onst cancelWorkspaceSubscription = useWorkspaceStore((state) => state.cancelWorkspaceSubscription);
+    //const resumeWorkspaceSubscription = useWorkspaceStore((state) => state.resumeWorkspaceSubscription);
     const fetchWorkspaceSubscription = useWorkspaceStore((state) => state.fetchWorkspaceSubscription);
-    const [isSubmittingSubscriptionChange, setIsSubmittingSubscriptionChange] = useState(false);
+    //const [isSubmittingSubscriptionChange, setIsSubmittingSubscriptionChange] = useState(false);
 
     useEffect(() => {
         fetchWorkspaceSubscription(workspaceID);
@@ -64,32 +64,10 @@ export const WorkspaceSubscriptionManage = () => {
     const membersProgressBarColor = isMembersOverLimit ? outOfRangeBg : inRangeBg;
     const boardsProgressBarColor = isBoardsOverLimit ? outOfRangeBg : inRangeBg;
     const progressBarHeight = "!h-2 !rounded-full"
-    const canCancelSubscription = Boolean(subscription?.ProviderSubscriptionID) && !cancelAtPeriodEnd;
-    const canResumeSubscription = Boolean(subscription?.ProviderSubscriptionID) && cancelAtPeriodEnd;
+    // const canCancelSubscription = Boolean(subscription?.ProviderSubscriptionID) && !cancelAtPeriodEnd;
+    //const canResumeSubscription = Boolean(subscription?.ProviderSubscriptionID) && cancelAtPeriodEnd;
 
-    const handleCancelSubscription = async () => {
-        if (!canCancelSubscription || isSubmittingSubscriptionChange) {
-            return;
-        }
-        try {
-            setIsSubmittingSubscriptionChange(true);
-            await cancelWorkspaceSubscription(workspaceID);
-        } finally {
-            setIsSubmittingSubscriptionChange(false);
-        }
-    };
 
-    const handleResumeSubscription = async () => {
-        if (!canResumeSubscription || isSubmittingSubscriptionChange) {
-            return;
-        }
-        try {
-            setIsSubmittingSubscriptionChange(true);
-            await resumeWorkspaceSubscription(workspaceID);
-        } finally {
-            setIsSubmittingSubscriptionChange(false);
-        }
-    };
 
     const isGoingToDowngrade = pendingPlan && subscription && subscription.Plan !== pendingPlan && subscription.Plan !== "free" && pendingPlan !== "free";
     const isGoingToBeCanceled = cancelAtPeriodEnd && !pendingPlan;
@@ -100,9 +78,9 @@ export const WorkspaceSubscriptionManage = () => {
 
 
     return (
-        <div className="h-[80vh] w-full flex flex-col items-start justify-start gap-4 mt-8">
-            <span className="text-sm text-neutral-300">Your current subscription plan details and billing information.</span>
-            <div className="flex flex-col w-full items-start justify-start gap-2 scrollbar-hidden overflow-y-auto">
+        <div className="flex-1 min-h-0 w-full flex flex-col items-start justify-start gap-4 mt-2">
+
+            <div className="flex-1 min-h-0 flex flex-col w-full items-start justify-start gap-2 scrollbar-hidden overflow-y-auto">
 
                 <div className="h-fit relative w-full rounded-md ">
                     <div className=" relative flex flex-col items-start pe-6 ps-5 py-4 pt-6 gap-4 bg-slate-500/10 
@@ -128,7 +106,7 @@ export const WorkspaceSubscriptionManage = () => {
                         </div>
                     </div>
                 </div>
-                <div className="relative flex flex-col h-6 w-full my-5 items-center justify-center">
+                <div className="relative flex flex-col h-6 w-full my-2 items-center justify-center">
                     <div className="absolute z-20 h-px w-full place-self-stretch bg-neutral-300/20 " />
                 </div>
 
@@ -140,23 +118,7 @@ export const WorkspaceSubscriptionManage = () => {
                     <span className="text-sm text-neutral-400">Next billing:</span>
                     <span className="text-sm text-neutral-300">${nextBillingAmount} USD/month</span>
                 </div>}
-                {false &&
-                    <div className="pt-2">
-                        <LabeledButtonPresetA
-                            label={isSubmittingSubscriptionChange
-                                ? (cancelAtPeriodEnd ? "Resuming..." : "Canceling...")
-                                : (cancelAtPeriodEnd ? "Resume Subscription" : "Cancel Subscription")}
-                            onClick={() => {
-                                if (cancelAtPeriodEnd) {
-                                    void handleResumeSubscription();
-                                    return;
-                                }
-                                void handleCancelSubscription();
-                            }}
-                            disabled={isSubmittingSubscriptionChange || (!canCancelSubscription && !canResumeSubscription)}
-                            className={`!rounded-xl ${(!canCancelSubscription && !canResumeSubscription) ? "opacity-50" : ""}`}
-                        />
-                    </div>}
+
                 <ManagaeMembersAndBoards />
             </div>
 

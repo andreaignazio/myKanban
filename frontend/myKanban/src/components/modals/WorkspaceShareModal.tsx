@@ -56,7 +56,7 @@ export const WorkspaceShareModal = forwardRef<HTMLDivElement, WorkspaceShareModa
     const getRoleClass = (role: BoardRole) => getRoleBadgeClass(role.toLowerCase() as BoardRole, true, false, false);
 
     const roles: MenuItem[] & { className: string }[] = [
-        { id: "owner", label: "Owner", onClick: () => setRole("owner"), className: getRoleClass("owner") },
+        //{ id: "owner", label: "Owner", onClick: () => setRole("owner"), className: getRoleClass("owner") },
         { id: "admin", label: "Admin", onClick: () => setRole("admin"), className: getRoleClass("admin") },
         { id: "member", label: "Member", onClick: () => setRole("member"), className: getRoleClass("member") },
         { id: "viewer", label: "Viewer", onClick: () => setRole("viewer"), className: getRoleClass("viewer") },

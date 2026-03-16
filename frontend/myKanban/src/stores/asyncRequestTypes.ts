@@ -93,6 +93,7 @@ export const ASYNC_REQUEST_BASE_KEYS = [
     "inbox:card:move:board:list",
     "inbox:card:copy:board:list",
     "inbox:card:detatch",
+    "inbox:card:convert-to-inboxonly",
     "workspace:board:create",
     "board:read:detail",
     "shareoffer:respond",

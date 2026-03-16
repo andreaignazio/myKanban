@@ -28,7 +28,7 @@ type PendingWorkspaceBoardTargetsResponse = {
     ShareOffers: ShareOffer[];
 }
 
-export type BoardStatus = "locked" | "offered" | "requested" | "suspended" | "pending_suspension" | null;
+export type BoardStatus = "locked" | "offered" | "requested" | "suspended" | "pending_suspension" | "accessible_pending_suspension" | null;
 
 export type BoardsStore = {
     OpCounter: number;
@@ -305,10 +305,11 @@ export const useBoardsStore = create<BoardsStore>((set, get) => ({
 
         const board = get().boardsById[boardId];
         if (board?.IsSuspended) return "suspended";
-        if (board?.IsPendingSuspend) return "pending_suspension";
 
         const hasUserBoardRelation = !!get().userBoardsById[boardId];
-        if (hasUserBoardRelation) return null;
+        if (hasUserBoardRelation) return board?.IsPendingSuspend ? "accessible_pending_suspension" : null;
+
+        if (board?.IsPendingSuspend) return "pending_suspension";
 
         const offered = (get().pendingOfferedBoardIdsByWorkspaceId[resolvedWorkspaceId] || []).includes(boardId);
         const requested = (get().pendingRequestedBoardIdsByWorkspaceId[resolvedWorkspaceId] || []).includes(boardId);

@@ -1,29 +1,32 @@
 import { LabeledButtonPresetA, LabeledButtonPresetBSubmit } from "@/components/buttons/labeledButton";
 import { MemberRow } from "@/components/common/MemberRow";
-import { CustomInput } from "@/components/menuElements/CustomInput";
 import { TopbarLite } from "@/components/TopbarLite";
 import { useHydrateAuth } from "@/hooks/useHydrateAuth";
 import { useJoinByToken } from "@/hooks/useJoinByToken";
-import { useLogin } from "@/hooks/useLogin";
 import { useShareOffersStore } from "@/stores/shareOffersStore";
 import { useShareLinksStore } from "@/stores/shareLinksStore";
 import type { PublicShareLink, ShareLinkAccessMode, ShareLinkTokenEntityData, User } from "@/stores/types";
-import { LockIcon, LockKeyholeOpen } from "lucide-react";
+import { Handshake, LockIcon, LockKeyholeOpen, CalendarDays, UserRound, CircleArrowRight } from "lucide-react";
+import { useDateTimeParser } from "@/hooks/useDateTimeParser";
 import { useRef, useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
 import { useNavigate, useParams } from "react-router-dom";
 import { AsyncRequestHandler, type AsyncRequestHandle } from "@/components/asyncRequestHandlers/asyncRequestHandler";
 
-import { SignIn } from "@clerk/react";
+import { SignIn, useAuth, useClerk } from "@clerk/react";
+import SpinningCircles from "react-loading-icons/dist/esm/components/spinning-circles";
 
 
 
 
 export const JoinPageMain = () => {
-    const [activeTab, setActiveTab] = useState<"welcome" | "signup" | "login" | "join">("welcome");
+    const [activeTab, setActiveTab] = useState<"welcome" | "join">("welcome");
 
     const { isAuthenticated, currentUser } = useHydrateAuth();
     const token = useParams().shareID as string;
     const { entityData, shareLink } = useJoinByToken(token, isAuthenticated);
+
+    const { isSignedIn, isLoaded: clerkIsLoaded } = useAuth()
 
 
     return (
@@ -31,19 +34,24 @@ export const JoinPageMain = () => {
             <TopbarLite isAuthenticated={isAuthenticated} />
 
             <div className="flex-1 w-full flex flex-col items-center justify-center gap-6">
-
-                {activeTab === "welcome" && (
-                    <WelcomeTab entityData={entityData} isAuthenticated={isAuthenticated} setActiveTab={setActiveTab} />
-                )}
-                {activeTab === "signup" && (
-                    <SignupTab setActiveTab={setActiveTab} />
-                )}
-                {activeTab === "login" && (
-                    <LoginTab setActiveTab={setActiveTab} />
-                )}
-                {activeTab === "join" && (
-                    <JoinTab User={currentUser as User} shareLink={shareLink} token={token} />
-                )}
+                <AnimatePresence mode="wait">
+                    <motion.div
+                        key={activeTab}
+                        initial={{ opacity: 0, y: 12 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -12 }}
+                        transition={{ duration: 0.22, ease: "easeInOut" }}
+                    >
+                        {activeTab === "welcome" && (
+                            <WelcomeTab entityData={entityData} isAuthenticated={isSignedIn ?? false}
+                                isLoading={!clerkIsLoaded}
+                                setActiveTab={setActiveTab} />
+                        )}
+                        {activeTab === "join" && (
+                            <JoinTab User={currentUser as User} shareLink={shareLink} token={token} />
+                        )}
+                    </motion.div>
+                </AnimatePresence>
             </div>
         </div>
     );
@@ -135,7 +143,7 @@ const JoinTab = ({ User, shareLink, token }: JoinTabProps) => {
 
     return (
         <div className=" relative flex flex-col items-center 
-        gap-4 rounded-3xl bg-menusec shadow-lg shadow-black/20 p-6 overflow-hidden">
+        gap-4 rounded-2xl bg-menusec shadow-lg shadow-black/20 p-6 overflow-hidden">
             <AsyncRequestHandler
                 onError={createRequestOnError}
                 onSuccess={createRequestOnSuccess}
@@ -240,167 +248,134 @@ const UserLoggedInInfo = ({ user }: { user: User }) => {
 type WelcomeTabProps = {
     entityData: ShareLinkTokenEntityData | null;
     isAuthenticated: boolean;
-    setActiveTab: (tab: "welcome" | "signup" | "login" | "join") => void;
+    isLoading: boolean;
+    setActiveTab: (tab: "welcome" | "join") => void;
 }
-const WelcomeTab = ({ entityData, isAuthenticated, setActiveTab }: WelcomeTabProps) => {
+const WelcomeTab = ({ entityData, isAuthenticated, isLoading, setActiveTab }: WelcomeTabProps) => {
+    const { signOut } = useClerk()
+    const { shareID } = useParams()
+    const [view, setView] = useState<"info" | "login">("info")
+
+    const redirectUrl = `${window.location.origin}/sharelinks/join/${shareID}`
+
     const handleLogout = () => {
-        setActiveTab("login");
+        void signOut({ redirectUrl })
     }
 
     return (
-        <div className="flex flex-col items-center gap-4 rounded-xl 
-                bg-menu shadow-xl shadow-black/20 p-12">
-            <h1 className="text-2xl font-bold text-white">Join a {entityData?.EntityType}</h1>
-            <span className="text-lg text-white">You are going to join {entityData?.Name}</span>
-            <p className="text-sm text-neutral-400">{entityData?.Description}</p>
-            {!isAuthenticated ? (
-                <LoginOrSignupPrompt setActiveTab={setActiveTab} />
-            ) : (
-                <div className="flex flex-col items-center gap-4 rounded-md bg-menusec shadow-lg shadow-black/20 p-6">
-                    <div className="flex flex-col items-start gap-2">
-                        <LabeledButtonPresetBSubmit label="Join Now" onClick={() => setActiveTab("join")} />
-                    </div>
-                    <div className="h-px w-full bg-neutral-700" />
-                    <div className="flex flex-row items-center gap-4">
-                        <LabeledButtonPresetBSubmit className="!bg-slate-300" label="Logout and Join with different account"
-                            onClick={handleLogout}
+        <motion.div
+            layout
+            layoutDependency={view}
+            transition={{ layout: { duration: 0.3, ease: "easeInOut" } }}
+            className={`relative w-[clamp(400px,60vw,600px)] overflow-hidden
+            ${isAuthenticated && !isLoading
+                    ? "bg-gradient-to-tr from-[#202022] to-[#37373f] ring-blue-400 ring-2"
+                    : "bg-zinc-800/80"}
+            flex flex-col items-center gap-4 rounded-3xl bg-menu shadow-lg shadow-black/20 p-8 pt-12`}>
+
+            <div className={`${isLoading ? "opacity-100" : "opacity-0 pointer-events-none"}
+                flex flex-col items-center justify-center
+                transition-all duration-300 ease-in-out
+                absolute inset-0 rounded-3xl bg-[#202022] z-20`}>
+                <SpinningCircles width="48" height="48" className="text-blue-500" />
+            </div>
+
+            <AnimatePresence mode="wait" initial={false}>
+                {view === "info" ? (
+                    <motion.div
+                        key="info"
+                        className="flex flex-col items-center gap-4 w-full"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        transition={{ duration: 0.2, ease: "easeInOut" }}
+                    >
+                        <Handshake size={180} className="text-zinc-200" strokeWidth={1} />
+                        <div className="flex flex-col w-full px-2 pt-4 items-start justify-start gap-2">
+                            <h1 className="text-3xl font-grotesk font-extrabold text-zinc-100">Join a {entityData?.EntityType}</h1>
+                            <div className="flex flex-row items-center gap-2">
+                                <span className="text-lg text-zinc-400">You are going to join </span>
+                                <span className="text-lg font-bold text-zinc-300">{entityData?.Name}</span>
+                            </div>
+                            {entityData?.Description && <p className="text-sm text-neutral-400">{entityData?.Description}</p>}
+                            <EntityMeta createdAt={entityData?.CreatedAt} ownerName={entityData?.OwnerName} />
+                        </div>
+                        {!isAuthenticated ? (
+                            <div className="flex flex-col items-center gap-4 rounded-xl bg-zinc-900/50 p-6 w-full">
+                                <div className="flex flex-col items-start gap-2 w-full">
+                                    <h2 className="text-lg font-semibold text-white">Please log in or sign up</h2>
+                                    <span className="text-sm text-neutral-400">You need an account to join and collaborate on boards</span>
+                                </div>
+                                <div className="h-px w-full bg-neutral-700" />
+                                <div className="flex flex-row items-start justify-end w-full">
+                                    <LabeledButtonPresetBSubmit
+                                        className="!h-12 !rounded-2xl !bg-sky-500/80 hover:!bg-sky-500/100 !text-zinc-100"
+                                        label="Go to Login"
+                                        onClick={() => setView("login")} />
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="flex flex-col items-center gap-4 rounded-xl bg-zinc-900/50 p-6 w-full">
+                                <LabeledButtonPresetBSubmit
+                                    className="transition-all duration-200 ease-in-out hover:shadow-md hover:shadow-sky-500/50
+                                        !h-12 !rounded-2xl !bg-sky-500/80 hover:!bg-sky-500/100 !text-zinc-100"
+                                    label="Join Now" onClick={() => setActiveTab("join")}>
+                                    <CircleArrowRight className="w-5 h-5 ms-2" />
+                                </LabeledButtonPresetBSubmit>
+                                <div className="h-px w-full bg-neutral-700" />
+                                <LabeledButtonPresetBSubmit
+                                    className="!bg-zinc-800 !text-zinc-400 hover:!bg-zinc-800/80"
+                                    label="Logout and Join with different account"
+                                    onClick={handleLogout} />
+                            </div>
+                        )}
+                    </motion.div>
+                ) : (
+                    !isLoading && (<motion.div
+                        key="login"
+                        className="flex flex-col items-center gap-3 mx-2 w-full"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 10 }}
+                        transition={{ duration: 0.2, ease: "easeInOut" }}
+                    >
+                        <SignIn
+                            routing={"virtual" as "hash"}
+                            signUpUrl={import.meta.env.VITE_CLERK_SIGN_UP_URL ?? "/sign-up"}
+                            fallbackRedirectUrl={redirectUrl}
                         />
-                    </div>
-                </div>)
-            }
-        </div>
+                        <LabeledButtonPresetBSubmit
+                            className="!bg-zinc-800 !text-zinc-400 hover:!bg-zinc-800/80 !w-full"
+                            label="← Back"
+                            onClick={() => setView("info")} />
+                    </motion.div>)
+                )}
+            </AnimatePresence>
+        </motion.div>
     )
-
 }
 
-type SignupTabProps = {
-    setActiveTab: (tab: "welcome" | "signup" | "login") => void;
-}
 
-const SignupTab = ({ setActiveTab }: SignupTabProps) => {
+
+const EntityMeta = ({ createdAt, ownerName }: { createdAt?: string; ownerName?: string }) => {
+    const dateParser = useDateTimeParser()
+    const formatted = createdAt ? dateParser.stringifyDatePretty(new Date(createdAt), true)?.date : undefined
+    if (!formatted && !ownerName) return null
     return (
-        <div className="flex flex-col items-center gap-4 rounded-md bg-menusec shadow-lg
-         shadow-black/20 p-6">
-            <div className="flex flex-col items-start gap-2">
-                <h2 className="text-lg font-semibold text-white">Sign Up</h2>
-                <span className="text-sm text-neutral-400">
-                    Sign up functionality is not implemented yet
+        <div className="flex flex-row items-center gap-4 mt-1">
+            {ownerName && (
+                <span className="flex items-center gap-1 text-xs text-neutral-500">
+                    <UserRound className="w-3 h-3" />
+                    {ownerName}
                 </span>
-            </div>
-            <div className="h-px w-full bg-neutral-700" />
-            <Footer setActiveTab={setActiveTab} />
+            )}
+            {formatted && (
+                <span className="flex items-center gap-1 text-xs text-neutral-500">
+                    <CalendarDays className="w-3 h-3" />
+                    {formatted}
+                </span>
+            )}
         </div>
     )
 }
 
-
-type LoginTabProps = {
-    setActiveTab: (tab: "welcome" | "signup" | "login") => void;
-
-}
-const LoginTab = ({ setActiveTab }: LoginTabProps) => {
-
-    const redirectUrl = `${window.location.origin}/sharelinks/join/${useParams().shareID}`;
-
-
-
-
-    return (
-        <div className="flex flex-col items-center gap-4 rounded-2xl bg-menusec shadow-lg shadow-black/20 p-6">
-            <SignIn
-                routing={"virtual" as "hash"}
-                signUpUrl={import.meta.env.VITE_CLERK_SIGN_UP_URL ?? "/sign-up"}
-                fallbackRedirectUrl={redirectUrl}
-            />
-
-            {false && <><LoginForm onLoginSuccess={() => setActiveTab("welcome")} />
-                <div className="h-px w-full bg-neutral-700" />
-                <Footer setActiveTab={setActiveTab} /></>}
-        </div>
-    )
-}
-
-type FooterProps = {
-    setActiveTab?: (tab: "welcome" | "signup" | "login") => void;
-}
-const Footer = ({ setActiveTab }: FooterProps) => {
-    return (
-        <div className="flex flex-row items-center gap-4">
-            <LabeledButtonPresetBSubmit
-                label="Go to Sign Up"
-                onClick={() => { setActiveTab?.("signup"); }} />
-            <LabeledButtonPresetBSubmit
-                className="!bg-slate-300"
-                label="Back to Welcome"
-                onClick={() => { setActiveTab?.("welcome"); }} />
-        </div>
-    )
-}
-
-type LoginFormProps = {
-    onLoginSuccess: () => void;
-}
-
-
-export const LoginForm = ({ onLoginSuccess }: LoginFormProps) => {
-    const { handleLogin } = useLogin();
-
-    const tempHandleLogin = () => {
-        handleLogin(email)
-        onLoginSuccess();
-    }
-
-    const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
-    const isEmailSet = email.length > 0;
-
-    const inputClassName = "!rounded-lg shadow-md shadow-black/20 "
-
-
-
-    return (
-        <div className="flex flex-col items-start gap-4">
-            <h2 className="text-lg font-semibold text-white">Login</h2>
-            <span className="text-sm text-neutral-400">
-                Login functionality is not implemented yet
-            </span>
-            <CustomInput
-                placeholder="Email"
-                value={email}
-                // danger={!isEmailValid}
-                className={inputClassName}
-                onInputChange={(input) => setEmail(input?.current?.value ?? "")}
-            />
-            <CustomInput
-                placeholder="Password"
-                // danger={!isPosswordSet}
-                value={password}
-                className={inputClassName}
-                onInputChange={(input) => setPassword(input?.current?.value ?? "")}
-            />
-            <LabeledButtonPresetBSubmit
-                label="Login"
-                disabled={!isEmailSet}
-                onClick={() => tempHandleLogin()} />
-        </div>
-    )
-}
-
-type LoginOrSignupPromptProps = {
-    setActiveTab?: (tab: "welcome" | "signup" | "login") => void;
-}
-const LoginOrSignupPrompt = ({ setActiveTab }: LoginOrSignupPromptProps) => {
-    return (
-        <div className="flex flex-col items-center gap-4 rounded-md bg-menusec shadow-lg shadow-black/20 p-6">
-            <div className="flex flex-col items-start gap-2">
-                <h2 className="text-lg font-semibold text-white">Please log in or sign up</h2>
-                <span className="text-sm text-neutral-400">You need an account to join and collaborate on boards</span>
-            </div>
-            <div className="h-px w-full bg-neutral-700" />
-            <div className="flex flex-row items-center gap-4">
-                <LabeledButtonPresetBSubmit label="Go to Login" onClick={() => { setActiveTab?.("login"); }} />
-                <LabeledButtonPresetBSubmit className="!bg-slate-300" label="Sign Up" onClick={() => { setActiveTab?.("signup"); }} />
-            </div>
-        </div>
-    )
-}

@@ -25,9 +25,10 @@ type CardMoveMenuProps = {
     mode?: cardMoveMenuMode;
     headless?: boolean;
     onMoveSubmitSuccess?: () => void;
+    onBeforeSubmit?: () => void;
 }
 
-export const CardMoveMenu = forwardRef<HTMLDivElement, CardMoveMenuProps>(({ onClose, cardId, listId, mode = "move", headless = false, onMoveSubmitSuccess }, ref) => {
+export const CardMoveMenu = forwardRef<HTMLDivElement, CardMoveMenuProps>(({ onClose, cardId, listId, mode = "move", headless = false, onMoveSubmitSuccess, onBeforeSubmit }, ref) => {
     const [activeTab, setActiveTab] = useState("board")
 
 
@@ -52,8 +53,8 @@ export const CardMoveMenu = forwardRef<HTMLDivElement, CardMoveMenuProps>(({ onC
             <div className="w-full" >
                 <TabSelector activeTab={activeTab} setActiveTab={setActiveTab} tabs={tabs} />
             </div>
-            {activeTab === "board" && <MoveToBoardTab onClose={onClose} cardId={cardId} listId={listId} mode={mode} onMoveSubmitSuccess={onMoveSubmitSuccess} />}
-            {activeTab === "inbox" && <MoveToInboxTab onClose={onClose} cardId={cardId} mode={mode} />}
+            {activeTab === "board" && <MoveToBoardTab onClose={onClose} cardId={cardId} listId={listId} mode={mode} onMoveSubmitSuccess={onMoveSubmitSuccess} onBeforeSubmit={onBeforeSubmit} />}
+            {activeTab === "inbox" && <MoveToInboxTab onClose={onClose} cardId={cardId} mode={mode} onBeforeSubmit={onBeforeSubmit} />}
         </>
     );
 
@@ -125,10 +126,11 @@ type MoveToBoardTabProps = {
     listId?: string;
     mode?: cardMoveMenuMode;
     onMoveSubmitSuccess?: () => void;
+    onBeforeSubmit?: () => void;
 }
 
 
-const MoveToBoardTab = ({ onClose, cardId, listId, mode, onMoveSubmitSuccess }: MoveToBoardTabProps) => {
+const MoveToBoardTab = ({ onClose, cardId, listId, mode, onMoveSubmitSuccess, onBeforeSubmit }: MoveToBoardTabProps) => {
     const boardID = useParams().boardId as string;
     const workspaceId = useParams().workspaceId as string;
     const cardActions = useCardActionRegistry();
@@ -367,6 +369,7 @@ const MoveToBoardTab = ({ onClose, cardId, listId, mode, onMoveSubmitSuccess }: 
     }
 
     const handleMove = async () => {
+
         // console.log("Moving card with details: ", { cardId, listId, activeBoard, activeList, activePosition })
         if (isSubmitInvalid) return
         if (!activeBoard || !activeList || !cardId || !activePosition) return;
@@ -394,6 +397,7 @@ const MoveToBoardTab = ({ onClose, cardId, listId, mode, onMoveSubmitSuccess }: 
 
             if (!activeSourceList) return
             const sourceListId = activeSourceList;
+            onBeforeSubmit?.();
             const result = await moveCardToBoard(boardID, cardId, sourceListId, targetBoardId, targetListId, beforeId, insertAtEnd)
             if (result !== null) {
                 onMoveSubmitSuccess?.();
@@ -419,12 +423,17 @@ const MoveToBoardTab = ({ onClose, cardId, listId, mode, onMoveSubmitSuccess }: 
         }
         const execMirror = async () => {
             const result = await cardActions.mirrorCardToList(boardID, cardId, payload)
-            if (result !== null) onClose();
+            if (result !== null) {
+                onClose()
+                onMoveSubmitSuccess?.();
+            };
         }
+        onBeforeSubmit?.();
         delayedExecute(execMirror, 300);
     }
 
     const handleCopy = async () => {
+
         // console.log("Copying card with details: ", { cardId, listId, activeBoard, activeList, activePosition })
         if (isTargetInvalid) return
         if (!activeBoard || !activeList || !cardId || !activePosition) return;
@@ -441,8 +450,9 @@ const MoveToBoardTab = ({ onClose, cardId, listId, mode, onMoveSubmitSuccess }: 
                     KeepLabels: keepLabels,
                     KeepChecklists: keepChecklists,
                 }
+
                 await copyInboxCardToListInBoard(cardId, workspaceId, activeBoard, activeList, payload)
-                onClose();
+                onClose(); onMoveSubmitSuccess?.();
                 return
             }
 
@@ -458,8 +468,9 @@ const MoveToBoardTab = ({ onClose, cardId, listId, mode, onMoveSubmitSuccess }: 
                 KeepChecklists: keepChecklists,
             }
             const result = await cardActions.copyCardToList(boardID, cardId, payload)
-            if (result !== null) onClose();
+            if (result !== null) { onClose(); onMoveSubmitSuccess?.(); }
         }
+        onBeforeSubmit?.();
         delayedExecute(execCopy, 300);
     }
 
@@ -575,12 +586,19 @@ const MoveToBoardTab = ({ onClose, cardId, listId, mode, onMoveSubmitSuccess }: 
     )
 }
 
-const MoveToInboxTab = ({ onClose, cardId, mode }: { onClose: () => void; cardId?: string; mode: string }) => {
+type MoveToInboxTabProps = {
+    onClose: () => void;
+    cardId?: string;
+    mode: string;
+    onBeforeSubmit?: () => void;
+}
+
+const MoveToInboxTab = ({ onClose, cardId, mode, onBeforeSubmit }: MoveToInboxTabProps) => {
     const boardID = useParams().boardId as string;
     const cardActions = useCardActionRegistry();
 
     const handleMirror = async () => {
-
+        onBeforeSubmit?.();
         const Payload: MirrorCardToInboxRequest = {
             InsertAt: "end"
         }

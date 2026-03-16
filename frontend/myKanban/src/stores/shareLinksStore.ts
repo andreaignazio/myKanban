@@ -181,6 +181,8 @@ export const useShareLinksStore = create<ShareLinksState>((set, get) => ({
                 EntityType: payload.Target.EntityType,
                 Name: payload.Target.Name,
                 Description: payload.Target.Description,
+                CreatedAt: payload.Target.CreatedAt,
+                OwnerName: payload.Target.OwnerName,
             };
 
             set((state) => ({

@@ -4,7 +4,6 @@ import (
 	"GoGORM/internal/authzdto"
 	"GoGORM/internal/domainerr"
 	"GoGORM/internal/rbac"
-	"GoGORM/internal/subscriptionplan"
 	"context"
 )
 
@@ -28,11 +27,6 @@ func (h *WorkspacePatchHandler) BuildAuthzContext(ctx context.Context, request a
 			FactKind:   authzdto.FactActorWorkspaceRole,
 			Value:      authzdto.NewWorkspaceRoleFact(rbac.Admin),
 		},
-		{
-			PolicyKind: authzdto.PolicyRequireMinimumFactValue,
-			FactKind:   authzdto.FactWorkspaceSubscriptionPlan,
-			Value:      authzdto.NewSubscriptionPlanFact(subscriptionplan.Pro),
-		},
 	}
 
 	facts := make(map[authzdto.FactKind]authzdto.Fact)
@@ -41,18 +35,8 @@ func (h *WorkspacePatchHandler) BuildAuthzContext(ctx context.Context, request a
 	if err != nil {
 		return nil, err
 	}
-	subscription, err := h.authzRepo.GetWorkspaceSubscriptionPlan(payload.WorkspaceID)
-	if err != nil {
-		return nil, err
-	}
 	if userWorkspace != nil {
 		err := authzdto.SetFact(facts, authzdto.FactActorWorkspaceRole, authzdto.NewWorkspaceRoleFact(userWorkspace.Role))
-		if err != nil {
-			return nil, err
-		}
-	}
-	if subscription != nil {
-		err := authzdto.SetFact(facts, authzdto.FactWorkspaceSubscriptionPlan, authzdto.NewSubscriptionPlanFact(subscription.Plan))
 		if err != nil {
 			return nil, err
 		}

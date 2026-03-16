@@ -236,6 +236,25 @@ func (h *InboxHandler) CopyInboxCardToBoard(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
+func (h *InboxHandler) ConvertToInboxOnly(c *gin.Context) {
+	ctx := c.Request.Context()
+	userID := c.MustGet("userID").(uuid.UUID)
+	cardIDStr := c.Param("cardID")
+	cardID, err := uuid.Parse(cardIDStr)
+	if err != nil {
+		httperr.WriteParamsError(c, err, "inbox.handler.ConvertToInboxOnly")
+		return
+	}
+	correlationID := c.MustGet("correlationID").(uuid.UUID)
+
+	response, err := h.inboxService.ConvertToInboxOnly(ctx, userID, cardID, correlationID)
+	if err != nil {
+		httperr.WriteOp(c, err, "inbox.handler.ConvertToInboxOnly")
+		return
+	}
+	c.JSON(http.StatusOK, response)
+}
+
 func (h *InboxHandler) PatchInboxCardProps(c *gin.Context) {
 	ctx := c.Request.Context()
 	userID := c.MustGet("userID").(uuid.UUID)

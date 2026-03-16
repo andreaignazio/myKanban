@@ -1,5 +1,5 @@
 ﻿import { create } from "zustand";
-import type { Card, CardProps, CopyInboxToListRequest, CreateInboxCardRequest, InboxCard, InboxCardResponse, MirrorCardToInboxRequest, MoveInboxToListRequest, PatchCardDetailsRequest, PatchCardPropsRequest, UserEvent, UserInboxCardResponse } from "./types";
+import type { Card, CardProps, CopyInboxToListRequest, CreateInboxCardRequest, InboxCard, InboxCardResponse, MirrorCardToInboxRequest, MoveInboxToListRequest, PatchCardDetailsRequest, PatchCardPropsRequest, SingleInboxCardResponse, UserEvent, UserInboxCardResponse } from "./types";
 import { api } from "@/api/api";
 import { useCardsStore } from "./cardsStore";
 import { useAsyncKey, useAsyncRequestStore } from "./asyncRequestStore";
@@ -18,6 +18,7 @@ type UserInboxStore = {
     applyInboxEvent: (evt: UserEvent) => void
     replaceInboxCardIds: (newIds: string[]) => void
     detatchInboxCard: (cardID: string) => Promise<void>
+    convertToInboxOnly: (cardID: string) => Promise<void>
     moveInboxCard: (cardID: string, request: MoveInboxToListRequest, rollbackInboxCardIds?: string[]) => Promise<void>
     moveInboxCardToListInBoard: (cardID: string, targetWorkspaceID: string, targetBoardID: string, targetListID: string, request: MoveInboxToListRequest, optimisticListCardID?: string, rollbackListCardIds?: string[]) => Promise<void>
     copyInboxCardToListInBoard: (cardID: string, targetWorkspaceID: string, targetBoardID: string, targetListID: string, request: CopyInboxToListRequest) => Promise<void>
@@ -212,6 +213,40 @@ export const useUserInboxStore = create<UserInboxStore>((set, get) => ({
                 inboxCardsById: prevInboxCardsById,
                 inboxCardsIds: prevInboxCardsIds,
             })
+        }
+    },
+    convertToInboxOnly: async (cardID: string) => {
+        try {
+            await useAsyncRequestStore.getState().execute(
+                "inbox:card:convert-to-inboxonly",
+                async () => {
+                    const response = await api.patch<SingleInboxCardResponse>(`/inbox/cards/${cardID}/convert-to-inboxonly`)
+                    const inboxCard = Object.values(get().inboxCardsById).find(c => c.CardID === cardID)
+                    if (inboxCard && response.data) {
+                        const updated = response.data
+                        const oldCardID = inboxCard.CardID
+                        set((state) => ({
+                            inboxCardsById: {
+                                ...state.inboxCardsById,
+                                [inboxCard.ID]: {
+                                    ...inboxCard,
+                                    CardID: updated.CardID,
+                                    SourceBoardID: null,
+                                    RootListCardID: null,
+                                }
+                            }
+                        }))
+                        const oldCard = useCardsStore.getState().cardsById[oldCardID]
+                        if (oldCard) {
+                            useCardsStore.getState().mergeCards([{ ...oldCard, ID: updated.CardID }])
+                        }
+                    }
+                    return response
+                },
+                { successResetDelayMs: 2000 }
+            )
+        } catch {
+            // no rollback needed — state only updated on success
         }
     },
     moveInboxCard: async (cardID: string, request: MoveInboxToListRequest, rollbackInboxCardIds?: string[]) => {

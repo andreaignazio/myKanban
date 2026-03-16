@@ -29,7 +29,7 @@ export const CardRowInbox = ({ inboxCardId }: { inboxCardId: string }) => {
     const rootBoardContext = useCardRootBoardContext({
         boardId,
         source: "inbox",
-        rootListCardId: inboxCard.RootListCardID,
+        rootListCardId: inboxCard.RootListCardID ?? undefined,
     })
 
 
@@ -43,7 +43,7 @@ export const CardRowInbox = ({ inboxCardId }: { inboxCardId: string }) => {
     return (
         <CardRowCoverWrapper mode={mode} cardColor={cardColor} cardCoverURL={cardCoverURL}>
 
-            {!isInboxOnlyCard() && <Mirrors cardId={cardID!} listCardId={inboxCard.RootListCardID} rootBoardContext={rootBoardContext} mode={"inbox"} />}
+            {!isInboxOnlyCard() && <Mirrors cardId={cardID!} listCardId={inboxCard.RootListCardID ?? undefined} rootBoardContext={rootBoardContext} mode={"inbox"} />}
             <div className="flex flex-col p-2 pb-2 gap-1">
                 <CardRowTitle title={card?.Title || "Untitled Card"} editMode={false} done={done} />
             </div>

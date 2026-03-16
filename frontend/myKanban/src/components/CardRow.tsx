@@ -57,7 +57,22 @@ export const CardRow = ({ boardID, listId, listCardID: listCardID, cardId, index
     function handleRemoveCard(e: React.MouseEvent) {
         if (!boardID || !listID || !cardID) return
         e.stopPropagation()
-        cardsStore.removeCardFromList(boardID, listID, cardID)
+        const data: DomainModalData = {
+            componentent: (onCloseModal) => (
+                <ConfirmDeletionPopover
+                    onClose={onCloseModal}
+                    onSubmit={() => {
+                        void cardsStore.removeCardFromList(boardID, listID, cardID)
+                        onCloseModal()
+                    }}
+                    title="Archive card?"
+                    body="Are you sure you want to archive this card?"
+                    submitLabel="Archive"
+                />
+            ),
+            anchorRef: null,
+        }
+        useUiStore.getState().setDomainModalOpen(true, data)
     }
 
     function handleRemoveInboxCard(e: React.MouseEvent) {
@@ -149,9 +164,12 @@ export const CardRow = ({ boardID, listId, listCardID: listCardID, cardId, index
         update()
         window.addEventListener("scroll", update, true)
         window.addEventListener("resize", update)
+        const ro = new ResizeObserver(update)
+        if (cardRowRef.current) ro.observe(cardRowRef.current)
         return () => {
             window.removeEventListener("scroll", update, true)
             window.removeEventListener("resize", update)
+            ro.disconnect()
         }
     }, [editMode])
 
@@ -304,9 +322,9 @@ export const CardRow = ({ boardID, listId, listCardID: listCardID, cardId, index
                                         showShadow={true}
                                     />
                                 )}
-                                <div className={`absolute inset-0 z-10 bg-gray-500/10  ${!canEdit ? "opacity-100" : "opacity-0"} transition-opacity ease-in-out duration-300`} />
+                                <div className={`absolute inset-0 z-10  bg-gray-500/10  ${!canEdit ? "opacity-100" : "opacity-0 pointer-events-none"} transition-opacity ease-in-out duration-300`} />
 
-                                <div className={`absolute inset-0 z-20 bg-black/50 ${isPendingCopy ? "opacity-100" : "opacity-0"} transition-opacity ease-in-out duration-200`} />
+                                <div className={`absolute inset-0 z-20 pointer-events-none bg-black/50 ${isPendingCopy ? "opacity-100" : "opacity-0"} transition-opacity ease-in-out duration-200`} />
 
                                 <div className="flex flex-col ">
 
@@ -425,6 +443,8 @@ import { useCardBackground } from "@/hooks/useCardBackground"
 import { useCardRootBoardContext } from "@/hooks/useCardRootBoardContext"
 import type { CardSource } from "@/domain/cardContext"
 import { useCardEditableContext } from "@/hooks/useCardEditableContext"
+import { useUiStore, type DomainModalData } from "@/stores/uiStore"
+import { ConfirmDeletionPopover } from "./modals/ConfirmDeletion"
 
 
 

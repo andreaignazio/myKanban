@@ -20,7 +20,7 @@ type WorkspaceCreateWizardProps = {
 const radius = 52
 const padding = 24
 
-const wSuccess = `calc(35vw + ${2 * padding}px)`
+const wSuccess = `max(calc(35vw + ${2 * padding}px), ${460 + 2 * padding}px)`
 
 
 const paddingInner = 48
@@ -33,6 +33,8 @@ export const WorkspaceCreateWizard = forwardRef<HTMLDivElement, WorkspaceCreateW
     const [iconId, setIconId] = useState<IconId>("boards")
     const [iconBgToken, setIconBgToken] = useState<string>("ws_flat_slate")
     const [iconBorderToken, setIconBorderToken] = useState<string>("ws_border_none")
+    const iconSelectionRef = useRef({ iconId, iconBgToken, iconBorderToken })
+    iconSelectionRef.current = { iconId, iconBgToken, iconBorderToken }
     const { selectedColor, handleSetColor, selectedImage, handleSetImage } = useImageOrColorSelector()
     const nameRef = useRef<import("../menuElements/CustomInput").CustomInputHandle | null>(null)
     const descriptionRef = useRef<import("../menuElements/CustomInput").CustomInputHandle | null>(null)
@@ -149,7 +151,10 @@ export const WorkspaceCreateWizard = forwardRef<HTMLDivElement, WorkspaceCreateW
                     nameRef={nameRef}
                     collapsed={isLoading || !!isSuccessful}
                     onIconMenuComponent={({ ref, onClose }) => (
-                        <WorkspaceIconEditor ref={ref} onClose={onClose} onLocalSubmit={handleIconSubmit} />
+                        <WorkspaceIconEditor ref={ref} onClose={onClose} onLocalSubmit={handleIconSubmit}
+                            initialIconId={iconSelectionRef.current.iconId}
+                            initialBgToken={iconSelectionRef.current.iconBgToken}
+                            initialBorderToken={iconSelectionRef.current.iconBorderToken} />
                     )}
                 />
 
@@ -230,9 +235,10 @@ const WorkspaceIcon = ({ size = 96, radiusOverride = 52, iconId = "boards", icon
                 height: size,
                 width: size,
             }}
-            className={`p-4 shadow-md shadow-black/20 flex flex-col items-center justify-center ${iconBgTokenClass ?? "bg-gray-100/10"}`}>
-            <CatalogIcon style={{ color: colorBorder }}
-                id={iconId} />
+            className={`p-4 shadow-md !text-stone-300 shadow-black/20 flex flex-col items-center justify-center 
+            ${iconBgTokenClass ?? "bg-gray-100/10"}`}>
+            <CatalogIcon
+                id={iconId} className="h-full w-full" />
 
         </div>
     )

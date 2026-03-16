@@ -172,6 +172,7 @@ func NewRouter(db *gorm.DB,
 			inbox.PATCH("/cards/:cardID/move", inboxHandler.MoveInboxCard)
 			inbox.PATCH("/cards/:cardID/workspaces/:targetWorkspaceID/boards/:targetBoardID/lists/:targetListID/move", inboxHandler.MoveInboxCardToBoard)
 			inbox.POST("/cards/:cardID/workspaces/:targetWorkspaceID/boards/:targetBoardID/lists/:targetListID/copy", inboxHandler.CopyInboxCardToBoard)
+			inbox.PATCH("/cards/:cardID/convert-to-inboxonly", inboxHandler.ConvertToInboxOnly)
 			inbox.PATCH("/cards/:cardID", inboxHandler.PatchInboxCardDetails)
 			inbox.PATCH("/cards/:cardID/props", inboxHandler.PatchInboxCardProps)
 		}

@@ -15,6 +15,7 @@ import { CustomDropDown, type MenuItem } from "@/components/menuElements/CustomD
 import { GlobeAsiaAustraliaIcon, LockClosedIcon, UsersIcon } from "@heroicons/react/24/solid"
 import { WorkspaceAvatar } from "./WorkspaceAvatar"
 import { useWorkspaceDerivedProps } from "@/hooks/useWorkspaceDerivedProps"
+import { useCurrentWorkspaceRole } from "@/hooks/useCurrentWorkspaceRole"
 
 export const WorkspaceSettings = () => {
     const workspaceId = useParams().workspaceId
@@ -25,6 +26,7 @@ export const WorkspaceSettings = () => {
     const [selectedVisibility, setSelectedVisibility] = useState<"private" | "workspace" | "public">((workspace?.Visibility as "private" | "workspace" | "public") ?? "private")
     const { coverType, coverImage, coverColor, footerBackgroundColorOverride } = headerProps
 
+    const { isAdminOrOwner } = useCurrentWorkspaceRole(workspaceId)
     const { subscription } = useResolveSubscriptionPlan();
 
     useEffect(() => {
@@ -36,9 +38,9 @@ export const WorkspaceSettings = () => {
     const hasChanges = editedName.trim() !== (workspace?.Name ?? "").trim()
         || editedDescription !== ((workspace?.Props?.Description as string | undefined) ?? "")
 
-    const canSave = !!workspaceId && editedName.trim().length > 0 && hasChanges
+    const canSave = isAdminOrOwner && !!workspaceId && editedName.trim().length > 0 && hasChanges
     const visibilityChanged = selectedVisibility !== ((workspace?.Visibility as "private" | "workspace" | "public") ?? "private")
-    const canSaveVisibility = !!workspaceId && visibilityChanged
+    const canSaveVisibility = isAdminOrOwner && !!workspaceId && visibilityChanged
 
     const visibilityItems: MenuItem[] = [
         {
@@ -187,6 +189,19 @@ export const WorkspaceSettings = () => {
                             onClick={handleSaveVisibility}
                         />
                     </div>
+
+                </div>
+                <div className="bg-zinc-900/50 flex flex-col h-fit gap-6 px-2 py-2 rounded-2xl w-full mt-4">
+                    <div className="flex flex-col items-start justify-start gap-2 mt-4 px-2 ">
+                        <div className="text-lg font-bold font-grotesk text-red-500">Danger zone</div>
+                        <div className="text-sm text-neutral-400">Permanently delete this workspace and all of its contents. This action cannot be undone.</div>
+                    </div>
+                    <button disabled={!isAdminOrOwner} className="w-64 bg-rose-800/20
+                    hover:bg-red-800/40 transition-colors duration-200
+                    rounded-xl h-12 flex items-center justify-center
+                    py-3 px-4 text-left disabled:opacity-40 disabled:cursor-not-allowed disabled:pointer-events-none" onClick={() => { }}>
+                        <span className="text-sm text-red-500 text-center w-full font-bold">Delete workspace</span>
+                    </button>
                 </div>
             </div>
         </UserPagesWrapper>

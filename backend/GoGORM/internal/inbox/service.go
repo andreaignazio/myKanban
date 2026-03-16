@@ -12,6 +12,7 @@ import (
 	"GoGORM/models"
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -537,6 +538,30 @@ func (s *InboxService) CopyInboxCardToListInBoard(ctx context.Context, userID, c
 			return nil, err
 		}
 
+		cardResponse := dto.CardToResponse(execResult.NewCard)
+		_ = s.EventRegistry.Emit(ctx, s.db, EventRegistry.DomainEvent{
+			Type:          EventRegistry.EventCardCreated,
+			WorkspaceID:   &targetWorkspaceID,
+			BoardID:       &targetBoardID,
+			ActorUserID:   &userID,
+			CorrelationID: &correlationID,
+			Payload: EventRegistry.EventPayloadEnvelope{
+				StatePayload: &dto.BoardDetailResponse{
+					Cards: map[uuid.UUID]dto.CardResponse{
+						execResult.NewCard.ID: cardResponse,
+					},
+					ListCardRelations: []dto.ListCardResponse{
+						dto.ListCardToResponse(execResult.NewListCard),
+					},
+				},
+			},
+			Targets: []EventRegistry.TargetRef{
+				{EntityType: "list", EntityID: targetListID, BoardID: &targetBoardID},
+				{EntityType: "card", EntityID: execResult.NewCard.ID, BoardID: &targetBoardID},
+			},
+			OccurredAt: time.Now(),
+		})
+
 		response := dto.ListCardToResponse(execResult.NewListCard)
 		return &response, nil
 	} else {
@@ -619,6 +644,30 @@ func (s *InboxService) CopyInboxCardToListInBoard(ctx context.Context, userID, c
 			return nil, err
 		}
 
+		cardResponse := dto.CardToResponse(&newCard)
+		_ = s.EventRegistry.Emit(ctx, s.db, EventRegistry.DomainEvent{
+			Type:          EventRegistry.EventCardCreated,
+			WorkspaceID:   &targetWorkspaceID,
+			BoardID:       &targetBoardID,
+			ActorUserID:   &userID,
+			CorrelationID: &correlationID,
+			Payload: EventRegistry.EventPayloadEnvelope{
+				StatePayload: &dto.BoardDetailResponse{
+					Cards: map[uuid.UUID]dto.CardResponse{
+						newCard.ID: cardResponse,
+					},
+					ListCardRelations: []dto.ListCardResponse{
+						dto.ListCardToResponse(&newListCard),
+					},
+				},
+			},
+			Targets: []EventRegistry.TargetRef{
+				{EntityType: "list", EntityID: targetListID, BoardID: &targetBoardID},
+				{EntityType: "card", EntityID: newCard.ID, BoardID: &targetBoardID},
+			},
+			OccurredAt: time.Now(),
+		})
+
 		response := dto.ListCardToResponse(&newListCard)
 		return &response, nil
 	}
@@ -673,5 +722,71 @@ func (s *InboxService) DetatchInboxCard(ctx context.Context,
 
 	response := dto.InboxCardToResponse(deletedCard)
 
+	return &response, nil
+}
+
+func (s *InboxService) ConvertToInboxOnly(ctx context.Context, userID, cardID uuid.UUID, correlationID uuid.UUID) (*dto.InboxCardResponse, error) {
+	authorization, err := s.authz.AuthorizeRequest(ctx, authzdto.Request{
+		UserID:        userID,
+		CorrelationID: correlationID,
+		Action:        actions.InboxCardDetatch,
+		Payload: authzdto.RequestPayload{
+			InboxCardDetatchPayload: &authzdto.InboxCardDetatchPayload{
+				CardID: cardID,
+			},
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+	if !authorization.Authorized {
+		return nil, domainerr.ErrForbidden
+	}
+
+	var updatedInboxCard *models.UserInboxCard
+	err = s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		inboxCard, err := s.repo.GetInboxCardByCardIDTX(ctx, tx, userID, cardID, s.includeDeleted)
+		if err != nil {
+			return err
+		}
+		if inboxCard.RootListCardID == nil {
+			return domainerr.ErrValidation
+		}
+
+		originalCard, err := s.CardsRepo.GetCardByIDTX(ctx, tx, inboxCard.CardID, s.includeDeleted)
+		if err != nil {
+			return err
+		}
+
+		newCard := models.Card{
+			ID:              uuid.New(),
+			Title:           originalCard.Title,
+			Description:     originalCard.Description,
+			StartDate:       originalCard.StartDate,
+			EndDate:         originalCard.EndDate,
+			Props:           originalCard.Props,
+			CreatedByUserID: userID,
+		}
+		if err := s.CardsRepo.CreateCardTX(ctx, tx, &newCard); err != nil {
+			return err
+		}
+
+		checklistDomain := listcards.NewCheckListDomain()
+		if err := s.ListCardsService.CopyCardChecklistsTX(ctx, tx, inboxCard.CardID, &newCard, checklistDomain); err != nil {
+			return err
+		}
+
+		updatedInboxCard, err = s.repo.PatchInboxCardTX(ctx, tx, userID, cardID, map[string]interface{}{
+			"card_id":           newCard.ID,
+			"root_list_card_id": nil,
+			"source_board_id":   nil,
+		})
+		return err
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	response := dto.InboxCardToResponse(updatedInboxCard)
 	return &response, nil
 }

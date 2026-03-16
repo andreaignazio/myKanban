@@ -3,6 +3,7 @@ import { UserAvatarDummy } from "../badges/UserAvatarDummy"
 import { UserRoleBadge, type Role } from "../badges/UserRoleBadge"
 import { UserAvatar } from "../badges/UserAvatar"
 import { AnimatePresence, motion } from "motion/react"
+import { GradientHover } from "./gradientHover"
 
 const COMPACT_TRANSITION_MS = 0.5
 const COMPACT_FADE_MS = 0.18
@@ -26,8 +27,9 @@ type MemberRowProps = {
     compact?: boolean
     presence?: boolean;
     showPresence?: boolean;
+    showRowHoverEffect?: boolean;
 }
-export const MemberRow = ({ onClick, onClickCapture, user, member, showRole = true, useDummyAvatar = true, avatarSize = 52, rowClassName, nameClassName, usernameClassName, children, showChildrenBeforeRole = false, endRowClassName, flip = false, showEndRow = true, compact = false, presence, showPresence }: MemberRowProps) => {
+export const MemberRow = ({ onClick, onClickCapture, user, member, showRole = true, useDummyAvatar = true, avatarSize = 52, rowClassName, nameClassName, usernameClassName, children, showChildrenBeforeRole = false, endRowClassName, flip = false, showEndRow = true, compact = false, presence, showPresence, showRowHoverEffect = true }: MemberRowProps) => {
 
 
     const resolvedEndRowClassName = endRowClassName ?? "flex flex-row items-center"
@@ -39,7 +41,8 @@ export const MemberRow = ({ onClick, onClickCapture, user, member, showRole = tr
             onClick={onClick}
             onClickCapture={onClickCapture}
             style={{ height: avatarSize + 4, minWidth: avatarSize + 4 }}
-            className={`group flex flex-row items-center w-full h-[56px] rounded-full bg-neutral-500/20 ${rowClassName ?? ""}`}
+            className={`${showRowHoverEffect ? "relative overflow-hidden cursor-pointer" : ""}
+                group flex flex-row items-center w-full h-[56px] rounded-full bg-neutral-500/20 ${rowClassName ?? ""}`}
             animate={{
                 paddingTop: "2px",
                 paddingBottom: "2px",
@@ -80,6 +83,7 @@ export const MemberRow = ({ onClick, onClickCapture, user, member, showRole = tr
                     </>
 
                 )}
+            {showRowHoverEffect && <GradientHover />}
 
         </motion.div>
     )

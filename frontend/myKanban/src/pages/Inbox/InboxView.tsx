@@ -64,7 +64,7 @@ export const InboxView = ({ draggedRootListCardId = null }: InboxViewProps) => {
                                         if (!inboxCard) return null
                                         const isInboxMirror = inboxCard.RootListCardID !== undefined && inboxCard.RootListCardID !== null
                                         const source = isInboxMirror ? "inbox-mirror" : "inbox"
-                                        const rootListCardId = inboxCard.RootListCardID ?? null
+                                        const rootListCardId = inboxCard.RootListCardID ?? undefined
                                         return (
                                             <CardRow key={id}
                                                 rootListCardId={rootListCardId}

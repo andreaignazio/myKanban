@@ -1,5 +1,5 @@
 import { ArchiveIcon, ArrowBigRight, ArrowRight, Clock10Icon, CopyIcon, CreditCardIcon, Link2Icon, TagIcon, User2 } from "lucide-react";
-import { forwardRef, useRef, type JSX } from "react";
+import { forwardRef, useRef, useState, type JSX } from "react";
 import { CardLabelMenu } from "../cardMenus/cardLabelMenu";
 import { useOverlayStore, type OverlayDescriptor } from "@/overlays/overlayStore";
 import { LabeledButtonPresetB } from "../buttons/labeledButton";
@@ -43,6 +43,7 @@ export const CardEditMenu = forwardRef<HTMLDivElement, CardEditMenuProps>((props
     const iconClass = "w-4 h-4 text-neutral-400"
     const isInboxSource = source === "inbox" || source === "inbox-mirror"
     const { workspaceId, boardId } = useParams<{ workspaceId: string; boardId: string }>()
+    const [linkCopied, setLinkCopied] = useState(false)
     const cardActions = useCardActionRegistry();
     const cardsStore = useCardsStore();
     const detatchInboxCard = useUserInboxStore((state) => state.detatchInboxCard)
@@ -126,6 +127,18 @@ export const CardEditMenu = forwardRef<HTMLDivElement, CardEditMenuProps>((props
         useUiStore.getState().setDomainModalOpen(true, data)
     }
 
+    const freezeAnchor = () => {
+        if (props.menuId) {
+            useOverlayStore.getState().freezeAnchor(props.menuId);
+        }
+    }
+
+    const closeMainMenu = () => {
+        if (props.menuId) {
+            useOverlayStore.getState().close(props.menuId);
+        }
+    }
+
 
     const menuItems: MenuItemAndID[] = [
         {
@@ -154,26 +167,36 @@ export const CardEditMenu = forwardRef<HTMLDivElement, CardEditMenuProps>((props
         },
         {
             id: "move", label: "Move", icon: <ArrowRight className={iconClass} />,
-            menuToOpen: ({ onClose, ref }) => <CardMoveMenu onClose={onClose} ref={ref} cardId={cardID} listId={listId} mode={isInboxSource ? "moveInboxCard" : "move"} />,
+            menuToOpen: ({ onClose, ref }) => <CardMoveMenu onClose={onClose} ref={ref}
+                onBeforeSubmit={freezeAnchor} onMoveSubmitSuccess={closeMainMenu}
+                cardId={cardID} listId={listId} mode={isInboxSource ? "moveInboxCard" : "move"} />,
             menuId: "card-edit-menu-move"
         },
         {
             id: "copy", label: "Copy", icon: <CopyIcon className={iconClass} />,
-            menuToOpen: ({ onClose, ref }) => <CardMoveMenu onClose={onClose} ref={ref} cardId={cardID} listId={listId} mode="copy" />,
+            menuToOpen: ({ onClose, ref }) => <CardMoveMenu onClose={onClose} ref={ref} onBeforeSubmit={freezeAnchor} onMoveSubmitSuccess={closeMainMenu}
+                cardId={cardID} listId={listId} mode="copy" />,
             menuId: "card-edit-menu-copy", shouldShow: !isInboxSource
         },
         {
-            id: "copyLink", label: "Copy Link", icon: <Link2Icon className={iconClass} />,
+            id: "copyLink", label: linkCopied ? "Link Copied!" : "Copy Link", icon: <Link2Icon className={iconClass} />,
+            shouldShow: !isInboxSource,
+            actionToPerform: () => {
+                const url = `${window.location.origin}/workspaces/${workspaceId}/boards/${boardId}/cards/${cardID}`
+                void navigator.clipboard.writeText(url)
+                setLinkCopied(true)
+                setTimeout(() => setLinkCopied(false), 1500)
+            },
         },
 
         {
             id: "mirror", label: "Mirror", icon: <ArrowBigRight className={iconClass} />,
-            menuToOpen: ({ onClose, ref }) => <CardMoveMenu onClose={onClose} ref={ref} cardId={cardID} listId={listId} mode="mirror" />,
+            menuToOpen: ({ onClose, ref }) => <CardMoveMenu onClose={onClose} ref={ref} onBeforeSubmit={freezeAnchor} onMoveSubmitSuccess={closeMainMenu} cardId={cardID} listId={listId} mode="mirror" />,
             menuId: "card-edit-menu-mirror", shouldShow: !isInboxSource
         },
         {
             id: "copyToBoard", label: "Copy to Board", icon: <ArrowBigRight className={iconClass} />,
-            menuToOpen: ({ onClose, ref }) => <CardMoveMenu onClose={onClose} ref={ref} cardId={cardID} listId={listId} mode="copyInboxCard" />,
+            menuToOpen: ({ onClose, ref }) => <CardMoveMenu onClose={onClose} ref={ref} onBeforeSubmit={freezeAnchor} onMoveSubmitSuccess={closeMainMenu} cardId={cardID} listId={listId} mode="copyInboxCard" />,
             menuId: "card-edit-menu-insert-into-board", shouldShow: isInboxSource
         },
 
@@ -212,7 +235,7 @@ export const CardEditMenu = forwardRef<HTMLDivElement, CardEditMenuProps>((props
         const id = "card-edit-menu-labels";
         const descriptor: OverlayDescriptor = {
             id: menuId ?? id,
-            render: () => menuToOpen ? menuToOpen({ onClose: () => handleCloseAllMenu(menuId ?? id), ref: cardActionsMenuRef })
+            render: () => menuToOpen ? menuToOpen({ onClose: () => onMenuClose(menuId ?? id), ref: cardActionsMenuRef })
                 : <CardLabelMenu cardID={cardID} onClose={() => onMenuClose(id)} ref={cardActionsMenuRef} />,
             anchorRef: anchorKey ? anchorMap.get(anchorKey) : btnRef,
             panelRef: cardActionsMenuRef,
