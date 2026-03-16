@@ -7,11 +7,12 @@ export type Tab = {
     icon?: React.ReactNode;
     type?: TabType;
     onClick?: () => void;
+    disabled?: boolean;
 }
 export type FloatingTabSelectorProps<TTab extends string> = {
     activeTab: TTab;
     setActiveTab: (tab: TTab) => void;
-    tabs: { id: TTab; label: string, icon?: React.ReactNode, type?: TabType, onClick?: () => void }[];
+    tabs: { id: TTab; label: string, icon?: React.ReactNode, type?: TabType, onClick?: () => void, disabled?: boolean }[];
 
 }
 
@@ -34,6 +35,7 @@ export const FloatingTabSelector = <TTab extends string,>({ activeTab, setActive
 
 
                             ${tab.type === "fixed" ? "cursor-default pointer-events-none" : "cursor-pointer"}
+                            ${tab.disabled ? "cursor-default opacity-50 pointer-events-none" : ""}
                             `}
 
                         onClick={() => {

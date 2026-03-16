@@ -2,7 +2,7 @@ import { forwardRef, useRef, useEffect, useState } from "react";
 import { useBoardsStore } from "@/stores/boardsStore";
 
 import type { Board, UserLite } from "@/stores/types";
-import { ChartBarIcon, FunnelIcon, UsersIcon, } from "@heroicons/react/24/solid";
+import { ChartBarIcon, UsersIcon, } from "@heroicons/react/24/solid";
 import { ChevronDownIcon, EnvelopeIcon, StarIcon } from "@heroicons/react/24/outline";
 import { usePresenceStore } from "@/stores/presenceStore";
 import { BoardActionMenuBtn } from "@/components/modals/BoardActionMenu";
@@ -11,12 +11,19 @@ import { useOverlayStore, type OverlayDescriptor } from "@/overlays/overlayStore
 import { BoardOfferManager } from "@/components/OffersLists/BoardOfferManager";
 
 import { useBoardActionRegistry } from "@/actionRegistry/boardActionRegistry";
-import { useBoardMembersStore } from "@/stores/boardMembersStore";
+import { boardMemberKey, useBoardMembersStore } from "@/stores/boardMembersStore";
 import { useIsOverlayActive } from "@/hooks/useIsOverlayActive";
 import { UserRoleBadge } from "../badges/UserRoleBadge";
 import { useCurrentBoardRole } from "@/hooks/useCurrentBoardRole";
 import { useShareOffersStore } from "@/stores/shareOffersStore";
 import { useShallow } from "zustand/shallow";
+import { InlineEditableTitle } from "../menuElements/InlineEditableTitle";
+import { useInlineTitleEditing } from "@/hooks/useInlineTitleEditing";
+import { CardRowMenuBtn } from "../cardMenus/cardRowMenus";
+
+import { BoardMembersDrop } from "../modals/boardMembersDrop";
+import { useBoardPresence } from "@/hooks/useBoardPresence";
+import { UserAvatarDummy } from "../badges/UserAvatarDummy";
 
 
 
@@ -28,12 +35,27 @@ type BoardViewTopBarProps = {
 
 export const BoardViewTopBar = ({ board, backgroundType }: BoardViewTopBarProps) => {
     const openOverlay = useOverlayStore((state) => state.open)
+    const triggerOverlayUpdate = useOverlayStore((state) => state.triggerUpdate)
     const boardOffersPanelRef = useRef<HTMLDivElement | null>(null)
     const boardMembersCount = useBoardMembersStore((state) => (board?.ID ? (state.membersIdsByBoardId[board.ID]?.length ?? 0) : 0))
     const boardActions = useBoardActionRegistry()
     const isStarred = useBoardsStore((state) => (board?.ID ? !!state.userBoardsById[board.ID]?.Props?.Starred : false))
+    const membersById = useBoardMembersStore(state => state.membersById)
+    const boardMembersIds = useBoardMembersStore(useShallow((state) => (board?.ID ? state.membersIdsByBoardId[board.ID ?? ""] ?? [] : [])))
+    const members = boardMembersIds.map(id => {
+        const key = boardMemberKey(board?.ID ?? "", id)
+        return (
+            membersById[key]
+        )
+    })
 
-    const { role } = useCurrentBoardRole(board?.ID ?? "")
+    const { connectedUsers, presenceByUserId } = useBoardPresence(board?.ID ?? "", members)
+
+    useEffect(() => {
+        triggerOverlayUpdate()
+    }, [connectedUsers, triggerOverlayUpdate])
+
+    const { role, isViewer } = useCurrentBoardRole(board?.ID ?? "")
 
     function handleOpenBoardOffers() {
         const id = "board-offers"
@@ -60,15 +82,47 @@ export const BoardViewTopBar = ({ board, backgroundType }: BoardViewTopBarProps)
 
     const pendingOfferCount = useShareOffersStore(useShallow((state) => state.getBoardPendingIncomingRequests(board?.ID ?? "")))
 
+    const persistTitleChange = (newTitle: string) => {
+        if (!board?.ID) return;
+        void boardActions.updateBoardTitle(board.ID, newTitle)
+    }
+
+    const { title,
+        setTitle,
+        titleFocused,
+        setTitleFocused,
+        titleInputRef,
+        handleOnBlurTitle } = useInlineTitleEditing(persistTitleChange, board?.Name ?? "")
+
+
+    const onTitlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+        if (isViewer) return;
+        if (!titleFocused) {
+            titleInputRef.current?.focus()
+        }
+    }
+
     return (
         <div className="flex shrink-0 text-white bg-black/20 
         backdrop-blur-md
          h-[60px] w-full items-center justify-between gap-2 px-4 ">
-            <div className="flex items-center gap-2">
-                <span className="text-md font-manrope font-extrabold tracking-normal text-inherit">
-                    {board?.Name}</span>
+            <div className="flex flex-row items-center gap-2">
+
+                <InlineEditableTitle
+                    ref={titleInputRef}
+                    title={title}
+                    setTitle={setTitle}
+                    setTitleFocused={setTitleFocused}
+                    handleOnBlurTitle={handleOnBlurTitle}
+                    titleFocused={titleFocused}
+                    isReadonly={isViewer}
+                    isDisabled={isViewer}
+                    onPointerDownCapture={onTitlePointerDown}
+                    className="!h-9 z-20 !w-fit !max-w-[200px] e !font-manrope !font-extrabold !tracking-normal !text-inherit !text-md rounded-lg"
+                />
                 <BaseBtn
                     className="!text-inherit"
+                    disabled={true}
                 >
                     <>
                         <ChartBarIcon className="w-4 h-4 !text-inherit " />
@@ -83,11 +137,9 @@ export const BoardViewTopBar = ({ board, backgroundType }: BoardViewTopBarProps)
                 <BoardPresenceBadge boardId={board?.ID ?? ""} />
             </div>
             <div className="flex items-end">
-                <BaseBtn
-                    className="!text-inherit"
-                >
-                    <FunnelIcon className="w-4 h-4 " />
-                </BaseBtn>
+
+
+
                 <BaseBtn
                     className="!text-inherit"
                     onClick={() => {
@@ -96,12 +148,18 @@ export const BoardViewTopBar = ({ board, backgroundType }: BoardViewTopBarProps)
                     }}>
                     <StarIcon className={`w-4 h-4 ${isStarred ? "text-yellow-500" : ""}`} fill={isStarred ? "currentColor" : "none"} />
                 </BaseBtn>
-                <BaseBtn className="relative !text-inherit">
-                    <UsersIcon className="w-4 h-4 !text-inherit" />
-                    <span className="absolute -top-1 -right-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-blue-500 px-1 text-[10px] font-semibold leading-none text-white">
-                        {boardMembersCount}
-                    </span>
-                </BaseBtn>
+                <CardRowMenuBtn
+                    menuComponent={({ onClose, ref }) => <BoardMembersDrop onClose={onClose} ref={ref} members={members} presenceByUserId={presenceByUserId} />}
+                >
+                    <BaseBtn className="relative !text-inherit">
+                        <UsersIcon className="w-4 h-4 !text-inherit" />
+                        <span className="absolute -top-1 -right-1 inline-flex h-4 min-w-4
+                     items-center justify-center rounded-full bg-blue-500 px-1 text-[10px]
+                      font-semibold leading-none text-white">
+                            {boardMembersCount}
+                        </span>
+                    </BaseBtn>
+                </CardRowMenuBtn>
                 <BaseBtn onClick={handleOpenBoardOffers} className="relative !text-inherit">
                     <EnvelopeIcon className="w-4 h-4 !text-inherit" />
                     {pendingOfferCount > 0 && <span className="absolute -top-1 -right-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-blue-500 px-1 text-[10px] font-semibold leading-none text-white">
@@ -137,11 +195,14 @@ export const BoardPresenceBadge = ({ boardId }: BoardPresenceBadgeProps) => {
     }, [boardId, getConnectedUsers, counter])
 
     return (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-[-4px]">
             {connectedUsers.map((user) => (
-                <div key={user.ID} className="w-6 h-6 rounded-full bg-gray-300 flex items-center justify-center text-white text-xs">
-                    {user.Name[0]}
-                </div>
+                <UserAvatarDummy
+                    key={user.ID}
+                    user={user}
+                    size={28}
+                    disableHoverEffect={true}
+                />
             ))}
         </div>
     )
@@ -157,13 +218,17 @@ type BaseBtnProp = {
     onClick?: () => void
     active?: boolean
     style?: React.CSSProperties
+    disabled?: boolean
 }
-export const BaseBtn = forwardRef<HTMLButtonElement, BaseBtnProp>(({ style, children, className, overrideClassName, label, labelClassName, onClick, active }, ref) => {
+export const BaseBtn = forwardRef<HTMLButtonElement, BaseBtnProp>(({ style, children, className, overrideClassName, label, labelClassName, onClick, active, disabled }, ref) => {
     return (
         <button ref={ref} onClick={onClick}
             style={style}
             className={overrideClassName ?? `flex items-center h-8 gap-1 px-2 py-1 rounded text-sm font-medium
-         hover:bg-gray-200  text-gray-700 transition-all ${active ? "bg-gray-200" : ""} ${className}`}>
+                ${disabled ? "cursor-default opacity-50" : "cursor-pointer hover:bg-gray-200"}
+           text-gray-700 transition-all ${active ? "bg-gray-200" : ""} ${className}`}
+            disabled={disabled}
+        >
             {children}
             {label && <span className={labelClassName}>{label}</span>}
         </button>

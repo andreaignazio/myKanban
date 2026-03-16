@@ -24,12 +24,14 @@ type MemberRowProps = {
     flip?: boolean
     showEndRow?: boolean
     compact?: boolean
+    presence?: boolean;
+    showPresence?: boolean;
 }
-export const MemberRow = ({ onClick, onClickCapture, user, member, showRole = true, useDummyAvatar = true, avatarSize = 52, rowClassName, nameClassName, usernameClassName, children, showChildrenBeforeRole = false, endRowClassName, flip = false, showEndRow = true, compact = false }: MemberRowProps) => {
+export const MemberRow = ({ onClick, onClickCapture, user, member, showRole = true, useDummyAvatar = true, avatarSize = 52, rowClassName, nameClassName, usernameClassName, children, showChildrenBeforeRole = false, endRowClassName, flip = false, showEndRow = true, compact = false, presence, showPresence }: MemberRowProps) => {
 
 
     const resolvedEndRowClassName = endRowClassName ?? "flex flex-row items-center"
-
+    //console.log("Rendering MemberRow for user", user?.ID, "presence:", presence, "showPresence:", showPresence)
 
 
     return (
@@ -59,14 +61,15 @@ export const MemberRow = ({ onClick, onClickCapture, user, member, showRole = tr
                         <div className={`grid grid-cols-[1fr_auto]
                              ${compact ? "gap-0" : "gap-2"} items-center`}>
                             <UserDescription user={user} nameClassName={nameClassName} usernameClassName={usernameClassName} flip={flip} compact={compact} />
-                            <ResolvedAvatar user={user} useDummyAvatar={useDummyAvatar} avatarSize={avatarSize} />
+
+                            <ResolvedAvatar user={user} useDummyAvatar={useDummyAvatar} avatarSize={avatarSize} presence={presence} showPresence={showPresence} />
                         </div>
 
                     </>
                 ) : (
                     <>
                         <div className={`grid grid-cols-[auto_1fr] ${compact ? "gap-0" : "gap-2"} items-center`}>
-                            <ResolvedAvatar user={user} useDummyAvatar={useDummyAvatar} avatarSize={avatarSize} />
+                            <ResolvedAvatar user={user} useDummyAvatar={useDummyAvatar} avatarSize={avatarSize} presence={presence} showPresence={showPresence} />
                             <UserDescription user={user} nameClassName={nameClassName} usernameClassName={usernameClassName} compact={compact} />
                         </div>
                         {showEndRow && <div className={`${resolvedEndRowClassName}`}>
@@ -125,18 +128,22 @@ type ResolvedAvatarProps = {
     user?: User;
     useDummyAvatar?: boolean;
     avatarSize?: number;
+    presence?: boolean;
+    showPresence?: boolean;
 }
-const ResolvedAvatar = ({ user, useDummyAvatar = true, avatarSize = 52 }: ResolvedAvatarProps) => {
+const ResolvedAvatar = ({ user, useDummyAvatar = true, avatarSize = 52, presence, showPresence }: ResolvedAvatarProps) => {
 
     return (
         <>
             {useDummyAvatar && <UserAvatarDummy
                 disableHoverEffect={true}
-                user={user} size={avatarSize} />}
+                user={user} size={avatarSize} presence={presence} showPresence={showPresence} />}
             {
                 !useDummyAvatar && <UserAvatar
                     user={user}
                     size={avatarSize}
+                    presence={presence}
+                    showPresence={showPresence}
                 />
             }
         </>

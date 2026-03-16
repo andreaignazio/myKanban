@@ -89,9 +89,14 @@ export const ListActionsMenu = forwardRef<HTMLDivElement, ListActionsMenuProps>(
         if (result !== null) scheduleClose(1200)
     }
 
+    const handleAddCard = async () => {
+        const result = await listActions.addCard(boardID, listID)
+        if (result !== null) scheduleClose(0)
+    }
+
     const h = 32;
     const menuItems: MenuItemExtended[] = [
-        { id: "addCard", label: "Add Card", kind: "standard", height: h, disabled: isReadonly, onClick: () => listActions.addCard(boardID, listID) },
+        { id: "addCard", label: "Add Card", kind: "standard", height: h, disabled: isReadonly, onClick: () => handleAddCard() },
         { id: "copyList", label: "Copy List", kind: "standard", height: h, onClick: () => setActiveTab("copyList") },
         { id: "moveList", label: "Move List", kind: "standard", height: h, onClick: () => setActiveTab("moveList") },
         { id: "mirrorList", label: "Mirror List", kind: "standard", height: h, onClick: () => setActiveTab("mirrorList") },
@@ -103,7 +108,7 @@ export const ListActionsMenu = forwardRef<HTMLDivElement, ListActionsMenuProps>(
             height: h,
             onClick: () => setActiveTab("accessMode")
         }] : []),
-        { id: "sortby", label: "Sort By...", kind: "standard", height: h, disabled: isReadonly },
+        { id: "sortby", label: "Sort By...", kind: "standard", height: h, disabled: true },
         {
             id: "watch",
             label: "Watch",

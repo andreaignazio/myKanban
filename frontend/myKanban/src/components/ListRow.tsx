@@ -27,6 +27,7 @@ import { useAsyncRequest } from "@/hooks/useAsyncRequest"
 import { AnimatePresence, motion } from "motion/react"
 import { flushSync } from "react-dom"
 import { LIST_CONTAINER_BOTTOM_PADDING } from "@/pages/BoardView/ListContainer"
+import { useInlineTitleEditing } from "@/hooks/useInlineTitleEditing"
 
 type ListRowProps = {
     boardID: string
@@ -242,8 +243,9 @@ const ListHeader = ({
 
 
     const listActions = useListActionRegistry()
-    const [titleFocused, setTitleFocused] = useState(false)
-    const [title, setTitle] = useState(list?.Title || "Untitled List")
+
+
+
     const [isMenuActive, setIsMenuActive] = useState(false)
     const [isEyeHovered, setIsEyeHovered] = useState(false)
     const [isEllipsisHovered, setIsEllipsisHovered] = useState(false)
@@ -264,9 +266,7 @@ const ListHeader = ({
 
 
 
-    useEffect(() => {
-        setTitle(list?.Title || "Untitled List")
-    }, [list?.Title])
+
 
     const handleWatchListToggle = async () => {
         if (listWatch) {
@@ -277,18 +277,16 @@ const ListHeader = ({
         await addListWatch(boardID, listID)
     }
 
+    const persistTitleChange = (newTitle: string) => listActions.setListTitle(boardID, listID, newTitle)
 
-    const titleInputRef = useRef<HTMLInputElement>(null)
-    const handleOnBlurTitle = () => {
-        setTitleFocused(false);
-        const currentTitle = titleInputRef.current?.value || "Untitled List";
-        // console.log("Current Title:", currentTitle)
-        // console.log("Original Title:", list?.Title)
-        if (currentTitle !== list?.Title) {
-            listActions.setListTitle(boardID, listID, currentTitle)
-            //  cardActions.setCardTitle(boardID, listID, currentTitle)
-        }
-    }
+    const { title,
+        setTitle,
+        titleFocused,
+        setTitleFocused,
+        titleInputRef,
+        handleOnBlurTitle } = useInlineTitleEditing(persistTitleChange, list.Title)
+
+
 
     const ellipsisHoverBg = hasListTheme ? hexToRgba(listTextColor, 0.18) : "#404040"
     const ellipsisActiveBg = hasListTheme ? hexToRgba(listTextColor, 0.3) : "#d4d4d4"
@@ -327,25 +325,25 @@ const ListHeader = ({
 
 
     return (
-        <div className="w-full flex flex-row justify-between h-8 mb-2">
-            <div className="flex items-center gap-2 min-w-0 mr-1">
-                <InlineEditableTitle
-                    ref={titleInputRef}
-                    title={title}
-                    setTitle={setTitle}
-                    setTitleFocused={setTitleFocused}
-                    handleOnBlurTitle={handleOnBlurTitle}
-                    titleFocused={titleFocused}
-                    isReadonly={isReadonly}
-                    isDisabled={false}
-                    className="!h-9  !font-medium !text-[16px] rounded-lg"
-                    onPointerDownCapture={onTitlePointerDownCapture}
-                    onPointerMove={onTitlePointerMove}
-                    onPointerUp={onTitlePointerUp}
-                    onPointerCancel={onTitlePointerCancel}
+        <div className="w-full flex flex-row items-center justify-between h-8 mb-2">
 
-                />
+            <InlineEditableTitle
+                ref={titleInputRef}
+                title={title}
+                setTitle={setTitle}
+                setTitleFocused={setTitleFocused}
+                handleOnBlurTitle={handleOnBlurTitle}
+                titleFocused={titleFocused}
+                isReadonly={isReadonly}
+                isDisabled={false}
+                className="!h-9 !font-medium !text-[16px] !w-32 rounded-lg"
+                onPointerDownCapture={onTitlePointerDownCapture}
+                onPointerMove={onTitlePointerMove}
+                onPointerUp={onTitlePointerUp}
+                onPointerCancel={onTitlePointerCancel}
 
+            />
+            <div className="flex flex-row items-center h-8 justify-end gap-1 min-w-0 ">
                 {showRootBadge && (
                     <CardRowMenuBtn
                         customId={mirrorMenuId}
@@ -383,54 +381,57 @@ const ListHeader = ({
                         desiredBackdropOpacity={0}
                         placement="bottom-start"
                     >
-                        <span className="inline-flex items-center rounded-full border border-neutral-600 px-2 py-0.5 text-[10px] font-semibold text-neutral-300 hover:bg-neutral-700/40 transition-colors">
+                        <span className="inline-flex items-center 
+                        rounded-full border border-neutral-600
+                         px-2 py-0.5 text-[10px] font-semibold text-neutral-300
+                          hover:bg-neutral-700/40 transition-colors">
                             MIRROR
                         </span>
                     </CardRowMenuBtn>
                 )}
-            </div>
 
-            <LabeledButtonPresetB label=""
-                onClick={() => { }}
-                onClickCapture={(e) => {
-                    e.stopPropagation()
-                    void handleWatchListToggle()
-                }}
-                onPointerDownCapture={(e) => e.stopPropagation()}
-                style={{ backgroundColor: eyeBg }}
-                className={`h-full rounded-md px-2 bg-transparent !m-0 
+
+                <LabeledButtonPresetB label=""
+                    onClick={() => { }}
+                    onClickCapture={(e) => {
+                        e.stopPropagation()
+                        void handleWatchListToggle()
+                    }}
+                    onPointerDownCapture={(e) => e.stopPropagation()}
+                    style={{ backgroundColor: eyeBg }}
+                    className={`h-full rounded-md px-2 bg-transparent !m-0 
             cursor-pointer transition-colors duration-150
             flex items-center justify-center  !gap-0
             ${isListWatched ? "opacity-100" : "opacity-0 group-hover/list-header:opacity-100"} `}>
 
-                <div
-                    className="w-full h-full flex items-center justify-center"
-                    onMouseEnter={() => setIsEyeHovered(true)}
-                    onMouseLeave={() => setIsEyeHovered(false)}
+                    <div
+                        className="w-full h-full flex items-center justify-center"
+                        onMouseEnter={() => setIsEyeHovered(true)}
+                        onMouseLeave={() => setIsEyeHovered(false)}
+                    >
+                        <EyeIcon className="w-4 h-4" />
+                    </div>
+                </LabeledButtonPresetB>
+
+
+                <CardRowMenuBtn
+                    customId={menuId}
+                    menuComponent={({ ref, onClose }) => <ListActionsMenu listID={listID} ref={ref} onClose={onClose} />}
+                    desiredBackdropOpacity={0.0}
+                    placement="bottom-start"
                 >
-                    <EyeIcon className="w-4 h-4" />
-                </div>
-            </LabeledButtonPresetB>
-
-
-            <CardRowMenuBtn
-                customId={menuId}
-                menuComponent={({ ref, onClose }) => <ListActionsMenu listID={listID} ref={ref} onClose={onClose} />}
-                desiredBackdropOpacity={0.0}
-                placement="bottom-start"
-            >
-                <div
-                    onMouseEnter={() => setIsEllipsisHovered(true)}
-                    onMouseLeave={() => setIsEllipsisHovered(false)}
-                    style={{ backgroundColor: ellipsisBg, color: ellipsisColor }}
-                    className={`h-full rounded-md px-2 bg-transparent 
+                    <div
+                        onMouseEnter={() => setIsEllipsisHovered(true)}
+                        onMouseLeave={() => setIsEllipsisHovered(false)}
+                        style={{ backgroundColor: ellipsisBg, color: ellipsisColor }}
+                        className={`h-8 rounded-md px-2 bg-transparent 
             cursor-pointer transition-colors duration-150
             flex items-center justify-center`}>
 
-                    <EllipsisIcon className="w-4 h-4 " />
-                </div>
-            </CardRowMenuBtn>
-
+                        <EllipsisIcon className="w-4 h-4 " />
+                    </div>
+                </CardRowMenuBtn>
+            </div>
 
 
         </div>

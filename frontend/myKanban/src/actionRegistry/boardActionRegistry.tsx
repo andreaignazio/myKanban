@@ -7,6 +7,8 @@ import { ConfirmDeletionPopover } from "@/components/modals/ConfirmDeletion";
 import { useOverlayStore } from "@/overlays/overlayStore";
 import { useNavigate } from "react-router-dom";
 import { useBuildPublicURL } from "@/hooks/useBuildPublicURL";
+import { useAsyncKey } from "@/stores/asyncRequestStore";
+import type { AsyncRequestKey } from "@/stores/asyncRequestTypes";
 
 export function useBoardActionRegistry() {
 
@@ -167,6 +169,13 @@ export function useBoardActionRegistry() {
         return boardsStore.getClosedBoardsInWorkspace(workspaceID);
     }
 
+    function updateBoardTitle(boardID: string, newTitle: string, asyncKey?: AsyncRequestKey) {
+        const defaultKey = useAsyncKey("board:edit:title", boardID)
+        const key = asyncKey ?? defaultKey
+        return boardsStore.patchBoard(boardID, { Name: newTitle }, key);
+    }
+
+
     return {
         setBoardMemberRole,
         deleteBoardMember,
@@ -189,5 +198,6 @@ export function useBoardActionRegistry() {
         getClosedBoards,
         closeBoardWithConfirmation,
         purgeBoardWithConfirmation,
+        updateBoardTitle,
     }
 }

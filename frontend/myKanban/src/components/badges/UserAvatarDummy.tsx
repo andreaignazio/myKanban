@@ -28,11 +28,13 @@ export type UserAvatarDummyProps = {
     darkenOnHover?: boolean;
     showEditHover?: boolean;
     disableHoverEffect?: boolean;
+    presence?: boolean;
+    showPresence?: boolean;
 
 }
 
 
-export function UserAvatarDummy({ user, className, size, overrideMode, colorOverride, imageOverride, initialsOverride, darkenOnHover, showEditHover, disableHoverEffect }: UserAvatarDummyProps) {
+export function UserAvatarDummy({ user, className, size, overrideMode, colorOverride, imageOverride, initialsOverride, darkenOnHover, showEditHover, disableHoverEffect, presence, showPresence }: UserAvatarDummyProps) {
     const hasImageOverride = imageOverride !== undefined;
     const hasColorOverride = colorOverride !== undefined;
     const userAvatarType = overrideMode ? undefined : user?.Props?.Avatar?.Type;
@@ -76,6 +78,7 @@ export function UserAvatarDummy({ user, className, size, overrideMode, colorOver
     return (
         <div
             className={`relative isolate ${fallbackFlat.className} h-8 aspect-square group
+                ${showPresence ? (presence ? " ring-2 ring-teal-400" : "ring-2 ring-amber-500") : ""}
                  rounded-full flex items-center justify-center ${resolvedAvatarUrl ? "!bg-transparent" : (avatarColor ? "!bg-transparent" : fallbackGradient.className)}
                  ${disableHoverEffect ? "cursor-default" : "hover:ring-2 hover:ring-white/80 cursor-pointer"} transition-all 
                   overflow-hidden ${className}`}

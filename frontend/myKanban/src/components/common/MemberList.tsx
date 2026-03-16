@@ -4,18 +4,20 @@ import { useUserStore } from "@/stores/userStore";
 
 type MemberListProps = {
     members?: UserWorkspace[] | UserBoard[];
+    showPresence?: boolean;
+    presenceByUserId?: Record<string, boolean>;
 }
 
-export const MembersList = ({ members }: MemberListProps) => {
+export const MembersList = ({ members, showPresence, presenceByUserId }: MemberListProps) => {
     const userById = useUserStore(state => state.usersById)
 
     return (
         <>
             {members && members.length > 0 ? (
                 members.map((member) => {
-                    const user = userById[member.UserID]
+                    const user = userById[member?.UserID]
                     return (
-                        <MemberRow key={member.UserID} user={user as User} member={member} />
+                        <MemberRow key={member?.UserID} user={user as User} member={member} showPresence={showPresence} presence={showPresence && presenceByUserId?.[member?.UserID]} />
                     )
                 })
             ) : (

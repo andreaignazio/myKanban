@@ -329,23 +329,6 @@ export const useBoardsStore = create<BoardsStore>((set, get) => ({
             successResetDelayMs: 3000,
         });
 
-        /*try {
-            set({
-                isSendingRequest: true,
-                isRequestSuccessful: false
-            });
-            const response = await api.post(`/workspaces/${workspaceId}/boards`, payload);
-            set({ isRequestSuccessful: true });
-            const data: UserBoardData = response.data;
-            // console.log("Created board in workspace", workspaceId, data)
-            get().applyCrateBoard(data)
-        } catch (error) {
-            set({ isRequestSuccessful: false });
-            // console.error("Error creating board in workspace", workspaceId, error);
-            throw error;
-        } finally {
-            set({ isSendingRequest: false });
-        }*/
     },
     patchBoard: async (boardId, payload, asyncKey?) => {
         const run = async () => {
@@ -359,6 +342,7 @@ export const useBoardsStore = create<BoardsStore>((set, get) => ({
             await run();
         }
     },
+
     patchMyUserBoardProps: async (boardId, payload, asyncKey?) => {
         const prev = get().userBoardsById[boardId];
         if (!prev) return;

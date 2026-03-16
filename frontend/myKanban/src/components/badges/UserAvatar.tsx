@@ -9,7 +9,7 @@ export type UserAvatarProps = UserAvatarDummyProps & {
 }
 
 
-export function UserAvatar({ user, className, size, overrideMode, colorOverride, imageOverride, initialsOverride, darkenOnHover, showEditHover }: UserAvatarProps) {
+export function UserAvatar({ user, className, size, overrideMode, colorOverride, imageOverride, initialsOverride, darkenOnHover, showEditHover, presence, showPresence }: UserAvatarProps) {
 
     return (
 
@@ -29,6 +29,8 @@ export function UserAvatar({ user, className, size, overrideMode, colorOverride,
                 initialsOverride={initialsOverride}
                 darkenOnHover={darkenOnHover}
                 showEditHover={showEditHover}
+                presence={presence}
+                showPresence={showPresence}
             />
         </CardRowMenuBtn>
 

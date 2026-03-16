@@ -214,9 +214,9 @@ export default function BoardView() {
 
     }
 
-    const floatingTabs: { id: string; label: string, icon?: React.ReactNode, type?: TabType, onClick?: () => void }[] = [
+    const floatingTabs: { id: string; label: string, icon?: React.ReactNode, type?: TabType, onClick?: () => void, disabled?: boolean }[] = [
         { id: "Inbox", label: "Inbox", icon: <WalletCardsIcon className="w-4 h-4" /> },
-        { id: "Planner", label: "Planner", icon: <Calendar className="w-4 h-4" /> },
+        { id: "Planner", label: "Planner", icon: <Calendar className="w-4 h-4" />, disabled: true },
         { id: "Board", label: "Board", icon: <Columns3Icon className="w-4 h-4" /> },
         { id: "divider1", label: "", type: "divider" },
         { id: "SwitchBoard", label: "Switch Board", type: "action", icon: <TableColumnsSplit className="w-4 h-4" />, onClick: () => handleOpenSwitchMenu() },
