@@ -386,7 +386,7 @@ export const CardRow = ({ boardID, listId, listCardID: listCardID, cardId, index
                         top: saveButtonRect.top,
                         left: saveButtonRect.left,
                         width: saveButtonRect.width,
-                        zIndex: 1100,
+                        zIndex: 999,
                     }}
                     className={`flex flex-row justify-start items-start ps-0 pt-1
                         ${canEdit ? "" : "filter grayscale brightness-50 pointer-events-none"}`}

@@ -71,6 +71,8 @@ export const CardEditMenu = forwardRef<HTMLDivElement, CardEditMenuProps>((props
 
     const archiveCard = async () => {
         if (isInboxSource || !boardId || !resolvedListId || !cardID) return;
+        if (props.menuId) useOverlayStore.getState().freezeAnchor(props.menuId);
+        handleCloseAllMenu(props.menuId ?? "card-edit-menu");
         const result = await cardsStore.removeCardFromList(boardId, resolvedListId, cardID);
         if (result !== null) {
             handleCloseAllMenu(props.menuId ?? "card-edit-menu");
@@ -79,6 +81,7 @@ export const CardEditMenu = forwardRef<HTMLDivElement, CardEditMenuProps>((props
 
     const detatchFromInbox = async () => {
         if (!isInboxSource || !cardID) return;
+        if (props.menuId) useOverlayStore.getState().freezeAnchor(props.menuId);
         await detatchInboxCard(cardID)
         handleCloseAllMenu(props.menuId ?? "card-edit-menu")
     }

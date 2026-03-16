@@ -158,7 +158,7 @@ export const useListsStore = create<ListsStore>((set, get) => ({
         await useAsyncRequestStore.getState().execute(
             useAsyncKey("list:detach", listID),
             async () => {
-                await new Promise((resolve) => setTimeout(resolve, 2000))
+                await new Promise((resolve) => setTimeout(resolve, 10))
                 return api.delete(`/boards/${boardID}/lists/${listID}`)
             },
             { successResetDelayMs: 2000 }
