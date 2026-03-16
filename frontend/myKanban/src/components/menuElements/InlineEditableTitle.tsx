@@ -47,6 +47,7 @@ export const InlineEditableTitle = forwardRef<HTMLInputElement, InlineEditableTi
                 transition-all duration-300 ease-in-out 
                 bg-transparent focus:outline-none text-inherit`}
 
+                onMouseDown={(e) => e.preventDefault()}
                 onFocus={() => props.setTitleFocused(true)}
                 onBlur={handleOnBlurTitle}
                 value={title}

@@ -9,7 +9,9 @@ import { useAsyncRequest } from "@/hooks/useAsyncRequest"
 import { useBoardsStore } from "@/stores/boardsStore"
 
 import { Droppable } from "@hello-pangea/dnd"
-import { useEffect, useState } from "react"
+import { use, useEffect, useRef, useState } from "react"
+import type { AsyncRequestKey } from "@/stores/asyncRequestTypes"
+import { useAsyncRequestGroup } from "@/hooks/useAsyncRequestGroup"
 
 const EMPTY_LIST_IDS: string[] = []
 const SKELETON_CARD_COUNTS = [3, 4, 2]
@@ -41,6 +43,11 @@ export const ListContainer = ({ draggedCardId = null, draggedSourceBoardListId =
 
     const [shouldAnimate, setShouldAnimate] = useState(true);
 
+    const animatedKeys: AsyncRequestKey[] = ["list:copy:bulk"]
+    const { isLoading: isAnimating } = useAsyncRequestGroup(animatedKeys)
+
+    const timeOutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
     useEffect(() => {
         if (!isLoading) {
             const timeout = setTimeout(() => {
@@ -49,6 +56,19 @@ export const ListContainer = ({ draggedCardId = null, draggedSourceBoardListId =
             return () => clearTimeout(timeout);
         }
     }, [isLoading]);
+
+
+    useEffect(() => {
+        if (isAnimating) {
+            setShouldAnimate(true);
+            if (timeOutRef.current) {
+                clearTimeout(timeOutRef.current);
+            }
+            timeOutRef.current = setTimeout(() => {
+                setShouldAnimate(false);
+            }, 2000);
+        }
+    }, [isAnimating]);
 
 
     return (
