@@ -1,6 +1,7 @@
 import { useWsMembersStore } from "@/stores/wsMembersStore";
 import { useWorkspaceStore } from "@/stores/workspaceStore";
 import type { PatchWorkspacePropsRequest } from "@/stores/types";
+import type { AsyncRequestKey } from "@/stores/asyncRequestTypes";
 import { useAuthStore } from "@/stores/auth";
 import { useNavigate } from "react-router-dom";
 import { useUiStore, type DomainModalData } from "@/stores/uiStore";
@@ -28,12 +29,32 @@ export function useWorkspaceActionRegistry() {
         }
     }
 
-    function patchWorkspaceProps(workspaceID: string, payload: PatchWorkspacePropsRequest) {
-        return workspaceStore.patchWorkspaceProps(workspaceID, payload);
+    function patchWorkspaceProps(workspaceID: string, payload: PatchWorkspacePropsRequest, asyncKey?: AsyncRequestKey) {
+        return workspaceStore.patchWorkspaceProps(workspaceID, payload, asyncKey);
     }
 
     function createWorkspace(payload: { Name: string; Description?: string; Props?: import('@/stores/types').WorkspaceProps }) {
         return workspaceStore.createWorkspace(payload);
+    }
+
+    function deleteWorkspaceWithConfirmation(workspaceID: string) {
+        const data: DomainModalData = {
+            componentent: (onClose) => (
+                <ConfirmDeletionPopover
+                    onClose={onClose}
+                    onSubmit={async () => {
+                        await workspaceStore.deleteWorkspace(workspaceID);
+                        onClose();
+                        navigate("/workspaces", { replace: true });
+                    }}
+                    title="Delete workspace?"
+                    body="This will permanently delete the workspace and all its boards. This action cannot be undone."
+                    submitLabel="Delete"
+                />
+            ),
+            anchorRef: null,
+        };
+        useUiStore.getState().setDomainModalOpen(true, data);
     }
 
     function leaveWorkspaceWithConfirmation(workspaceID: string, userID: string, anchorRef?: React.RefObject<HTMLElement | null>) {
@@ -62,6 +83,7 @@ export function useWorkspaceActionRegistry() {
         patchWorkspaceProps,
         leaveWorkspaceWithConfirmation,
         createWorkspace,
+        deleteWorkspaceWithConfirmation,
     }
 
 }

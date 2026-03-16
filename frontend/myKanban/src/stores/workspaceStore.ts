@@ -4,6 +4,7 @@ import { create } from "zustand";
 
 import type { BoardDetailPatch, DeltaPayload } from "./boardDetailStore";
 import type { PatchWorkspacePropsRequest, SubscriptionPlan, User, UserEvent, UserWorkspace, UserWorkspaceBoardRestoredPayload, Workspace, WorkspaceEvent, WorkspaceSubscription, Board } from "./types";
+import type { AsyncRequestKey } from "./asyncRequestTypes";
 import { useWsMembersStore } from "./wsMembersStore";
 import { useUserStore } from "./userStore";
 import { useBoardsStore, type UserBoardData } from "./boardsStore";
@@ -77,7 +78,8 @@ export type WorkspaceStore = {
     cancelWorkspaceSubscription: (workspaceID: string) => Promise<WorkspaceSubscription | null>;
     resumeWorkspaceSubscription: (workspaceID: string) => Promise<WorkspaceSubscription | null>;
     fetchWorkspaceSubscription: (workspaceID: string) => Promise<void>;
-    patchWorkspaceProps: (workspaceID: string, payload: PatchWorkspacePropsRequest) => Promise<Workspace>;
+    patchWorkspaceProps: (workspaceID: string, payload: PatchWorkspacePropsRequest, asyncKey?: AsyncRequestKey) => Promise<Workspace>;
+    deleteWorkspace: (workspaceID: string) => Promise<void>;
     getWorkspaceWhereUserIsMember: (userId: string) => Workspace[];
     isWorkspaceAccessible: (workspaceId: string) => boolean;
     removeWorkspace: (workspaceId: string) => void;
@@ -409,6 +411,16 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
                 }
                 break
             }
+            case "workspace.deleted": {
+                const workspaceId = evt.WorkspaceID
+                if (!workspaceId) break
+                get().removeWorkspace(workspaceId)
+                const currentRouteWorkspaceId = useUiStore.getState().currentRouteParams.workspaceId
+                if (currentRouteWorkspaceId === workspaceId) {
+                    useUiStore.getState().setLostWorkspaceAccessModalOpen(true, workspaceId)
+                }
+                break
+            }
             case "workspace.user.updated": {
                 const user = evt.Payload?.User as User | undefined
                 if (!user) {
@@ -583,16 +595,36 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
             useBoardsStore.getState().mergeBoardsPatch(boardPatch);
         }
     },
-    patchWorkspaceProps: async (workspaceID: string, payload: PatchWorkspacePropsRequest) => {
-        const response = await api.patch(`/workspaces/${workspaceID}/props`, payload);
-        const updatedWorkspace = response.data as Workspace;
-        set((state) => ({
-            workspacesById: {
-                ...state.workspacesById,
-                [workspaceID]: updatedWorkspace,
-            },
-        }));
-        return updatedWorkspace;
+    patchWorkspaceProps: async (workspaceID: string, payload: PatchWorkspacePropsRequest, asyncKey?: AsyncRequestKey) => {
+        let updatedWorkspace: Workspace | null = null;
+        await useAsyncRequestStore.getState().execute(
+            asyncKey ?? `workspace:props:patch:${workspaceID}` as AsyncRequestKey,
+            () => api.patch(`/workspaces/${workspaceID}/props`, payload),
+            {
+                onSuccess: (response) => {
+                    updatedWorkspace = response.data as Workspace;
+                    set((state) => ({
+                        workspacesById: {
+                            ...state.workspacesById,
+                            [workspaceID]: updatedWorkspace!,
+                        },
+                    }));
+                },
+                successResetDelayMs: 2000,
+            }
+        );
+        return updatedWorkspace!;
+    },
+    deleteWorkspace: async (workspaceID: string) => {
+        await useAsyncRequestStore.getState().execute(
+            `workspace:delete:${workspaceID}`,
+            () => api.delete(`/workspaces/${workspaceID}`),
+            {
+                onSuccess: () => {
+                    get().removeWorkspace(workspaceID);
+                },
+            }
+        );
     },
 
     getWorkspaceWhereUserIsMember: (userId: string) => {

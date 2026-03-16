@@ -82,6 +82,8 @@ type WorkspaceRepo interface {
 	UpdateUserWorkspaceRoleTX(ctx context.Context, tx *gorm.DB, userID, workspaceID uuid.UUID, updateMap map[string]interface{}) (*models.UserWorkspace, error)
 	DeleteUserWorkspaceTX(ctx context.Context, tx *gorm.DB, userID, workspaceID uuid.UUID) (*models.UserWorkspace, error)
 	DeleteUserBaordsWhereWorkspaceIDTX(ctx context.Context, tx *gorm.DB, userID, workspaceID uuid.UUID) error
+	SoftDeleteWorkspaceTX(ctx context.Context, tx *gorm.DB, workspaceID uuid.UUID) (*models.Workspace, error)
+	SoftDeleteWorkspaceBoardsTX(ctx context.Context, tx *gorm.DB, workspaceID uuid.UUID) error
 
 	GetWorkspacesBoardsForUserID(ctx context.Context, userID uuid.UUID, workspaceIDs []uuid.UUID) ([]boards.UserBoardRow, error)
 }

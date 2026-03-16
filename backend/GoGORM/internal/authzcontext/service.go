@@ -23,6 +23,8 @@ func (s *Service) getHandlerForAction(action actions.Action) (AuthzContextHandle
 	switch action {
 	case actions.WorkspacePatch:
 		return NewWorkspacePatchHandler(s.authzRepo), nil
+	case actions.WorkspaceDelete:
+		return NewWorkspaceDeleteHandler(s.authzRepo), nil
 	case actions.InboxCardMoveToListInBoard:
 		return NewMoveInboxCardToListInBoardHandler(s.authzRepo), nil
 	case actions.PatchBoardCard:

@@ -44,6 +44,7 @@ const (
 	AuditTemplateWorkspaceBoardRestored            AuditTemplateKey = "audit.workspace.board.restored"
 	AuditTemplateWorkspaceBoardPurged              AuditTemplateKey = "audit.workspace.board.purged"
 	AuditTemplateWorkspacePatched                  AuditTemplateKey = "audit.workspace.patched"
+	AuditTemplateWorkspaceDeleted                  AuditTemplateKey = "audit.workspace.deleted"
 	AuditTemplateWorkspaceMemberRoleChanged        AuditTemplateKey = "audit.workspace.member.role.changed"
 	AuditTemplateWorkspaceMemberRoleChangedSelf    AuditTemplateKey = "audit.workspace.member.role.changed.self"
 	AuditTemplateWorkspaceMemberRemoved            AuditTemplateKey = "audit.workspace.member.removed"

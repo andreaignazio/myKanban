@@ -264,12 +264,16 @@ const HeaderCol = ({ iconId, iconBgTokenClass, hasBorder, iconBorderColor, onIco
                 placement="bottom"
                 menuComponent={onIconMenuComponent}
             >
-                <WorkspaceIcon size={120} radiusOverride={74}
-                    iconId={iconId}
-                    iconBgTokenClass={iconBgTokenClass}
-                    hasBorder={hasBorder}
-                    iconBorderColor={iconBorderColor}
-                />
+                <div className="group relative cursor-pointer rounded-[26px]
+                    ring-0 hover:ring-2 ring-zinc-300/60 transition-all duration-150">
+                    <WorkspaceIcon size={120} radiusOverride={74}
+                        iconId={iconId}
+                        iconBgTokenClass={iconBgTokenClass}
+                        hasBorder={hasBorder}
+                        iconBorderColor={iconBorderColor}
+                    />
+                    <div className="absolute inset-0 rounded-[26px] bg-white/0 group-hover:bg-white/10 transition-colors duration-150" />
+                </div>
             </CardRowMenuBtn>
             <div className={`overflow-hidden transition-all duration-500 ease-in-out w-full flex flex-col gap-4
                 ${collapsed ? "max-h-0 opacity-0" : "max-h-40 opacity-100"}`}>

@@ -9,13 +9,15 @@ import { WorkspaceCoverEditor } from "./workspaceCoverEditor"
 import { WorkspaceIconEditor } from "./workspaceIconEditor"
 import { useEffect, useState } from "react"
 import { CustomInput } from "@/components/menuElements/CustomInput"
-import { LabeledButtonPresetBSubmit } from "@/components/buttons/labeledButton"
+import { LabeledButtonPresetBSubmitAsync } from "@/components/buttons/labeledButton"
 import { useWorkspaceActionRegistry } from "@/actionRegistry/workspaceActionRegistry"
 import { CustomDropDown, type MenuItem } from "@/components/menuElements/CustomDropDown"
 import { GlobeAsiaAustraliaIcon, LockClosedIcon, UsersIcon } from "@heroicons/react/24/solid"
 import { WorkspaceAvatar } from "./WorkspaceAvatar"
 import { useWorkspaceDerivedProps } from "@/hooks/useWorkspaceDerivedProps"
 import { useCurrentWorkspaceRole } from "@/hooks/useCurrentWorkspaceRole"
+import { useAsyncKey } from "@/stores/asyncRequestStore"
+import { DangerButton } from "@/components/buttons/DangerButton"
 
 export const WorkspaceSettings = () => {
     const workspaceId = useParams().workspaceId
@@ -28,6 +30,9 @@ export const WorkspaceSettings = () => {
 
     const { isAdminOrOwner } = useCurrentWorkspaceRole(workspaceId)
     const { subscription } = useResolveSubscriptionPlan();
+    const patchKey = useAsyncKey("workspace:props:patch", workspaceId ?? "")
+    const visibilityPatchKey = useAsyncKey("workspace:visibility:patch", workspaceId ?? "")
+    const deleteKey = useAsyncKey("workspace:delete", workspaceId ?? "")
 
     useEffect(() => {
         setEditedName(workspace?.Name ?? "")
@@ -68,7 +73,7 @@ export const WorkspaceSettings = () => {
             Props: {
                 Description: editedDescription,
             }
-        })
+        }, patchKey)
     }
 
     const handleSaveVisibility = async () => {
@@ -76,7 +81,7 @@ export const WorkspaceSettings = () => {
         await workspaceActions.patchWorkspaceProps(workspaceId, {
             Visibility: selectedVisibility,
             Props: {}
-        })
+        }, visibilityPatchKey)
     }
 
     return (
@@ -155,11 +160,12 @@ export const WorkspaceSettings = () => {
                     </div>
 
                     <div className="flex flex-row justify-end w-full mt-4">
-                        <LabeledButtonPresetBSubmit
+                        <LabeledButtonPresetBSubmitAsync
                             className="!w-32"
                             label="Save"
                             disabled={!canSave}
                             onClick={handleSaveWorkspaceDetails}
+                            asyncKey={patchKey}
                         />
                     </div>
 
@@ -182,11 +188,12 @@ export const WorkspaceSettings = () => {
                     </div>
 
                     <div className="flex flex-row justify-end w-full mt-4">
-                        <LabeledButtonPresetBSubmit
+                        <LabeledButtonPresetBSubmitAsync
                             className="!w-32"
                             label="Save"
                             disabled={!canSaveVisibility}
                             onClick={handleSaveVisibility}
+                            asyncKey={visibilityPatchKey}
                         />
                     </div>
 
@@ -196,12 +203,12 @@ export const WorkspaceSettings = () => {
                         <div className="text-lg font-bold font-grotesk text-red-500">Danger zone</div>
                         <div className="text-sm text-neutral-400">Permanently delete this workspace and all of its contents. This action cannot be undone.</div>
                     </div>
-                    <button disabled={!isAdminOrOwner} className="w-64 bg-rose-800/20
-                    hover:bg-red-800/40 transition-colors duration-200
-                    rounded-xl h-12 flex items-center justify-center
-                    py-3 px-4 text-left disabled:opacity-40 disabled:cursor-not-allowed disabled:pointer-events-none" onClick={() => { }}>
-                        <span className="text-sm text-red-500 text-center w-full font-bold">Delete workspace</span>
-                    </button>
+                    <DangerButton
+                        label="Delete workspace"
+                        disabled={!isAdminOrOwner}
+                        onClick={() => workspaceActions.deleteWorkspaceWithConfirmation(workspaceId ?? "")}
+                        asyncKey={deleteKey}
+                    />
                 </div>
             </div>
         </UserPagesWrapper>

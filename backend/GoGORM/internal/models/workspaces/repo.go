@@ -630,3 +630,28 @@ func (r *GormWorkspaceRepo) DeleteUserBaordsWhereWorkspaceIDTX(ctx context.Conte
 	}
 	return nil
 }
+
+func (r *GormWorkspaceRepo) SoftDeleteWorkspaceTX(ctx context.Context, tx *gorm.DB, workspaceID uuid.UUID) (*models.Workspace, error) {
+	var workspace models.Workspace
+	res := tx.WithContext(ctx).
+		Model(&workspace).
+		Where("id = ?", workspaceID).
+		Where("deleted_at IS NULL").
+		Clauses(clause.Returning{}).
+		Update("deleted_at", gorm.Expr("NOW()"))
+	if res.Error != nil {
+		return nil, res.Error
+	}
+	if res.RowsAffected == 0 {
+		return nil, gorm.ErrRecordNotFound
+	}
+	return &workspace, nil
+}
+
+func (r *GormWorkspaceRepo) SoftDeleteWorkspaceBoardsTX(ctx context.Context, tx *gorm.DB, workspaceID uuid.UUID) error {
+	return tx.WithContext(ctx).
+		Table("boards").
+		Where("workspace_id = ?", workspaceID).
+		Where("deleted_at IS NULL").
+		Update("deleted_at", gorm.Expr("NOW()")).Error
+}

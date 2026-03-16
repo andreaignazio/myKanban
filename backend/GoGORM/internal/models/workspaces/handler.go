@@ -445,3 +445,20 @@ func (h *WorkspacesHandler) DeleteWorkspaceMember(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, response)
 }
+
+func (h *WorkspacesHandler) DeleteWorkspace(c *gin.Context) {
+	ctx := c.Request.Context()
+	userID := c.MustGet("userID").(uuid.UUID)
+	workspaceID, err := uuid.Parse(c.Param("workspaceID"))
+	if err != nil {
+		httperr.WriteParamsError(c, err, "workspaces.handler.DeleteWorkspace")
+		return
+	}
+	correlationID := c.MustGet("correlationID").(uuid.UUID)
+	response, err := h.WorkspaceService.DeleteWorkspace(ctx, userID, workspaceID, correlationID)
+	if err != nil {
+		httperr.WriteOp(c, err, "workspaces.handler.DeleteWorkspace")
+		return
+	}
+	c.JSON(http.StatusOK, response)
+}

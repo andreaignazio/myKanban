@@ -41,6 +41,7 @@ const (
 	EventWorkspaceBoardRestored       DomainEventType = "workspace.board.restored"
 	EventWorkspaceBoardPurged         DomainEventType = "workspace.board.purged"
 	EventWorkspacePatched             DomainEventType = "workspace.patched"
+	EventWorkspaceDeleted             DomainEventType = "workspace.deleted"
 
 	EventWorkspaceMemberRoleChanged DomainEventType = "workspace.member.role.changed"
 	EventWorkspaceMemberRemoved     DomainEventType = "workspace.member.removed"
@@ -137,6 +138,7 @@ func (e DomainEventType) IsValidEventType() bool {
 		EventWorkspaceBoardRestored,
 		EventWorkspaceBoardPurged,
 		EventWorkspacePatched,
+		EventWorkspaceDeleted,
 		EventWorkspaceMemberRoleChanged,
 		EventWorkspaceMemberRemoved,
 		EventBoardMemberRemoved,
@@ -270,6 +272,7 @@ func (e DomainEventType) IsWorkspaceCoreToastEvent() bool {
 		EventWorkspaceBoardRestored,
 		EventWorkspaceBoardPurged,
 		EventWorkspacePatched,
+		EventWorkspaceDeleted,
 		EventWorkspaceMemberRoleChanged,
 		EventWorkspaceMemberRemoved,
 		EventWorkspaceShareOfferCreated,
@@ -310,6 +313,7 @@ func (e DomainEventType) IsUserFanOutEvent() bool {
 	switch e {
 	case EventWorkspaceBoardRestored,
 		EventWorkspaceBoardCreatedPrivate,
+		EventWorkspaceDeleted,
 		EventWorkspaceMemberRoleChanged,
 		EventWorkspaceMemberRemoved,
 		EventCardsUserMemberAdded,

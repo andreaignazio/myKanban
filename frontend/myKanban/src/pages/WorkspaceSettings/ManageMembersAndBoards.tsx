@@ -7,7 +7,11 @@ import { useUserStore } from "@/stores/userStore";
 import type { AnyUser, User } from "@/stores/usertypes";
 import { useWsMembersStore } from "@/stores/wsMembersStore";
 import { useCurrentWorkspaceRole } from "@/hooks/useCurrentWorkspaceRole";
+import { useAsyncRequestDisplay } from "@/hooks/useAsyncRequestDisplay";
+import type { AsyncRequestKey } from "@/stores/asyncRequestTypes";
 import { ArrowsUpDownIcon, ExclamationCircleIcon } from "@heroicons/react/24/solid";
+import { LoaderCircle } from "lucide-react";
+import { GradientHover } from "@/components/common/gradientHover";
 import { Activity, useEffect, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import { useParams } from "react-router-dom";
@@ -178,12 +182,14 @@ const SuspendMembersList = ({
         setSelectedUserIDs((current) => current.includes(userID) ? current.filter((id) => id !== userID) : [...current, userID]);
     };
 
+    const membersAsyncKey = useAsyncKey("subscription:suspension:members:save", workspaceID);
+
     const handleSave = async () => {
         await replaceMemberPendingSuspensionSelection(
             workspaceID,
             selectedUserIDs,
             membersIds.filter((id) => !selectedSet.has(id)),
-            useAsyncKey("subscription:suspension:members:save", workspaceID),
+            membersAsyncKey,
         );
     };
 
@@ -196,6 +202,7 @@ const SuspendMembersList = ({
                     disabled={!hasChanges || !selectedCountMatchesExpected}
                     selectedCount={selectedUserIDs.length}
                     expectedCount={expectedSelectedCount}
+                    asyncKey={membersAsyncKey}
                     onClick={() => { void handleSave(); }}
                 />
             )}
@@ -215,6 +222,7 @@ const SuspendMembersList = ({
                 return (
                     <MemberRow
                         key={id}
+                        cursorDefault
                         rowClassName={` transition-all ease-in-out duration-300
                             relative overflow-hidden shadow-md shadow-black/30
                             ${(isGoingToBeSuspended) ? "ring-2 ring-orange-500/50" : ""}
@@ -303,12 +311,14 @@ const SuspendBoardsList = ({
         setSelectedBoardIDs((current) => current.includes(boardID) ? current.filter((id) => id !== boardID) : [...current, boardID]);
     };
 
+    const boardsAsyncKey = useAsyncKey("subscription:suspension:boards:save", workspaceID);
+
     const handleSave = async () => {
         await replaceBoardPendingSuspensionSelection(
             workspaceID,
             selectedBoardIDs,
             boardIds.filter((id) => !selectedSet.has(id)),
-            useAsyncKey("subscription:suspension:boards:save", workspaceID),
+            boardsAsyncKey,
         );
         onSaveSuccess?.();
     };
@@ -322,6 +332,7 @@ const SuspendBoardsList = ({
                     disabled={!hasChanges || !selectedCountMatchesExpected}
                     selectedCount={selectedBoardIDs.length}
                     expectedCount={expectedSelectedCount}
+                    asyncKey={boardsAsyncKey}
                     onClick={() => { void handleSave(); }}
                 />
             )}
@@ -339,12 +350,14 @@ const SuspendBoardsList = ({
                 const isGoingToBeReinstated = isPendingSuspend && !isDraftSelected
                 const isCurrentlyPendingSuspension = isPendingSuspend && isDraftSelected
                 return (
-                    <div key={boardID} className={`group flex flex-row items-center justify-between gap-3 rounded-2xl border
+                    <div key={boardID} className={`cursor-default relative overflow-hidden group flex flex-row items-center justify-between gap-3 rounded-2xl border
                      border-amber-500/30 bg-neutral-500/20 px-4 py-3 transition-colors ease-in-out duration-300 shadow-md shadow-black/30
                      ${(isGoingToBeSuspended) ? "ring-2 ring-orange-500/50" : ""}
                                 ${(isCurrentlyPendingSuspension) ? "ring-1 ring-amber-500/40" : ""}
-                                    ${(isGoingToBeReinstated) ? "bg-lime-500/20" : ""}
+                                    ${(isGoingToBeReinstated) ? "bg-lime-500/20 ring-2 ring-lime-500/50" : ""}
                      `}>
+                        <GradientHover />
+                        <div className={`absolute inset-0 ${isDraftSelected ? "bg-orange-600/10" : "bg-transparent"} transition-colors pointer-events-none`} />
                         <div className="flex min-w-0 flex-col gap-1">
                             <span className="truncate text-sm font-medium text-neutral-200">{board.Name}</span>
                             <span className="text-xs text-neutral-400">{board.Visibility} board</span>
@@ -377,26 +390,46 @@ type SaveSelectionButtonProps = {
     selectedCount: number;
     expectedCount: number;
     onClick: () => void;
+    asyncKey?: AsyncRequestKey;
     className?: string;
     buttonClassName?: string;
-
 };
 
-const SaveSelectionButton = ({ disabled, selectedCount, expectedCount, onClick, className, buttonClassName }: SaveSelectionButtonProps) => {
+const SaveSelectionButton = ({ disabled, selectedCount, expectedCount, onClick, asyncKey, className, buttonClassName }: SaveSelectionButtonProps) => {
+    const { displayLoading, displaySuccess, displayError, errorMessage } = useAsyncRequestDisplay(
+        asyncKey ?? [] as unknown as AsyncRequestKey[],
+        { minSuccessMs: 1200 }
+    );
+
+    const bgClass = displayError
+        ? "bg-red-600/60 text-red-100"
+        : displaySuccess
+            ? "bg-lime-600/60 text-white"
+            : disabled
+                ? "cursor-not-allowed bg-neutral-700/30 text-neutral-500"
+                : "bg-amber-500/70 text-white hover:bg-amber-500";
+
+    const label = displayError
+        ? (errorMessage ?? "Error")
+        : displaySuccess
+            ? "Saved"
+            : `Save ${selectedCount} / ${expectedCount} selected`;
+
     return (
         <div className={`z-30 flex justify-end ${className ?? ""}`}>
             <button
                 onClick={onClick}
-                disabled={disabled}
-                className={`h-10 rounded-3xl px-4 text-sm font-semibold transition-colors 
-                    backdrop-blur-lg
-                    ${disabled
-                        ? "cursor-not-allowed bg-neutral-700/30 text-neutral-500"
-                        : "bg-amber-500/70 text-white hover:bg-amber-500"} 
+                disabled={disabled || displayLoading}
+                className={`h-10 rounded-3xl px-4 text-sm font-semibold transition-colors
+                    backdrop-blur-lg flex items-center gap-2
+                    ${bgClass}
                     shadow-md shadow-black/10
                     ${buttonClassName ?? ""}`}
             >
-                Save {selectedCount} / {expectedCount} selected
+                {displayLoading
+                    ? <><LoaderCircle className="h-4 w-4 animate-spin" /><span>Saving…</span></>
+                    : label
+                }
             </button>
         </div>
     );

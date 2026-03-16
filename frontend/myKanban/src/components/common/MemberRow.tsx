@@ -28,8 +28,9 @@ type MemberRowProps = {
     presence?: boolean;
     showPresence?: boolean;
     showRowHoverEffect?: boolean;
+    cursorDefault?: boolean;
 }
-export const MemberRow = ({ onClick, onClickCapture, user, member, showRole = true, useDummyAvatar = true, avatarSize = 52, rowClassName, nameClassName, usernameClassName, children, showChildrenBeforeRole = false, endRowClassName, flip = false, showEndRow = true, compact = false, presence, showPresence, showRowHoverEffect = true }: MemberRowProps) => {
+export const MemberRow = ({ onClick, onClickCapture, user, member, showRole = true, useDummyAvatar = true, avatarSize = 52, rowClassName, nameClassName, usernameClassName, children, showChildrenBeforeRole = false, endRowClassName, flip = false, showEndRow = true, compact = false, presence, showPresence, showRowHoverEffect = true, cursorDefault = false }: MemberRowProps) => {
 
 
     const resolvedEndRowClassName = endRowClassName ?? "flex flex-row items-center"
@@ -41,7 +42,8 @@ export const MemberRow = ({ onClick, onClickCapture, user, member, showRole = tr
             onClick={onClick}
             onClickCapture={onClickCapture}
             style={{ height: avatarSize + 4, minWidth: avatarSize + 4 }}
-            className={`${showRowHoverEffect ? "relative overflow-hidden cursor-pointer" : ""}
+            className={`${showRowHoverEffect ? "relative overflow-hidden" : ""}
+                ${cursorDefault ? "cursor-default" : "cursor-pointer"}
                 group flex flex-row items-center w-full h-[56px] rounded-full bg-neutral-500/20 ${rowClassName ?? ""}`}
             animate={{
                 paddingTop: "2px",

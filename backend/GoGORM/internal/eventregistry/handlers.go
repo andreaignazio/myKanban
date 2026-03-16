@@ -43,6 +43,7 @@ func buildHandlers(auditRepo auditcontext.Reader) map[DomainEventType]EventHandl
 		EventWorkspaceBoardRestored:             NewWorkspaceBoardRestoredHandler(auditRepo),
 		EventWorkspaceBoardPurged:               NewWorkspaceBoardPurgedHandler(auditRepo),
 		EventWorkspacePatched:                   NewWorkspacePatchedHandler(auditRepo),
+		EventWorkspaceDeleted:                   NewWorkspaceDeletedHandler(auditRepo),
 		EventWorkspaceMemberRoleChanged:         NewWorkspaceMembershipHandlerRoleChanged(auditRepo),
 		EventWorkspaceMemberRemoved:             NewWorkspaceMembershipHandlerRemoved(auditRepo),
 		EventBoardMemberRemoved:                 NewBoardMembershipRemovedHandler(auditRepo),

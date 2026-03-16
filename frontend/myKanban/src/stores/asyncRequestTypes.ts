@@ -104,6 +104,9 @@ export const ASYNC_REQUEST_BASE_KEYS = [
     "board:access:request",
     "workspace:access:request",
     "board:edit:title",
+    "workspace:props:patch",
+    "workspace:visibility:patch",
+    "workspace:delete",
 ] as const;
 
 export type AsyncRequestBaseKey = typeof ASYNC_REQUEST_BASE_KEYS[number];

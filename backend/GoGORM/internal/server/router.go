@@ -366,6 +366,7 @@ func NewRouter(db *gorm.DB,
 				workspaces.GET("/:workspaceID/activity/me", eventRegistryHandler.GetWorkspaceMyActivity)
 				workspaces.GET("/:workspaceID/cards/:cardID/mirrors", listCardsHandler.GetWorkspaceCardMirrors)
 				workspaces.PATCH("/:workspaceID/props", workspacesHandler.PatchWorkspaceProps)
+				workspaces.DELETE("/:workspaceID", workspacesHandler.DeleteWorkspace)
 				workspaces.GET("/:workspaceID/boards", workspacesHandler.GetWorkspaceBoardsForUserID)
 				workspaces.POST("/:workspaceID/boards", workspacesHandler.CreateBoardInWorkspace)
 

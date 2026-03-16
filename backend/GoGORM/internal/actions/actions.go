@@ -4,6 +4,7 @@ type Action string
 
 const (
 	WorkspacePatch             Action = "workspace:patch"
+	WorkspaceDelete            Action = "workspace:delete"
 	InboxCardMoveToListInBoard Action = "inbox:card:move:board:list"
 	InboxCardDetatch           Action = "inbox:card:detatch"
 
