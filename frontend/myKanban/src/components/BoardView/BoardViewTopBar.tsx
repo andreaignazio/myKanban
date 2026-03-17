@@ -98,7 +98,9 @@ export const BoardViewTopBar = ({ board, backgroundType }: BoardViewTopBarProps)
     const onTitlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
         if (isViewer) return;
         if (!titleFocused) {
+            e.preventDefault()
             titleInputRef.current?.focus()
+            setTitleFocused(true)
         }
     }
 

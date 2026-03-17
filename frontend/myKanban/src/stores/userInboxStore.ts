@@ -5,6 +5,7 @@ import { useCardsStore } from "./cardsStore";
 import { useAsyncKey, useAsyncRequestStore } from "./asyncRequestStore";
 import type { AsyncRequestKey } from "./asyncRequestTypes";
 import { useBoardDetailStore, type ListCard } from "./boardDetailStore";
+import { useEventStore } from "./eventStore";
 
 
 
@@ -51,6 +52,8 @@ export const useUserInboxStore = create<UserInboxStore>((set, get) => ({
     },
 
     mirrorCardToInbox: async (boardId: string, cardId: string, payload: MirrorCardToInboxRequest, optimisticInboxCardID?: string, rollbackInboxCardIds?: string[]) => {
+        const correlationID = crypto.randomUUID()
+        useEventStore.getState().addEvent(correlationID, "inbox.card.mirrored")
         let mirroredInboxCard: InboxCard | undefined
 
         const rollbackOptimisticMirror = () => {
@@ -93,7 +96,7 @@ export const useUserInboxStore = create<UserInboxStore>((set, get) => ({
         try {
             await useAsyncRequestStore.getState().execute(
                 "card:mirror:inbox",
-                () => api.post(`/boards/${boardId}/cards/${cardId}/mirrortoinbox`, payload),
+                () => api.post(`/boards/${boardId}/cards/${cardId}/mirrortoinbox`, payload, { headers: { "x-correlation-id": correlationID } }),
                 {
                     successResetDelayMs: 2000,
                     onSuccess: (response) => {
@@ -128,10 +131,11 @@ export const useUserInboxStore = create<UserInboxStore>((set, get) => ({
 
     },
     createInboxCard: async (payload: CreateInboxCardRequest) => {
+        const correlationID = crypto.randomUUID()
+        useEventStore.getState().addEvent(correlationID, "inbox.card.created")
         try {
-            const response = await api.post(`/inbox/cards`, payload);
+            const response = await api.post(`/inbox/cards`, payload, { headers: { "x-correlation-id": correlationID } });
             const data = response.data as InboxCardResponse
-            // console.log("Created inbox card:", data)
 
             const inboxCard = data.InboxCards[0];
             const card = data.Cards[inboxCard.CardID];
@@ -169,6 +173,85 @@ export const useUserInboxStore = create<UserInboxStore>((set, get) => ({
             case "inbox.rootcard.moved": {
                 return
             }
+            case "inbox.card.created":
+            case "inbox.card.mirrored": {
+                const payload = evt.Payload?.InboxCardEventPayload
+                if (!payload) return
+                if (payload.Cards) {
+                    useCardsStore.getState().mergeCardsPatch(payload.Cards)
+                }
+                if (payload.InboxCards?.length) {
+                    set((state) => {
+                        const nextById = { ...state.inboxCardsById }
+                        const newIds: string[] = []
+                        payload.InboxCards!.forEach((ic) => {
+                            if (state.inboxCardsById[ic.ID]) return
+                            nextById[ic.ID] = ic
+                            newIds.push(ic.ID)
+                        })
+                        if (newIds.length === 0) return state
+                        const allIds = [...newIds, ...state.inboxCardsIds]
+                        const sortedIds = allIds.sort((a, b) => {
+                            const posA = nextById[a]?.Pos ?? ""
+                            const posB = nextById[b]?.Pos ?? ""
+                            return posA < posB ? -1 : posA > posB ? 1 : 0
+                        })
+                        return {
+                            inboxCardsById: nextById,
+                            inboxCardsIds: sortedIds,
+                        }
+                    })
+                }
+                return
+            }
+            case "inbox.card.moved": {
+                const payload = evt.Payload?.InboxCardEventPayload
+                if (!payload?.InboxCards?.length) return
+                set((state) => {
+                    const nextById = { ...state.inboxCardsById }
+                    payload.InboxCards!.forEach((ic) => { nextById[ic.ID] = ic })
+                    const sortedIds = [...state.inboxCardsIds].sort((a, b) => {
+                        const posA = nextById[a]?.Pos ?? ""
+                        const posB = nextById[b]?.Pos ?? ""
+                        return posA < posB ? -1 : posA > posB ? 1 : 0
+                    })
+                    return { inboxCardsById: nextById, inboxCardsIds: sortedIds }
+                })
+                return
+            }
+            case "inbox.card.detatched": {
+                const payload = evt.Payload?.InboxCardEventPayload
+                if (!payload?.RemovedInboxCardIDs?.length) return
+                const removedSet = new Set(payload.RemovedInboxCardIDs)
+                set((state) => {
+                    const nextById = { ...state.inboxCardsById }
+                    removedSet.forEach((id) => delete nextById[id])
+                    return {
+                        inboxCardsById: nextById,
+                        inboxCardsIds: state.inboxCardsIds.filter((id) => !removedSet.has(id)),
+                    }
+                })
+                return
+            }
+            case "inbox.card.converted": {
+                const payload = evt.Payload?.InboxCardEventPayload
+                if (!payload?.InboxCards?.length) return
+                if (payload.Cards) {
+                    useCardsStore.getState().mergeCardsPatch(payload.Cards)
+                }
+                set((state) => {
+                    const nextById = { ...state.inboxCardsById }
+                    payload.InboxCards!.forEach((ic) => { nextById[ic.ID] = ic })
+                    return { inboxCardsById: nextById }
+                })
+                return
+            }
+            case "inbox.card.patched": {
+                const payload = evt.Payload?.InboxCardEventPayload
+                if (!payload?.Cards) return
+                useCardsStore.getState().mergeCardsPatch(payload.Cards)
+                return
+            }
         }
     },
     replaceInboxCardIds: (newIds: string[]) => {
@@ -177,6 +260,8 @@ export const useUserInboxStore = create<UserInboxStore>((set, get) => ({
         })
     },
     detatchInboxCard: async (cardID: string) => {
+        const correlationID = crypto.randomUUID()
+        useEventStore.getState().addEvent(correlationID, "inbox.card.detatched")
         const prevInboxCardsById = get().inboxCardsById
         const prevInboxCardsIds = get().inboxCardsIds
         const removedInboxCardIds = Object.values(prevInboxCardsById)
@@ -197,7 +282,7 @@ export const useUserInboxStore = create<UserInboxStore>((set, get) => ({
         try {
             await useAsyncRequestStore.getState().execute(
                 "inbox:card:detatch",
-                () => api.delete(`/inbox/cards/${cardID}`),
+                () => api.delete(`/inbox/cards/${cardID}`, { headers: { "x-correlation-id": correlationID } }),
                 {
                     successResetDelayMs: 2000,
                     onError: () => {
@@ -216,11 +301,13 @@ export const useUserInboxStore = create<UserInboxStore>((set, get) => ({
         }
     },
     convertToInboxOnly: async (cardID: string) => {
+        const correlationID = crypto.randomUUID()
+        useEventStore.getState().addEvent(correlationID, "inbox.card.converted")
         try {
             await useAsyncRequestStore.getState().execute(
                 "inbox:card:convert-to-inboxonly",
                 async () => {
-                    const response = await api.patch<SingleInboxCardResponse>(`/inbox/cards/${cardID}/convert-to-inboxonly`)
+                    const response = await api.patch<SingleInboxCardResponse>(`/inbox/cards/${cardID}/convert-to-inboxonly`, undefined, { headers: { "x-correlation-id": correlationID } })
                     const inboxCard = Object.values(get().inboxCardsById).find(c => c.CardID === cardID)
                     if (inboxCard && response.data) {
                         const updated = response.data
@@ -250,6 +337,8 @@ export const useUserInboxStore = create<UserInboxStore>((set, get) => ({
         }
     },
     moveInboxCard: async (cardID: string, request: MoveInboxToListRequest, rollbackInboxCardIds?: string[]) => {
+        const correlationID = crypto.randomUUID()
+        useEventStore.getState().addEvent(correlationID, "inbox.card.moved")
         const rollbackOptimisticMove = () => {
             if (!rollbackInboxCardIds) return
 
@@ -261,7 +350,7 @@ export const useUserInboxStore = create<UserInboxStore>((set, get) => ({
         try {
             await useAsyncRequestStore.getState().execute(
                 "card:move:inbox",
-                () => api.patch(`/inbox/cards/${cardID}/move`, request),
+                () => api.patch(`/inbox/cards/${cardID}/move`, request, { headers: { "x-correlation-id": correlationID } }),
                 {
                     successResetDelayMs: 2000,
                     onError: () => {
@@ -281,6 +370,9 @@ export const useUserInboxStore = create<UserInboxStore>((set, get) => ({
         request: MoveInboxToListRequest,
         optimisticListCardID?: string,
         rollbackListCardIds?: string[]) => {
+        const correlationID = crypto.randomUUID()
+        useEventStore.getState().addEvent(correlationID, "inbox.card.detatched")
+        useEventStore.getState().addEvent(correlationID, "card.created")
         const removedInboxCards = Object.values(get().inboxCardsById)
             .filter((inboxCard) => inboxCard.CardID === cardID)
         const removedInboxCardIds = removedInboxCards.map((inboxCard) => inboxCard.ID)
@@ -315,7 +407,7 @@ export const useUserInboxStore = create<UserInboxStore>((set, get) => ({
 
         try {
             await useAsyncRequestStore.getState().execute("inbox:card:move:board:list",
-                () => api.patch(`/inbox/cards/${cardID}/workspaces/${targetWorkspaceID}/boards/${targetBoardID}/lists/${targetListID}/move`, request),
+                () => api.patch(`/inbox/cards/${cardID}/workspaces/${targetWorkspaceID}/boards/${targetBoardID}/lists/${targetListID}/move`, request, { headers: { "x-correlation-id": correlationID } }),
                 {
                     successResetDelayMs: 2000,
                     onSuccess: (response) => {
@@ -364,29 +456,31 @@ export const useUserInboxStore = create<UserInboxStore>((set, get) => ({
         }
     },
     patchInboxCardProps: async (cardID: string, props: CardProps) => {
+        const correlationID = crypto.randomUUID()
+        useEventStore.getState().addEvent(correlationID, "inbox.card.patched")
         const payload: PatchCardPropsRequest = { Props: props }
 
         return useAsyncRequestStore.getState().execute<Card>(
             useAsyncKey("card:edit:props", cardID),
             async () => {
-                const res = await api.patch(`/inbox/cards/${cardID}/props`, payload)
-                console.log("Patched inbox card props response:", res.data)
+                const res = await api.patch(`/inbox/cards/${cardID}/props`, payload, { headers: { "x-correlation-id": correlationID } })
                 return res.data as Card
             },
             {
                 successResetDelayMs: 1500,
                 onSuccess: (updatedCard) => {
-                    console.log("Updated inbox card props:", updatedCard)
                     useCardsStore.getState().mergeCardsPatch({ [updatedCard.ID]: updatedCard })
                 }
             }
         )
     },
     patchInboxCardDetails: async (cardID: string, payload: PatchCardDetailsRequest, asyncKey?: AsyncRequestKey) => {
+        const correlationID = crypto.randomUUID()
+        useEventStore.getState().addEvent(correlationID, "inbox.card.patched")
         return useAsyncRequestStore.getState().execute<Card>(
             asyncKey ?? useAsyncKey("card:edit:details", cardID),
             async () => {
-                const res = await api.patch(`/inbox/cards/${cardID}`, payload)
+                const res = await api.patch(`/inbox/cards/${cardID}`, payload, { headers: { "x-correlation-id": correlationID } })
                 return res.data as Card
             },
             {

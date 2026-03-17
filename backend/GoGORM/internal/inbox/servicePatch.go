@@ -5,10 +5,13 @@ import (
 	"GoGORM/internal/authzdto"
 	"GoGORM/internal/domainerr"
 	"GoGORM/internal/dto"
+	EventRegistry "GoGORM/internal/eventregistry"
 	"GoGORM/internal/models/cards"
+	"GoGORM/internal/ws"
 	"GoGORM/models"
 	"context"
 	"encoding/json"
+	"time"
 
 	"github.com/google/uuid"
 	"gorm.io/datatypes"
@@ -28,11 +31,15 @@ func (s *InboxService) PatchInboxCardDetails(ctx context.Context, userID, cardID
 	if err != nil {
 		return nil, err
 	}
+	var mirrorRootBoardID *uuid.UUID
+	var mirrorWorkspaceID *uuid.UUID
 	if isMirror {
-		rootBoardList, err := s.getRootBoardListForMirrorCard(ctx, *inboxCard)
+		rootBoard, rootBoardList, err := s.getRootBoardAndBoardListForMirrorCard(ctx, *inboxCard)
 		if err != nil {
 			return nil, err
 		}
+		mirrorRootBoardID = &rootBoardList.BoardID
+		mirrorWorkspaceID = &rootBoard.WorkspaceID
 		request := authzdto.Request{
 			UserID:        userID,
 			CorrelationID: correlationID,
@@ -84,6 +91,27 @@ func (s *InboxService) PatchInboxCardDetails(ctx context.Context, userID, cardID
 	}
 
 	cardResponse := dto.CardToResponse(updatedCard)
+	s.EventRegistry.EmitInboxUserEvent(userID, ws.EventInboxCardPatched, ws.InboxCardEventPayload{
+		Cards: map[uuid.UUID]dto.CardResponse{updatedCard.ID: cardResponse},
+	}, &correlationID)
+	if isMirror && mirrorRootBoardID != nil {
+		_ = s.EventRegistry.Emit(ctx, s.db, EventRegistry.DomainEvent{
+			Type:          EventRegistry.EventCardPatched,
+			WorkspaceID:   mirrorWorkspaceID,
+			BoardID:       mirrorRootBoardID,
+			ActorUserID:   &userID,
+			CorrelationID: &correlationID,
+			Targets: []EventRegistry.TargetRef{
+				{EntityType: "card", EntityID: cardID, BoardID: mirrorRootBoardID},
+			},
+			Payload: EventRegistry.EventPayloadEnvelope{
+				StatePayload: &dto.BoardDetailResponse{
+					Cards: map[uuid.UUID]dto.CardResponse{updatedCard.ID: cardResponse},
+				},
+			},
+			OccurredAt: time.Now(),
+		})
+	}
 	return &cardResponse, nil
 }
 
@@ -101,14 +129,17 @@ func (s *InboxService) PatchInboxCardProps(ctx context.Context, userID, cardID, 
 	if err != nil {
 		return nil, err
 	}
+	var mirrorRootBoardID *uuid.UUID
+	var mirrorWorkspaceID *uuid.UUID
 	if isMirror {
-		rootBoardList, err := s.getRootBoardListForMirrorCard(ctx, *inboxCard)
+		rootBoard, rootBoardList, err := s.getRootBoardAndBoardListForMirrorCard(ctx, *inboxCard)
 		if err != nil {
 			return nil, err
 		}
+		mirrorRootBoardID = &rootBoardList.BoardID
+		mirrorWorkspaceID = &rootBoard.WorkspaceID
 		request := authzdto.Request{
-			UserID: userID,
-
+			UserID:        userID,
 			CorrelationID: correlationID,
 			Action:        actions.PatchInboxMirrorCard,
 			Payload: authzdto.RequestPayload{
@@ -125,9 +156,6 @@ func (s *InboxService) PatchInboxCardProps(ctx context.Context, userID, cardID, 
 		if !authzContext.Authorized {
 			return nil, domainerr.ErrForbidden
 		}
-		///check Authz for mirror cards - only allow if user has access to the board the card is on
-	} else {
-		//we have alredy checked that the card is in the user's inbox, so we can allow the update
 	}
 
 	var card *models.Card
@@ -167,12 +195,26 @@ func (s *InboxService) PatchInboxCardProps(ctx context.Context, userID, cardID, 
 	}
 
 	cardResponse := dto.CardToResponse(card)
-
-	if isMirror {
-		//emit event to update card in board if it's a mirror card
-
+	s.EventRegistry.EmitInboxUserEvent(userID, ws.EventInboxCardPatched, ws.InboxCardEventPayload{
+		Cards: map[uuid.UUID]dto.CardResponse{card.ID: cardResponse},
+	}, &correlationID)
+	if isMirror && mirrorRootBoardID != nil {
+		_ = s.EventRegistry.Emit(ctx, s.db, EventRegistry.DomainEvent{
+			Type:          EventRegistry.EventCardPatched,
+			WorkspaceID:   mirrorWorkspaceID,
+			BoardID:       mirrorRootBoardID,
+			ActorUserID:   &userID,
+			CorrelationID: &correlationID,
+			Targets: []EventRegistry.TargetRef{
+				{EntityType: "card", EntityID: cardID, BoardID: mirrorRootBoardID},
+			},
+			Payload: EventRegistry.EventPayloadEnvelope{
+				StatePayload: &dto.BoardDetailResponse{
+					Cards: map[uuid.UUID]dto.CardResponse{card.ID: cardResponse},
+				},
+			},
+			OccurredAt: time.Now(),
+		})
 	}
-
 	return &cardResponse, nil
-
 }

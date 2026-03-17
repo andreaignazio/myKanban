@@ -7,7 +7,7 @@ import { useEffect, useRef, useState } from "react"
 import { SubscriptionBadge } from "../badges/subscriptionBadge"
 import { CardRowMenuBtn } from "../cardMenus/cardRowMenus"
 import { CommonMenuWrapper } from "../menuElements/menuWrapper"
-import { Filter, FolderSearch, Plus } from "lucide-react"
+import { Filter, FolderSearch, PanelLeftClose, PanelLeftOpen, Plus } from "lucide-react"
 import { WorkspaceSubRows, type SidebarItem } from "@/components/sidebar/WorkspaceSubRows";
 import { SimpleWorkspaceRow } from "./SimpleWorkspaceRow"
 import { SidebarSubRow } from "./SidebarSubRow"
@@ -31,13 +31,35 @@ export default function Sidebar({ isSingleMode }: SidebarProps) {
 
     //const isSingleMode = useMatch("/workspaces/:workspaceId/members/*")
     const isUserSet = useAuthStore((state) => !!state.userID)
+    const [isCollapsed, setIsCollapsed] = useState(() => localStorage.getItem("sidebarCollapsed") === "true")
+
+    const toggleCollapsed = () => {
+        setIsCollapsed(prev => {
+            const next = !prev
+            localStorage.setItem("sidebarCollapsed", String(next))
+            return next
+        })
+    }
 
     return (
-        <aside className={`flex flex-col min-w-[300px] h-full p-0 py-4 transition-colors duration-1000
+        <aside className={`flex flex-col h-full p-0 py-4 transition-all duration-300 delay-[25ms] ease-in-out
+         ${isCollapsed ? "w-[60px] min-w-[60px]" : "min-w-[300px]"}
          ${isSingleMode ? "!bg-[#18191a]" : "bg-main"}`}>
 
+            {/* In-flow toggle — visible only when collapsed, collapses to h-0 when expanded */}
+            <div className={`flex-shrink-0 flex justify-center overflow-hidden transition-all duration-100 ease-in-out
+                ${isCollapsed ? "h-8 mb-1 opacity-100" : "h-0 opacity-0"}`}>
+                <button
+                    onClick={toggleCollapsed}
+                    title="Expand sidebar"
+                    className="h-7 w-7 rounded-md flex items-center justify-center text-neutral-400 hover:text-neutral-200 hover:bg-white/10 transition-colors"
+                >
+                    <PanelLeftOpen className="h-4 w-4" />
+                </button>
+            </div>
+
             <div className="flex flex-col flex-1 min-h-0 [overflow-x:clip] [overflow-clip-margin:8px] overflow-y-auto scrollbar-hidden">
-                <WorkspaceList isSingleMode={isSingleMode} />
+                <WorkspaceList isSingleMode={isSingleMode} isCollapsed={isCollapsed} toggleCollapsed={toggleCollapsed} />
                 {!isUserSet && <nav className="space-y-2 text-muted">
                     <NavLink to="/" className="block text-sm ">
                         Home
@@ -48,7 +70,7 @@ export default function Sidebar({ isSingleMode }: SidebarProps) {
                 </nav>}
             </div>
             <div className="relative flex flex-col justify-end mt-2">
-                <SidebarFooter />
+                <SidebarFooter isCollapsed={isCollapsed} />
             </div>
         </aside>
     )
@@ -56,7 +78,7 @@ export default function Sidebar({ isSingleMode }: SidebarProps) {
 
 export type WorkspaceFilterState = Partial<Pick<CardFilterState, "statusFilter" | "searchQuery">>
 
-const WorkspaceList = ({ isSingleMode }: { isSingleMode?: boolean }) => {
+const WorkspaceList = ({ isSingleMode, isCollapsed, toggleCollapsed }: { isSingleMode?: boolean, isCollapsed?: boolean, toggleCollapsed?: () => void }) => {
 
     const [filterState, setFilterState] = useState<WorkspaceFilterState>({ statusFilter: null, searchQuery: "" })
     const workspaceIds = useWorkspaceStore(useShallow((state) => state.workspaceIds))
@@ -161,15 +183,17 @@ const WorkspaceList = ({ isSingleMode }: { isSingleMode?: boolean }) => {
     return (
         <div className="flex flex-col gap-2  ">
 
-            <div className={`flex flex-col px-4 overflow-x-visible  overflow-y-hidden transition-all duration-300 ease-in-out 
-                            ${isMembersView ? "max-h-[220px] opacity-100" : "max-h-0 opacity-0"}`}>
+            <div className={`flex flex-col overflow-x-visible overflow-y-hidden transition-all duration-300 ease-in-out
+                            ${(isMembersView || isCollapsed) ? "max-h-[220px] opacity-100" : "max-h-0 opacity-0"}
+                            ${isCollapsed ? "px-1" : "px-4"}`}>
 
-                <div className="text-[13px] font-semibold text-neutral-400 px-2 mb-2">{acitivityLabel}</div>
-                <SidebarPersonalActivities isMembersView={isMembersView} />
-
-                <div className="w-full h-px bg-neutral-700 mb-2" />
+                <div className={`${isCollapsed ? "opacity-0 hidden" : "opacity-100 h-12 "} transition-all duration-[0] ease-in-out
+                    text-[13px] font-semibold text-neutral-400 px-2 mb-2`}>{acitivityLabel}</div>
+                <SidebarPersonalActivities isMembersView={isMembersView} isCollapsed={isCollapsed} />
+                <div className={`${isCollapsed ? "mt-2 mb-0" : "mb-2 "} w-full h-px bg-neutral-700 `} />
             </div>
-            <div className="flex flex-row items-center justify-between ps-6 pe-4">
+            <div className={`flex flex-row items-center justify-between ps-6 pe-4 transition-all duration-100 ease-in-out
+                ${isCollapsed ? "max-h-0 opacity-0 pointer-events-none overflow-hidden" : "max-h-10 opacity-100"}`}>
                 <div className="text-[13px] font-semibold text-neutral-400 px-2">Workspaces</div>
                 <div className="flex flex-row items-center gap-1">
                     <CardRowMenuBtn
@@ -198,35 +222,66 @@ const WorkspaceList = ({ isSingleMode }: { isSingleMode?: boolean }) => {
                     </div>
                 </div>
             </div>
-            <div className=" bg-slate-200/5 h-px mb-1 ms-8 me-[24px]" />
+            <div className="relative">
+                <div className={`bg-slate-200/5 h-px mb-1 ms-8 me-[24px] transition-all duration-300 ${isCollapsed ? "opacity-0" : "opacity-100"}`} />
+                {/* Out-of-flow toggle — absolutely positioned on the divider, visible only when expanded */}
+                <button
+                    onClick={toggleCollapsed}
+                    title="Collapse sidebar"
+                    className={`absolute right-[16px] top-0 -translate-y-1/2 h-[18px] w-[18px] rounded-full
+                        bg-neutral-800 border border-neutral-600/40
+                        flex items-center justify-center
+                        text-neutral-400 hover:text-neutral-200 hover:bg-neutral-700
+                        transition-all duration-300
+                        ${isCollapsed ? "opacity-0 pointer-events-none" : "opacity-100"}`}
+                >
+                    <PanelLeftClose className="h-3 w-3" />
+                </button>
+            </div>
             <div className={`flex flex-col gap-0 transition-all duration-300 ease-in-out`}>
                 {workspaceIds.map((id) => {
                     const isFilteredOut = !filteredIds.includes(id)
                     const status = getStatus(id)
                     const notAvailableToUser = status === "none"
-                    const shouldHideRow = !!(isMembersView && activeWorkspaceId && activeWorkspaceId !== id) || (isFilteredOut && activeWorkspaceId !== id) || notAvailableToUser
+                    const shouldHideRow = isCollapsed
+                        ? (isFilteredOut && activeWorkspaceId !== id) || notAvailableToUser
+                        : !!(isMembersView && activeWorkspaceId && activeWorkspaceId !== id) || (isFilteredOut && activeWorkspaceId !== id) || notAvailableToUser
 
                     const isActive = activeWorkspaceId === id
-                    const disableRowMenuClick = status === "accessible" && !isMembersView
+                    const disableRowMenuClick = isCollapsed || (status === "accessible" && !isMembersView)
                     const isOffered = status === "offered"
                     return (
                         <div className=" relative w-full h-fit">
 
                             <div
                                 key={`workspace-row-${id}`}
-                                className={`relative flex flex-col transition-all duration-300 ease-in-out overflow-visible
-                            mx-4
+                                className={`relative flex flex-col transition-all duration-300 ease-in-out overflow-visible delay-200 rounded-[18px]
+                            ${isCollapsed ? "mx-1" : "mx-4"}
                                 ${shouldHideRow
                                         ? "max-h-0 opacity-0 -translate-y-1 pointer-events-none"
                                         : "max-h-[250px] opacity-100 translate-y-0"
                                     }
-                           ${isActive ? "bg-gradient-to-tr  from-slate-500/10 to-slate-500/20 rounded-[18px] mb-2 mt-1 shadow-lg shadow-black/10 p-2" : ""}`}
+                           ${isActive && !isCollapsed
+                                        ? "bg-gradient-to-tr  from-slate-500/10 to-slate-500/20 rounded-[18px] mb-2 mt-1 shadow-lg shadow-black/10 p-2"
+                                        : ""}
+                                        ${isActive && isCollapsed
+                                        ? "bg-gradient-to-tr  from-slate-500/10 to-slate-500/20 rounded-[16px] mb-2 mt-1 shadow-lg shadow-black/10 p-1"
+                                        : ""}
+                                        
+                                        `}
                             >
-                                <div className={` ${(isActive) ? "opacity-100" : "opacity-0"}
+                                <div className={`${(isActive && !isCollapsed) ? "opacity-100" : "opacity-0"}
                             absolute -left-2 top-0  h-full  w-1 rounded flex flex-row items-center `} >
                                     <div className="bg-gray-300 h-[90%] w-full rounded-full" />
                                 </div>
-                                <div className={` ${(isOffered) ? "opacity-100" : "opacity-0"}
+                                {false && <div className={`${(isActive && isCollapsed) ? "opacity-100" : "opacity-0"}
+                                pointer-events-none
+                            absolute left-2 top-10  h-[75%]  w-[2px] rounded flex flex-row items-center `} >
+                                    <div className="bg-gray-500 h-[90%] w-full rounded-full" />
+                                </div>}
+
+
+                                <div className={`${(isOffered && !isCollapsed) ? "opacity-100" : "opacity-0"}
                             absolute -left-2 top-0  h-full  w-1 rounded flex flex-row items-center `} >
                                     <div className="bg-amber-500 h-1 w-full rounded-full" />
                                 </div>
@@ -249,23 +304,42 @@ const WorkspaceList = ({ isSingleMode }: { isSingleMode?: boolean }) => {
                                     desiredBackdropOpacity={0}
                                     renderType={status === "offered" || status === "requested" ? "virtual" : "anchored"}
                                 >
-                                    < WorkspaceRow
-                                        ref={rowRef}
-                                        key={id} workspaceId={id}
-                                        onSubRowToggle={handleSubRowToggle}
-                                        activeSubRowId={activeWorkspaceId}
-                                        className={` ${isMembersView ? "!border border-neutral-300/20 !p-2 gap-1 !h-[62px] !grid-cols-[46px_1fr_1fr_1fr]" : ""}`}
-                                        isActive={isActive}
-                                        status={status}
-                                    />
+                                    <div className={`${!isActive && isCollapsed ? "opacity-0 h-0 pointer-events-none" : ""} transition-all duration-50 ease-in-out`} >
+                                        <WorkspaceRow
+                                            ref={rowRef}
+                                            key={id} workspaceId={id}
+                                            onSubRowToggle={handleSubRowToggle}
+                                            activeSubRowId={activeWorkspaceId}
+                                            className={`
+                                            ${isMembersView && !isCollapsed ? "!border border-neutral-300/20 !p-2 gap-1 !h-[62px] !grid-cols-[46px_1fr_1fr_1fr]" : ""}`}
+                                            isActive={isActive}
+                                            status={status}
+                                            isCollapsed={isCollapsed}
+                                        />
+                                    </div>
+                                    <div className={`${!isActive && isCollapsed ? "opacity-100" : "opacity-0 h-0 pointer-events-none"} transition-all duration-50 ease-in-out`} >
+                                        <WorkspaceRow
+                                            ref={rowRef}
+                                            key={id} workspaceId={id}
+                                            onSubRowToggle={handleSubRowToggle}
+                                            activeSubRowId={activeWorkspaceId}
+                                            className={`
+                                            ${isMembersView && !isCollapsed ? "!border border-neutral-300/20 !p-2 gap-1 !h-[62px] !grid-cols-[46px_1fr_1fr_1fr]" : ""}`}
+                                            isActive={isActive}
+                                            status={status}
+                                            isCollapsed={isCollapsed}
+                                        />
+                                    </div>
                                 </CardRowMenuBtn>
                                 <div
-                                    className={`mt-1  overflow-hidden transition-all duration-300 ease-in-out 
+                                    className={`
+                                        ${isCollapsed ? " opacity-80" : "w-50"}
+                                        mt-1  overflow-hidden transition-all duration-300 ease-in-out
                             ${activeWorkspaceId === id ? "max-h-[250px] opacity-100" : "max-h-0 opacity-0"}`}>
                                     <WorkspaceSubRows
-                                        className={` 
-                                    ${isMembersView ? "ps-4" : "ps-8"}`}
-                                        workspaceId={id} />
+                                        className={`${isMembersView && !isCollapsed ? "ps-4" : isCollapsed ? "" : "ps-8"}`}
+                                        workspaceId={id}
+                                        isCollapsed={isCollapsed} />
                                 </div>
                             </div>
                         </div>
@@ -283,7 +357,7 @@ const WorkspaceList = ({ isSingleMode }: { isSingleMode?: boolean }) => {
 }
 
 
-function SidebarFooter() {
+function SidebarFooter({ isCollapsed }: { isCollapsed?: boolean }) {
 
     const { signOut } = useClerk()
     const isAuthenticated = useAuthStore((state) => !!state.userID)
@@ -294,6 +368,19 @@ function SidebarFooter() {
     async function handleLogout() {
         clearAuthSession()
         await signOut({ redirectUrl: "/" })
+    }
+
+    if (isCollapsed) {
+        return (
+            <div className="flex flex-col items-center gap-2 px-1">
+                <CardRowMenuBtn
+                    renderType="virtual"
+                    menuComponent={({ onClose, ref }) => <SearchWorkspaceOverlay onClose={onClose} ref={ref} />}
+                    offset={[0, 0]}>
+                    <FolderSearch className="h-5 w-5 text-neutral-400 cursor-pointer hover:text-neutral-200 transition-colors" />
+                </CardRowMenuBtn>
+            </div>
+        )
     }
 
     return (
@@ -328,10 +415,10 @@ function SidebarFooter() {
 
 type SidebarPersonalActivitiesProps = {
     isMembersView?: boolean
-
+    isCollapsed?: boolean
 }
 
-const SidebarPersonalActivities = ({ isMembersView }: SidebarPersonalActivitiesProps) => {
+const SidebarPersonalActivities = ({ isMembersView, isCollapsed }: SidebarPersonalActivitiesProps) => {
     const routeParam = "users/me/"
 
     const items: SidebarItem[] = [
@@ -348,13 +435,13 @@ const SidebarPersonalActivities = ({ isMembersView }: SidebarPersonalActivitiesP
     }
 
     return (
-        <div className="flex flex-col mb-4">
+        <div className={`flex flex-col ${isCollapsed ? "gap-1" : "mb-4"}`}>
             {items.map((item) => (
                 item.show &&
                 <SidebarSubRow
-                    className={` !text-sm
-                        ${isMembersView ? "ps-4" : "ps-8"}`}
-                    key={item.id} item={item} isActive={false} onClick={() => handleItemClick(item.id)} />
+                    className={isCollapsed ? "" : `!text-sm ${isMembersView ? "ps-4" : "ps-8"}`}
+                    key={item.id} item={item} isActive={false} onClick={() => handleItemClick(item.id)}
+                    isCollapsed={isCollapsed} />
             ))}
         </div>
     )

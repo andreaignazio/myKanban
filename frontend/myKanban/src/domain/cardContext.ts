@@ -11,7 +11,7 @@ export type CardContext = {
     openedFrom?: CardOpenedFrom
     listCardId?: string
     inboxCardId?: string
-    rootListCardId?: string
+    rootListCardId?: string | null
 }
 
 export type CardRouteState = {

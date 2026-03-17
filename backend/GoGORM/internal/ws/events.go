@@ -50,6 +50,13 @@ type UserEvent struct {
 type UserEventType string
 
 const (
+	EventInboxCardCreated   UserEventType = "inbox.card.created"
+	EventInboxCardMirrored  UserEventType = "inbox.card.mirrored"
+	EventInboxCardMoved     UserEventType = "inbox.card.moved"
+	EventInboxCardDetatched UserEventType = "inbox.card.detatched"
+	EventInboxCardConverted UserEventType = "inbox.card.converted"
+	EventInboxCardPatched   UserEventType = "inbox.card.patched"
+
 	EventUserNotificationCreated                   UserEventType = "user.notification.created"
 	EventUserNotificationRead                      UserEventType = "user.notification.read"
 	EventUserNotificationReadAll                   UserEventType = "user.notification.read_all"
@@ -97,7 +104,14 @@ const (
 	EventUserBoardShareRequestRevokedNonAdmin      UserEventType = "board.user.shareoffer.nonadmin.request.revoked"
 )
 
+type InboxCardEventPayload struct {
+	InboxCards         []dto.InboxCardResponse        `json:"InboxCards,omitempty"`
+	Cards              map[uuid.UUID]dto.CardResponse `json:"Cards,omitempty"`
+	RemovedInboxCardIDs []uuid.UUID                   `json:"RemovedInboxCardIDs,omitempty"`
+}
+
 type UserEventPayload struct {
+	InboxCardEventPayload *InboxCardEventPayload `json:"InboxCardEventPayload,omitempty"`
 	UserNotificationCreatedPayload           *UserNotificationCreatedPayload           `json:"UserNotificationCreatedPayload,omitempty"`
 	UserNotificationReadPayload              *UserNotificationReadPayload              `json:"UserNotificationReadPayload,omitempty"`
 	UserNotificationReadAllPayload           *UserNotificationReadAllPayload           `json:"UserNotificationReadAllPayload,omitempty"`

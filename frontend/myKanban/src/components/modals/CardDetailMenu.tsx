@@ -40,6 +40,8 @@ import { RoundButton } from "../buttons/RoundButton";
 import { useDeferredContentVisibility } from "@/hooks/useDeferredContentVisibility";
 import { useAuditStore } from "@/stores/auditStore";
 import { MenuStateIndicator } from "../menuElements/menuWrapper";
+import { useAsyncKey } from "@/stores/asyncRequestStore";
+import { useAsyncRequest } from "@/hooks/useAsyncRequest";
 import type { RequestGroup } from "./ActionMenuWrapper";
 import { motion } from "motion/react";
 import { menuMotionProps } from "./menuMotion";
@@ -621,6 +623,17 @@ export const CardMain = ({ cardId, source = "board", listCardId, canEdit, isAsid
     useEffect(() => {
         cardEntityIdRef.current = card?.ID;
     }, [card?.ID]);
+
+    const titleAsyncKey = useAsyncKey("card:edit:title", cardId);
+    const { errorMessage: titleErrorMessage } = useAsyncRequest(titleAsyncKey);
+
+    useEffect(() => {
+        if (!titleErrorMessage) return;
+        const storeTitle = card?.Title || "Untitled Card";
+        isTitleSavePendingRef.current = false;
+        persistedTitleRef.current = storeTitle;
+        setTitle(storeTitle);
+    }, [titleErrorMessage]);
 
     useEffect(() => {
         const storeTitle = card?.Title || "Untitled Card";

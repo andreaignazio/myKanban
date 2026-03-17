@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/google/uuid"
 	"gorm.io/datatypes"
@@ -333,6 +334,20 @@ func (s *EventRegistryService) Emit(ctx context.Context, tx *gorm.DB, event Doma
 	}
 
 	return nil
+}
+
+func (s *EventRegistryService) EmitInboxUserEvent(userID uuid.UUID, eventType ws.UserEventType, payload ws.InboxCardEventPayload, correlationID *uuid.UUID) {
+	s.emitUserEvent(ws.UserEvent{
+		Type:            string(eventType),
+		RecipientUserID: userID,
+		Payload: ws.UserEventPayload{
+			InboxCardEventPayload: &payload,
+		},
+		TS:            time.Now(),
+		ID:            uuid.New(),
+		ActorUserID:   &userID,
+		CorrelationID: correlationID,
+	})
 }
 
 func (s *EventRegistryService) emitUserEvent(userEvent ws.UserEvent) {

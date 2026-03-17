@@ -11,7 +11,8 @@ type UseCardRootBoardContextParams = {
     source?: CardSource
     listCard?: ListCard
     listCardID?: string
-    rootListCardId?: string
+    rootListCardId?: string | null
+    listID?: string
 }
 
 export function useCardRootBoardContext({
@@ -19,13 +20,24 @@ export function useCardRootBoardContext({
     source,
     listCard,
     listCardID,
-    rootListCardId,
+    rootListCardId: rawRootListCardId,
+    listID,
 }: UseCardRootBoardContextParams) {
+    const rootListCardId = rawRootListCardId ?? undefined
+    const isMirrorList = useBoardDetailStore((state) => {
+        const resolvedListID = listID ?? listCard?.ListID
+        if (!resolvedListID || !boardId) return false
+        const blIds = state.boardListIdsByBoardId[boardId] ?? []
+        const bl = blIds.map((id) => state.boardListById[id]).find((bl) => bl?.ListID === resolvedListID)
+        return bl ? bl.ID !== bl.RootID : false
+    })
+
     const mirrorState = useCardMirrorState({
         source,
         listCard,
         listCardID,
         rootListCardId,
+        isMirrorList,
     })
 
     const { isInboxMirror, isMirrorCard, effectiveListCardID } = mirrorState

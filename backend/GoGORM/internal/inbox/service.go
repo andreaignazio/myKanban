@@ -7,6 +7,7 @@ import (
 	"GoGORM/internal/domainerr"
 	"GoGORM/internal/dto"
 	EventRegistry "GoGORM/internal/eventregistry"
+	"GoGORM/internal/ws"
 
 	"GoGORM/internal/listcards"
 	"GoGORM/models"
@@ -132,7 +133,6 @@ func (s *InboxService) GetUserInboxCards(ctx context.Context, userID uuid.UUID) 
 func (s *InboxService) MirrorCardToInbox(ctx context.Context, userID, workspaceUUID, boardID, cardID uuid.UUID,
 	req MirrorCardToInboxRequest, correlationID uuid.UUID) (*dto.InboxCardResponse, error) {
 	_ = workspaceUUID
-	_ = correlationID
 
 	rootListCard, err := s.ListCardsRepo.GetAnyListCardByCardIDTX(ctx, s.db, cardID, false)
 	if err != nil {
@@ -174,6 +174,15 @@ func (s *InboxService) MirrorCardToInbox(ctx context.Context, userID, workspaceU
 		fmt.Println("mirrors are:", mirrors)
 		response.Mirrors = mirrors
 	}
+
+	cardMap := map[uuid.UUID]dto.CardResponse{}
+	if card, err := s.CardsRepo.GetCardByIDTX(ctx, s.db, cardID, s.includeDeleted); err == nil {
+		cardMap[card.ID] = dto.CardToResponse(card)
+	}
+	s.EventRegistry.EmitInboxUserEvent(userID, ws.EventInboxCardMirrored, ws.InboxCardEventPayload{
+		InboxCards: []dto.InboxCardResponse{response},
+		Cards:      cardMap,
+	}, &correlationID)
 	return &response, nil
 }
 
@@ -284,6 +293,12 @@ func (s *InboxService) CreateInboxCard(ctx context.Context, userID uuid.UUID, re
 		InboxCards: []dto.InboxCardResponse{dto.InboxCardToResponse(&newInboxCard)},
 		Cards:      map[uuid.UUID]dto.CardResponse{newCard.ID: dto.CardToResponse(&newCard)},
 	}
+
+	s.EventRegistry.EmitInboxUserEvent(userID, ws.EventInboxCardCreated, ws.InboxCardEventPayload{
+		InboxCards: response.InboxCards,
+		Cards:      response.Cards,
+	}, &correlationID)
+
 	return &response, nil
 
 }
@@ -391,6 +406,11 @@ func (s *InboxService) MoveInboxCardToListInBoard(ctx context.Context, userID, c
 		}
 	}
 
+	inboxCard, err := s.repo.GetInboxCardByCardID(ctx, userID, cardID, s.includeDeleted)
+	if err != nil {
+		return nil, err
+	}
+
 	err = s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err = s.ListCardsRepo.CreateCardListTX(ctx, tx, newListCard); err != nil {
 			return err
@@ -404,8 +424,35 @@ func (s *InboxService) MoveInboxCardToListInBoard(ctx context.Context, userID, c
 		return nil, err
 	}
 
-	response := dto.ListCardToResponse(newListCard)
+	if card, err := s.CardsRepo.GetCardByIDTX(ctx, s.db, cardID, s.includeDeleted); err == nil {
+		cardResponse := dto.CardToResponse(card)
+		_ = s.EventRegistry.Emit(ctx, s.db, EventRegistry.DomainEvent{
+			Type:          EventRegistry.EventCardCreated,
+			WorkspaceID:   &targetWorkspaceID,
+			BoardID:       &targetBoardID,
+			ActorUserID:   &userID,
+			CorrelationID: &correlationID,
+			Payload: EventRegistry.EventPayloadEnvelope{
+				StatePayload: &dto.BoardDetailResponse{
+					Cards:             map[uuid.UUID]dto.CardResponse{card.ID: cardResponse},
+					ListCardRelations: []dto.ListCardResponse{dto.ListCardToResponse(newListCard)},
+				},
+			},
+			Targets: []EventRegistry.TargetRef{
+				{EntityType: "list", EntityID: targetListID, BoardID: &targetBoardID},
+				{EntityType: "card", EntityID: card.ID, BoardID: &targetBoardID},
+			},
+			OccurredAt: time.Now(),
+		})
+	}
 
+	if inboxCard != nil {
+		s.EventRegistry.EmitInboxUserEvent(userID, ws.EventInboxCardDetatched, ws.InboxCardEventPayload{
+			RemovedInboxCardIDs: []uuid.UUID{inboxCard.ID},
+		}, &correlationID)
+	}
+
+	response := dto.ListCardToResponse(newListCard)
 	return &response, nil
 
 }
@@ -468,6 +515,9 @@ func (s *InboxService) MoveInboxCard(ctx context.Context, userID, cardID uuid.UU
 		return nil, err
 	}
 	response := dto.InboxCardToResponse(updatedCard)
+	s.EventRegistry.EmitInboxUserEvent(userID, ws.EventInboxCardMoved, ws.InboxCardEventPayload{
+		InboxCards: []dto.InboxCardResponse{response},
+	}, &correlationID)
 	return &response, nil
 }
 
@@ -721,7 +771,9 @@ func (s *InboxService) DetatchInboxCard(ctx context.Context,
 	}
 
 	response := dto.InboxCardToResponse(deletedCard)
-
+	s.EventRegistry.EmitInboxUserEvent(userID, ws.EventInboxCardDetatched, ws.InboxCardEventPayload{
+		RemovedInboxCardIDs: []uuid.UUID{deletedCard.ID},
+	}, &correlationID)
 	return &response, nil
 }
 
@@ -788,5 +840,8 @@ func (s *InboxService) ConvertToInboxOnly(ctx context.Context, userID, cardID uu
 	}
 
 	response := dto.InboxCardToResponse(updatedInboxCard)
+	s.EventRegistry.EmitInboxUserEvent(userID, ws.EventInboxCardConverted, ws.InboxCardEventPayload{
+		InboxCards: []dto.InboxCardResponse{response},
+	}, &correlationID)
 	return &response, nil
 }

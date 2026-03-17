@@ -5,15 +5,18 @@ type UseCardMirrorStateParams = {
     source?: CardSource
     listCard?: ListCard
     listCardID?: string
-    rootListCardId?: string
+    rootListCardId?: string | null
+    isMirrorList?: boolean
 }
 
 export function useCardMirrorState({
     source = "board",
     listCard,
     listCardID,
-    rootListCardId,
+    rootListCardId: rawRootListCardId,
+    isMirrorList,
 }: UseCardMirrorStateParams) {
+    const rootListCardId = rawRootListCardId ?? undefined
     const isInbox = source === "inbox"
     const isInboxMirror = source === "inbox-mirror"
     const isInboxMode = isInbox || isInboxMirror
@@ -27,7 +30,7 @@ export function useCardMirrorState({
 
     const isMirrorCard = !!effectiveListCardID
         && !!resolvedRootListCardID
-        && (isInboxMirror || isInboxRootMirror || effectiveListCardID !== resolvedRootListCardID)
+        && (isInboxMirror || isInboxRootMirror || effectiveListCardID !== resolvedRootListCardID || !!isMirrorList)
 
     return {
         isInbox,

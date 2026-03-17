@@ -323,7 +323,7 @@ export default function BoardView() {
                 ID: optimisticListCardId,
                 UserID: currentUserId,
                 CardID: movedListCard?.CardID ?? "",
-                Position: "",
+                Pos: "",
                 CreatedAt: new Date().toISOString(),
                 UpdatedAt: new Date().toISOString(),
                 DeletedAt: null,

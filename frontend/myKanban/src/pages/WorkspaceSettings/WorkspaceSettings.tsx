@@ -18,6 +18,7 @@ import { useWorkspaceDerivedProps } from "@/hooks/useWorkspaceDerivedProps"
 import { useCurrentWorkspaceRole } from "@/hooks/useCurrentWorkspaceRole"
 import { useAsyncKey } from "@/stores/asyncRequestStore"
 import { DangerButton } from "@/components/buttons/DangerButton"
+import { WorkspacePageHeader } from "@/components/workspacePages/WorkspacePageHeader"
 
 export const WorkspaceSettings = () => {
     const workspaceId = useParams().workspaceId
@@ -85,7 +86,12 @@ export const WorkspaceSettings = () => {
     }
 
     return (
-        <UserPagesWrapper Title="Workspace Settings">
+        <UserPagesWrapper
+            DoNotShowTitle={true}
+            Title="Workspace Settings">
+            <WorkspacePageHeader title="Workspace Settings"
+                description="Manage your workspace details and visibility. Craft the public face of your workspace by customizing its name, description, and icon. Control who can see your workspace and its contents by adjusting the visibility settings. Whether you want to keep it private or share it with the world, you can set it up here."
+                iconId={"workspaces"} />
             <div className="flex flex-col gap-2 min-h-0 pb-8 pr-1">
                 <EntityHeaderCard
                     type="workspace"
@@ -107,7 +113,7 @@ export const WorkspaceSettings = () => {
                     footer={
                         <div className="flex h-full w-full items-center justify-start pl-40">
                             <div className="flex flex-col items-start">
-                                <h2 className="text-lg font-semibold text-neutral-300">{workspaceName}</h2>
+                                <h2 className="text-lg mb-1 font-semibold text-neutral-300">{workspaceName}</h2>
                                 <SubscriptionBadge plan={subscription} />
                             </div>
                         </div>
@@ -136,7 +142,7 @@ export const WorkspaceSettings = () => {
                         <CustomInput
                             value={editedName}
                             danger={editedName.trim().length === 0}
-                            className="h-[38px]"
+                            className="h-[38px] !border-none"
                             onInputChange={(inputRef) => {
                                 inputRef?.current && setEditedName(inputRef.current.value)
                             }}
@@ -150,12 +156,14 @@ export const WorkspaceSettings = () => {
                         </div>
                         <CustomInput
                             value={editedDescription}
-                            className="min-h-[90px] max-h-[220px] h-auto"
+                            className="min-h-[90px] max-h-[240px] h-auto !py-2 !border-none "
                             onInputChange={(inputRef) => {
                                 inputRef?.current && setEditedDescription(inputRef.current.value)
                             }}
                             placeholder="Describe this workspace"
                             useTextArea={true}
+                            textAreaClassName="!font-normal !pb-1 !pt-0 px-1 min-h-[90px] max-h-[240px]"
+                            nonFocusClassName=" !text-zinc-200/80"
                         />
                     </div>
 
@@ -171,19 +179,20 @@ export const WorkspaceSettings = () => {
 
                     <div className="h-px bg-neutral-400/20 w-full mt-8" />
 
-                    <div className="text-lg font-bold mt-6 mb-2">Visibility</div>
-                    <div className="w-full flex flex-col gap-1 mt-2">
-                        <span className="text-sm text-neutral-400 font-bold">Workspace visibility</span>
+                    <div className="text-lg font-bold mt-6 mb-0">Visibility</div>
+                    <div className="w-full flex flex-col gap-1 mt-0">
+                        <span className="text-sm  text-neutral-400 mb-1 font-normal">Choose who can see this workspace</span>
                         <CustomDropDown
                             disableGlobalState={true}
                             style={{ height: 42 }}
-                            className="!text-neutral-300 text-sm"
+                            className="!text-zinc-300 text-sm !border-none"
                             showChevron={true}
                             chevronClassName="h-4 text-neutral-400"
                             activeId={selectedVisibility}
                             onClick={(id) => setSelectedVisibility(id as "private" | "workspace" | "public")}
                             btnId={`workspace-settings-visibility-${workspaceId ?? "unknown"}`}
                             items={visibilityItems}
+                            desiredBackdropOpacity={0}
                         />
                     </div>
 
@@ -198,7 +207,7 @@ export const WorkspaceSettings = () => {
                     </div>
 
                 </div>
-                <div className="bg-zinc-900/50 flex flex-col h-fit gap-6 px-2 py-2 rounded-2xl w-full mt-4">
+                <div className=" bg-zinc-900/50 flex flex-col h-fit gap-6 px-2 py-2 rounded-2xl w-full mt-8">
                     <div className="flex flex-col items-start justify-start gap-2 mt-4 px-2 ">
                         <div className="text-lg font-bold font-grotesk text-red-500">Danger zone</div>
                         <div className="text-sm text-neutral-400">Permanently delete this workspace and all of its contents. This action cannot be undone.</div>

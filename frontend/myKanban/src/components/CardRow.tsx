@@ -100,6 +100,7 @@ export const CardRow = ({ boardID, listId, listCardID: listCardID, cardId, index
         listCard: listcard,
         listCardID,
         rootListCardId,
+        listID,
     })
 
     const {
@@ -283,7 +284,7 @@ export const CardRow = ({ boardID, listId, listCardID: listCardID, cardId, index
                 openCard(cardID!)
             }}
             data-list-card-id={listCardID}
-            className="relative  pt-0 overflow-visible "
+            className="relative pt-0 overflow-visible cursor-pointer"
         >
 
             <Draggable draggableId={resolvedDraggableId} index={index} isDragDisabled={isDragDisabled || isPendingCopy}>
@@ -297,6 +298,7 @@ export const CardRow = ({ boardID, listId, listCardID: listCardID, cardId, index
                             style={{
                                 ...provided.draggableProps.style,
                                 zIndex: snapshot.isDragging ? 9999 : undefined,
+                                cursor: snapshot.isDragging ? "grabbing" : "pointer",
                             }}>
 
 

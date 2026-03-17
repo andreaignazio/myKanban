@@ -86,7 +86,15 @@ export type CardsUserEventTypes =
     | "cards.user.member.added"
     | "cards.user.member.removed";
 
-export type InboxEventTypes = "inbox.rootcard.moved" | "inbox.cards.invalidated";
+export type InboxEventTypes =
+    | "inbox.rootcard.moved"
+    | "inbox.cards.invalidated"
+    | "inbox.card.created"
+    | "inbox.card.mirrored"
+    | "inbox.card.moved"
+    | "inbox.card.detatched"
+    | "inbox.card.converted"
+    | "inbox.card.patched";
 
 export type DomainEventTypes =
     | CardEventTypes
@@ -107,6 +115,12 @@ export type UserEventTypes =
     | "user.notification.read_all"
     | "inbox.cards.invalidated"
     | "inbox.rootcard.moved"
+    | "inbox.card.created"
+    | "inbox.card.mirrored"
+    | "inbox.card.moved"
+    | "inbox.card.detatched"
+    | "inbox.card.converted"
+    | "inbox.card.patched"
     | "cards.user.member.added"
     | "cards.user.member.removed"
     | "workspace.user.board.restored"

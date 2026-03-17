@@ -464,6 +464,7 @@ export type UserEventPayload = {
     UserNotificationReadAllPayload?: UserNotificationReadAllPayload;
     InboxCardsInvalidatedPayload?: InboxCardsInvalidatedPayload;
     InboxRootCardMovedPayload?: InboxRootCardMovedPayload;
+    InboxCardEventPayload?: InboxCardEventPayload;
     CardsUserMemberAddedPayload?: CardsUserMemberAddedPayload;
     CardsUserMemberRemovedPayload?: CardsUserMemberRemovedPayload;
     WorkspaceBoardRestoredPayload?: UserWorkspaceBoardRestoredPayload;
@@ -888,7 +889,7 @@ export type InboxCard = {
     ID: string
     UserID: string
     CardID: string
-    Position: string
+    Pos: string
     SourceBoardID: string | null
     RootListCardID: string | null
     Mirrors: string[]
@@ -958,6 +959,12 @@ export type InboxRootCardMovedPayload = {
 export type InboxCardsInvalidatedPayload = {
     AffectedInboxCardIDs: string[]
     InvalidatedListCardIDs: string[]
+}
+
+export type InboxCardEventPayload = {
+    InboxCards?: InboxCard[]
+    Cards?: Record<string, Card>
+    RemovedInboxCardIDs?: string[]
 }
 
 export type CreateBoardRequest = {

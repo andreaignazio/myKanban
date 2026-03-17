@@ -14,6 +14,8 @@ type CustomInputProps = {
     onFocus?: () => void;
     danger?: boolean;
     focusColorClass?: string;
+    focusClassName?: string;
+    nonFocusClassName?: string;
 }
 
 export type CustomInputHandle = {
@@ -22,7 +24,7 @@ export type CustomInputHandle = {
     getElement: () => HTMLInputElement | HTMLTextAreaElement | null;
 }
 
-export const CustomInput = forwardRef<CustomInputHandle, CustomInputProps>(({ danger, children, onInputChange, className, placeholder, value, onBlur, isDisabled, paddingLeft, useTextArea, textAreaClassName, onFocus, focusColorClass }, ref) => {
+export const CustomInput = forwardRef<CustomInputHandle, CustomInputProps>(({ danger, children, onInputChange, className, placeholder, value, onBlur, isDisabled, paddingLeft, useTextArea, textAreaClassName, onFocus, focusColorClass, focusClassName, nonFocusClassName }, ref) => {
     const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
     const [isFocused, setIsFocused] = useState(false);
 
@@ -64,10 +66,12 @@ export const CustomInput = forwardRef<CustomInputHandle, CustomInputProps>(({ da
         }
     };
 
+    const conditionalClasses = isFocused ? focusClassName : nonFocusClassName;
+
 
 
     return (
-        <div className={`flex flex-row overflow-hidden font-inter trnasition-all duration-200
+        <div className={`flex flex-row overflow-hidden font-inter trnasition-all duration-200 ${conditionalClasses}
                         ${danger ? "ring-red-500 ring-1 ring-inset !border-red-500/50" : ""} 
                         bg-menusec w-full text-white  rounded-[4px] ${useTextArea ? " " : "h-11"} ${className}
                         ${isDisabled ? 'border-none bg-neutral-600/20 text-neutral-400' : isFocused ?

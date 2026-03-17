@@ -13,7 +13,7 @@ export type SidebarItem = {
     show?: boolean;
 }
 
-export function WorkspaceSubRows({ workspaceId, className }: { workspaceId: string, className?: string }) {
+export function WorkspaceSubRows({ workspaceId, className, isCollapsed }: { workspaceId: string, className?: string, isCollapsed?: boolean }) {
 
     const items: SidebarItem[] = [
         { id: "1", name: "Boards", iconId: "boards", route: `/workspaces/${workspaceId}/boards` },
@@ -52,13 +52,12 @@ export function WorkspaceSubRows({ workspaceId, className }: { workspaceId: stri
     }, [location.pathname, workspaceId]) // Re-run when the path changes or workspaceId changes
     return (
         <>
-            <div className="flex flex-col
-             text-neutral-300 text-sm font-normal gap-2 ">
+            <div className={`flex flex-col text-neutral-300 text-sm font-normal ${isCollapsed ? "gap-1" : "gap-2"}`}>
                 {items.map((item) => (
                     <SidebarSubRow key={item.id} item={item} isActive={activeItemId === item.id} onClick={handleItemClick}
                         className={className}
+                        isCollapsed={isCollapsed}
                     />
-
                 ))}
             </div>
 

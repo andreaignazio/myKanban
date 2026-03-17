@@ -9,7 +9,9 @@
       "Bash(grep -n \"isAdminOrOwner\\\\|canManageWorkspace\\\\|role.*admin\\\\|role.*owner\" /d/SoftwareDevelopment/MYTRELLO/frontend/myKanban/src/pages/WorkspaceSettings/*.tsx)",
       "Bash(npm run:*)",
       "Bash(go build:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(grep -rn \"InboxCard\\\\b.*Pos\\\\b\\\\|\\\\.Pos\\\\b\" d:/SoftwareDevelopment/MYTRELLO/frontend/myKanban/src/ --include=*.ts --include=*.tsx)",
+      "Bash(grep -rn \"\\\\.Position\\\\b\\\\|: Position\\\\b\" d:/SoftwareDevelopment/MYTRELLO/frontend/myKanban/src/ --include=*.ts --include=*.tsx)"
     ]
   }
 }

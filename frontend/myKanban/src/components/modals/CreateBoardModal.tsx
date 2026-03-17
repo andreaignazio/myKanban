@@ -110,6 +110,21 @@ export const CreateBoardModal = forwardRef<HTMLDivElement, CreateBoardModalProps
         }
     }, [isSuccessful]);
 
+    const canSubmitRef = useRef(canSubmit);
+    canSubmitRef.current = canSubmit;
+    const handleCreateBoardRef = useRef(handleCreateBoard);
+    handleCreateBoardRef.current = handleCreateBoard;
+
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === "Enter" && canSubmitRef.current) {
+                void handleCreateBoardRef.current();
+            }
+        };
+        window.addEventListener("keydown", handleKeyDown);
+        return () => window.removeEventListener("keydown", handleKeyDown);
+    }, []);
+
     async function handleCreateBoard() {
         if (!selectedWorkspace || !selectedVisibility) {
             return;
