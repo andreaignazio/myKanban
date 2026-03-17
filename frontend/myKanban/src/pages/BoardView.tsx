@@ -30,6 +30,9 @@ export { BaseBtn }
 
 
 const EMPTY_LIST_IDS: string[] = []
+const INBOX_MIN_WIDTH = 200
+const INBOX_MAX_WIDTH = 640
+const INBOX_DEFAULT_WIDTH = 320
 
 
 export default function BoardView() {
@@ -223,6 +226,37 @@ export default function BoardView() {
     ]
     const [activeFloatingTab, setActiveFloatingTab] = useState("Board")
     const isInboxActive = activeFloatingTab === "Inbox"
+
+    const [inboxWidth, setInboxWidth] = useState(() => {
+        const stored = localStorage.getItem("inboxPanelWidth")
+        return stored ? Math.min(INBOX_MAX_WIDTH, Math.max(INBOX_MIN_WIDTH, parseInt(stored, 10))) : INBOX_DEFAULT_WIDTH
+    })
+    const [isResizingInbox, setIsResizingInbox] = useState(false)
+
+    function handleInboxResizeStart(e: React.PointerEvent<HTMLDivElement>) {
+        e.preventDefault()
+        setIsResizingInbox(true)
+        const startX = e.clientX
+        const startWidth = inboxWidth
+        let lastWidth = startWidth
+        document.body.style.cursor = "col-resize"
+        document.body.style.userSelect = "none"
+
+        const onPointerMove = (e: PointerEvent) => {
+            lastWidth = Math.min(INBOX_MAX_WIDTH, Math.max(INBOX_MIN_WIDTH, startWidth + (e.clientX - startX)))
+            setInboxWidth(lastWidth)
+        }
+        const onPointerUp = () => {
+            setIsResizingInbox(false)
+            document.body.style.cursor = ""
+            document.body.style.userSelect = ""
+            localStorage.setItem("inboxPanelWidth", String(lastWidth))
+            document.removeEventListener("pointermove", onPointerMove)
+            document.removeEventListener("pointerup", onPointerUp)
+        }
+        document.addEventListener("pointermove", onPointerMove)
+        document.addEventListener("pointerup", onPointerUp)
+    }
 
 
     // const boardId = useParams().boardId as string
@@ -474,19 +508,33 @@ export default function BoardView() {
 
     return (
         <>
-            <div className="absolute inset-0 -z-20 bg-menusec" />
+            <div className="absolute inset-0 -z-20 bg-main" />
             <div className=" relative flex flex-row gap-0 h-full w-[100vw] ">
 
                 <DragDropContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
                     <div
-                        style={{ paddingBottom: isInboxActive ? 40 : 0, }}
-                        className={` min-h-0 relative flex-shrink-0  transition-all 
-                ${isInboxActive ? "w-80 mx-2" : "w-0 mx-0"}
-                 bg-transparent overflow-hidden
-                 `}>
+                        style={{
+                            paddingBottom: isInboxActive ? 40 : 0,
+                            width: isInboxActive ? inboxWidth : 0,
+                        }}
+                        className={`min-h-0 relative flex-shrink-0 bg-transparent
+                            ${isInboxActive ? "mx-2 me-[9px] overflow-visible" : "mx-0 overflow-hidden"}
+                            ${!isResizingInbox ? "transition-[width,margin,padding] duration-200" : ""}`}>
 
-                        <InboxView draggedRootListCardId={draggedRootListCardId}></InboxView>
+                        <InboxView draggedRootListCardId={draggedRootListCardId} />
 
+                        {isInboxActive && (
+                            <div
+                                onPointerDown={handleInboxResizeStart}
+                                className="absolute top-0 -right-[12px] w-4 h-full cursor-col-resize z-20 flex items-center justify-center group"
+                            >
+                                <div className={`w-[2px] rounded-full transition-all duration-150
+                                    ${isResizingInbox
+                                        ? "h-24 bg-neutral-300/60"
+                                        : "h-10 bg-neutral-600/30 group-hover:h-20 group-hover:bg-neutral-400/60"}`}
+                                />
+                            </div>
+                        )}
                     </div>
                     {boardId && (
 
@@ -513,7 +561,7 @@ export default function BoardView() {
                                 style={{ paddingTop: 0, paddingBottom: 0, }}
                                 className={`
                                
-                                flex-1 min-h-0 w-full ps-4 pe-2 scrollbar-hidden `}>
+                                flex-1 min-h-0 w-full ps-0 pe-0 scrollbar-hidden `}>
 
                                 <ListContainer draggedCardId={draggedCardId} draggedSourceBoardListId={draggedSourceBoardListId} />
 

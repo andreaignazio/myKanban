@@ -90,7 +90,7 @@ export const ListContainer = ({ draggedCardId = null, draggedSourceBoardListId =
                     {...provided.droppableProps}
                     ref={provided.innerRef}
                     style={{ paddingTop: LIST_CONTAINER_TOP_PADDING }}
-                    className="relative flex h-full min-h-0 w-full flex-row items-start
+                    className="relative flex h-full min-h-0 w-full flex-row items-start ps-4 pe-4
                      
                              overflow-y-hidden scrollbar-hidden "
                 >
