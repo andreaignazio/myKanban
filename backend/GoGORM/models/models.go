@@ -101,6 +101,7 @@ type List struct {
 	Props            datatypes.JSON `gorm:"type:jsonb;default:'{}'"`
 	CreatedByUserID  uuid.UUID      `gorm:"type:uuid;"`
 	CreatedInBoardID uuid.UUID      `gorm:"type:uuid;"`
+	ExternalAccess   string         `gorm:"type:varchar(32);default:'open'"`
 	TimeStamps
 }
 

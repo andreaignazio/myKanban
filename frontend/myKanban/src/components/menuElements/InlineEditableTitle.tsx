@@ -15,10 +15,11 @@ type InlineEditableTitleProps = {
     onPointerUp?: (e: React.PointerEvent<HTMLDivElement>) => void;
     onPointerCancel?: (e: React.PointerEvent<HTMLDivElement>) => void;
     isReadonly?: boolean
+    inputClassName?: string;
 }
 
 export const InlineEditableTitle = forwardRef<HTMLInputElement, InlineEditableTitleProps>((props, ref) => {
-    const { title, setTitle, handleOnBlurTitle, isDisabled, className, titleFocused, isReadonly = false } = props;
+    const { title, setTitle, handleOnBlurTitle, isDisabled, className, titleFocused, isReadonly = false, inputClassName } = props;
 
     return (
         <div
@@ -43,9 +44,10 @@ export const InlineEditableTitle = forwardRef<HTMLInputElement, InlineEditableTi
                 ref={ref}
                 size={1}
                 style={{ gridArea: '1/1', pointerEvents: titleFocused ? 'auto' : 'none' }}
-                className={`min-w-0 px-2
-                transition-all duration-300 ease-in-out 
-                bg-transparent focus:outline-none text-inherit`}
+                className={`min-w-0 px-2 ${inputClassName}
+                transition-all duration-300 ease-in-out
+                bg-transparent focus:outline-none text-inherit
+                ${!titleFocused ? 'truncate' : ''}`}
 
                 onFocus={() => props.setTitleFocused(true)}
                 onBlur={handleOnBlurTitle}

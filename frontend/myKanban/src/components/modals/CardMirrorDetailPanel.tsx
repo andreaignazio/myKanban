@@ -8,6 +8,8 @@ import { useBoardBackground } from "@/hooks/useBoardBackground";
 import { useUserStore } from "@/stores/userStore";
 import { useDateTimeParser } from "@/hooks/useDateTimeParser";
 
+const EMPTY_IDS: string[] = [];
+
 // ─── MirrorListItem ─────────────────────────────────────────────────────────
 
 type MirrorListItemProps = {
@@ -17,9 +19,28 @@ type MirrorListItemProps = {
 }
 
 const MirrorListItem = ({ mirrorId, isSelected, onSelect }: MirrorListItemProps) => {
-    const mirrorData = useCardMirrorsStore(useShallow(
-        state => state.getMirrorRenderDataForBoardListCard(mirrorId)
+    const { mirrorCardData, boardsById, listsById, listcardsById } = useCardMirrorsStore(useShallow(
+        state => ({
+            mirrorCardData: state.mirrorCardDataByBoardListCardId[mirrorId] ?? null,
+            boardsById: state.boardsById,
+            listsById: state.listsById,
+            listcardsById: state.listcardsById,
+        })
     ))
+    const mirrorData = useMemo(() => {
+        if (!mirrorCardData) return null
+
+        const board = boardsById[mirrorCardData.BoardID]
+        const list = listsById[mirrorCardData.ListID]
+        const listCard = listcardsById[mirrorCardData.ListCardID]
+        if (!board || !list || !listCard) return null
+
+        return {
+            board,
+            list,
+            isRootBoardCard: listCard.ID === listCard.RootID,
+        }
+    }, [mirrorCardData, boardsById, listsById, listcardsById])
     const { backgroundType, backgroundColorClassName, backgroundImageUrl } = useBoardBackground({ board: mirrorData?.board })
 
     if (!mirrorData) return null
@@ -58,13 +79,20 @@ const MirrorListItem = ({ mirrorId, isSelected, onSelect }: MirrorListItemProps)
 
 const SelectedMirrorDescription = ({ mirrorId }: { mirrorId: string }) => {
     const usersById = useUserStore(state => state.usersById)
-    const data = useCardMirrorsStore(useShallow(state => {
-        const mirrorCardData = state.mirrorCardDataByBoardListCardId[mirrorId]
+    const { mirrorCardData, boardsById, listsById, listcardsById } = useCardMirrorsStore(useShallow(state => ({
+        mirrorCardData: state.mirrorCardDataByBoardListCardId[mirrorId] ?? null,
+        boardsById: state.boardsById,
+        listsById: state.listsById,
+        listcardsById: state.listcardsById,
+    })))
+    const data = useMemo(() => {
         if (!mirrorCardData) return null
-        const board = state.boardsById[mirrorCardData.BoardID]
-        const list = state.listsById[mirrorCardData.ListID]
-        const listCard = state.listcardsById[mirrorCardData.ListCardID]
+
+        const board = boardsById[mirrorCardData.BoardID]
+        const list = listsById[mirrorCardData.ListID]
+        const listCard = listcardsById[mirrorCardData.ListCardID]
         if (!board || !list || !listCard) return null
+
         return {
             boardName: board.Name,
             listTitle: list.Title,
@@ -72,7 +100,7 @@ const SelectedMirrorDescription = ({ mirrorId }: { mirrorId: string }) => {
             createdAt: listCard.CreatedAt,
             isRoot: listCard.ID === listCard.RootID,
         }
-    }))
+    }, [mirrorCardData, boardsById, listsById, listcardsById])
     const dateParser = useDateTimeParser()
 
     if (!data) return null
@@ -126,10 +154,10 @@ export const CardMirrorDetailPanel = forwardRef<HTMLDivElement, CardMirrorDetail
         const fetchUsersByIDs = useUserStore(state => state.fetchUsersByIDs)
 
         const boardListCardIds = useCardMirrorsStore(useShallow(
-            state => state.boardListCardIdsByCardId[cardId] ?? []
+            state => state.boardListCardIdsByCardId[cardId] ?? EMPTY_IDS
         ))
-        const mirrorCardDataById = useCardMirrorsStore(state => state.mirrorCardDataByBoardListCardId)
-        const listcardsById = useCardMirrorsStore(state => state.listcardsById)
+        const mirrorCardDataById = useCardMirrorsStore(useShallow(state => state.mirrorCardDataByBoardListCardId))
+        const listcardsById = useCardMirrorsStore(useShallow(state => state.listcardsById))
 
         useEffect(() => {
             if (!cardId || !workspaceId) return
@@ -160,10 +188,17 @@ export const CardMirrorDetailPanel = forwardRef<HTMLDivElement, CardMirrorDetail
         const [selectedId, setSelectedId] = useState<string | null>(null)
 
         useEffect(() => {
-            if (sortedIds.length > 0 && !selectedId) {
+            if (sortedIds.length === 0) {
+                if (selectedId !== null) {
+                    setSelectedId(null)
+                }
+                return
+            }
+
+            if (!selectedId || !sortedIds.includes(selectedId)) {
                 setSelectedId(sortedIds[0])
             }
-        }, [sortedIds, selectedId])
+        }, [selectedId, sortedIds])
 
         return (
             <CommonMenuWrapper

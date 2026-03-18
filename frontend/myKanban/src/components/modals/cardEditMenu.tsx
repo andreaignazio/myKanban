@@ -23,6 +23,7 @@ type CardEditMenuProps = {
     onClose: () => void;
     menuId?: string;
     canEdit?: boolean;
+    canEditBoardList?: boolean;
 }
 
 
@@ -38,7 +39,7 @@ type MenuItem = {
 type MenuItemAndID = MenuItem & { menuId?: string }
 
 export const CardEditMenu = forwardRef<HTMLDivElement, CardEditMenuProps>((props, ref) => {
-    const { cardContext, onClose, canEdit = true } = props;
+    const { cardContext, onClose, canEdit = true, canEditBoardList = true } = props;
     const { cardId: cardID, sourceListId: listId, source = "board" } = cardContext;
     const iconClass = "w-4 h-4 text-neutral-400"
     const isInboxSource = source === "inbox" || source === "inbox-mirror"
@@ -264,7 +265,9 @@ export const CardEditMenu = forwardRef<HTMLDivElement, CardEditMenuProps>((props
         <div className=" relative flex flex-col gap-1"
             ref={ref}>
             {menuItems.map((item) => {
-                if (!canEdit && item.id !== "openCard" && item.id !== "copy" && item.id !== "copyLink") return null;
+                const isBoardListOp = item.id === "archive" || item.id === "detatchFromInbox" || item.id === "move" || item.id === "mirror" || item.id === "copyToBoard" || item.id === "editlabels"
+                if (isBoardListOp && !canEditBoardList) return null;
+                if (!isBoardListOp && !canEdit && item.id !== "openCard" && item.id !== "copy" && item.id !== "copyLink") return null;
                 if (item.shouldShow === false) return null;
 
                 return (

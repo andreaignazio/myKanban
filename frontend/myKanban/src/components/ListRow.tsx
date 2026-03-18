@@ -1,27 +1,25 @@
 ﻿import { useBoardDetailStore } from "@/stores/boardDetailStore"
 import { useListsStore } from "@/stores/listsStore"
 import { CardRow } from "./CardRow"
-import { api } from "@/api/api"
 
 import { useShallow } from "zustand/shallow"
 import { useEffect, useRef, useState } from "react"
 
 import { ListRowFooter } from "./ListRowFooter"
-import { ActionMenuWrapper, ListActionsMenu, MoveListTab } from "./modals/ListActionsMenu"
-import { useNavigate, useParams } from "react-router-dom"
+import { ListActionsMenu } from "./modals/ListActionsMenu"
 import { InlineEditableTitle } from "./menuElements/InlineEditableTitle"
 import { useListActionRegistry } from "@/actionRegistry/listActionRegistry"
-import type { BoardListAccessMode, BoardListMirrorsResponse, List, MirrorBoardListRequest } from "@/stores/types"
-import type { RefObject } from "react"
-import { CustomDropDown, type MenuItem } from "./menuElements/CustomDropDown"
+import type { List } from "@/stores/types"
+import { ListMirrorMenuV2 } from "./listMenus/ListMirrorMenuV2"
 
 import { Draggable, Droppable } from "@hello-pangea/dnd"
 import { LabeledButtonPresetB } from "./buttons/labeledButton"
-import { EllipsisIcon, EyeIcon } from "lucide-react"
+import { EllipsisIcon, EyeIcon, Lock, LockOpen } from "lucide-react"
 import { CardRowMenuBtn } from "./cardMenus/cardRowMenus"
 import { useOverlayStore } from "@/overlays/overlayStore"
 import { useUserWatchStore } from "@/stores/userWatchStore"
 import { useListTheme } from "@/hooks/useListTheme"
+import { useListEditableContext } from "@/hooks/useListEditableContext"
 import { useAsyncKey } from "@/stores/asyncRequestStore"
 import { useAsyncRequest } from "@/hooks/useAsyncRequest"
 import { AnimatePresence, motion } from "motion/react"
@@ -45,11 +43,10 @@ export function ListRow({ boardID: boardID, boardListID: boardListID, index: ind
     const list = useListsStore(state => state.listsById[listID])
     const listCardIds = useBoardDetailStore(useShallow((state) => state.listCardIdsByListId[listID] ?? []))
     const getCardIdForListCardId = useBoardDetailStore((state) => state.getCardIdForListCardId)
-    const isRootBoardList = !!boardList && boardList.ID === boardList.RootID
-    const accessMode = boardList?.AccessMode === "readonly" ? "readonly" : "editable"
+    const { canEditList, isReadonly, isRootBoardList, accessMode } = useListEditableContext({ boardID, boardListID })
 
     // All hooks must be called before any early return (Rules of Hooks)
-    const { listColor, listTextColor, hasListTheme, isReadonly } = useListTheme(list, accessMode)
+    const { listColor, listTextColor, hasListTheme } = useListTheme(list, accessMode)
     const stack = useOverlayStore(useShallow((state) => state.stack))
     const [isCardEditing, setIsCardEditing] = useState(false)
     const cardEditMenuIdPrefix = `card-edit-menu-${boardListID}`
@@ -167,11 +164,11 @@ export function ListRow({ boardID: boardID, boardListID: boardListID, index: ind
                                             listTextColor={listTextColor}
                                             hasListTheme={hasListTheme}
                                             showRootBadge={isRootBoardList}
-                                            isReadonly={isReadonly}
+                                            isReadonly={!canEditList}
                                         />
                                     </div>
 
-                                    <Droppable droppableId={boardListID} type="card" isDropDisabled={isReadonly || alreadyContainsDraggedCard || isCardDropDisabled}>
+                                    <Droppable droppableId={boardListID} type="card" isDropDisabled={!canEditList || alreadyContainsDraggedCard || isCardDropDisabled}>
                                         {(provided) => (
                                             <div
                                                 ref={provided.innerRef}
@@ -186,7 +183,7 @@ export function ListRow({ boardID: boardID, boardListID: boardListID, index: ind
                                                                 <CardRow
                                                                     key={listCardID}
                                                                     index={cardIndex}
-                                                                    isDragDisabled={false}
+                                                                    isDragDisabled={!canEditList}
                                                                     editMenuPrefix={cardEditMenuIdPrefix}
                                                                     boardID={boardID} listId={listID} listCardID={listCardID} />
 
@@ -198,7 +195,7 @@ export function ListRow({ boardID: boardID, boardListID: boardListID, index: ind
                                         )}
                                     </Droppable>
                                     <div className="shrink-0 pt-1" ref={footerRef}>
-                                        <ListRowFooter boardID={boardID} listID={listID} isReadonly={isReadonly} />
+                                        <ListRowFooter boardID={boardID} listID={listID} isReadonly={!canEditList} />
                                     </div>
                                 </div>
                             </div>
@@ -336,7 +333,8 @@ const ListHeader = ({
                 titleFocused={titleFocused}
                 isReadonly={isReadonly}
                 isDisabled={false}
-                className="!h-9 !font-medium !text-[16px] !w-32 rounded-lg"
+                className="!h-9 !font-medium !text-[16px] !w-[108px] rounded-lg"
+                inputClassName="!max-w-[108px]"
                 onPointerDownCapture={onTitlePointerDownCapture}
                 onPointerMove={onTitlePointerMove}
                 onPointerUp={onTitlePointerUp}
@@ -344,51 +342,29 @@ const ListHeader = ({
 
             />
             <div className="flex flex-row items-center h-8 justify-end gap-1 min-w-0 ">
-                {showRootBadge && (
-                    <CardRowMenuBtn
-                        customId={mirrorMenuId}
-                        menuComponent={({ ref, onClose }) => (
-                            <ListMirrorMenu
-                                boardID={boardID}
-                                listID={listID}
-                                boardListID={boardListID}
-                                isRootBoardList={showRootBadge}
-                                onClose={onClose}
-                                ref={ref}
-                            />
-                        )}
-                        desiredBackdropOpacity={0}
-                        placement="bottom-start"
-                    >
-                        <span className="inline-flex items-center rounded-full border border-neutral-600 px-2 py-0.5 text-[10px] font-semibold text-neutral-300 hover:bg-neutral-700/40 transition-colors">
-                            ROOT
-                        </span>
-                    </CardRowMenuBtn>
-                )}
-                {!showRootBadge && (
-                    <CardRowMenuBtn
-                        customId={mirrorMenuId}
-                        menuComponent={({ ref, onClose }) => (
-                            <ListMirrorMenu
-                                boardID={boardID}
-                                listID={listID}
-                                boardListID={boardListID}
-                                isRootBoardList={showRootBadge}
-                                onClose={onClose}
-                                ref={ref}
-                            />
-                        )}
-                        desiredBackdropOpacity={0}
-                        placement="bottom-start"
-                    >
-                        <span className="inline-flex items-center 
-                        rounded-full border border-neutral-600
-                         px-2 py-0.5 text-[10px] font-semibold text-neutral-300
-                          hover:bg-neutral-700/40 transition-colors">
-                            MIRROR
-                        </span>
-                    </CardRowMenuBtn>
-                )}
+                <CardRowMenuBtn
+                    customId={mirrorMenuId}
+                    menuComponent={({ ref, onClose }) => (
+                        <ListMirrorMenuV2
+                            boardID={boardID}
+                            listID={listID}
+                            boardListID={boardListID}
+                            isRootBoardList={showRootBadge}
+                            onClose={onClose}
+                            ref={ref}
+                        />
+                    )}
+                    desiredBackdropOpacity={0}
+                    placement="bottom-start"
+                >
+                    <span className="inline-flex items-center gap-1 rounded-full border border-neutral-600 px-2 py-0.5 text-[10px] font-semibold text-neutral-300 hover:bg-neutral-700/40 transition-colors">
+                        {showRootBadge ? "ROOT" : "MIRROR"}
+                        {list.ExternalAccess === "restricted"
+                            ? <Lock size={10} className="text-red-400 shrink-0 -translate-y-px" />
+                            : <LockOpen size={10} className="text-green-400 shrink-0 -translate-y-px" />
+                        }
+                    </span>
+                </CardRowMenuBtn>
 
 
                 <LabeledButtonPresetB label=""
@@ -438,159 +414,6 @@ const ListHeader = ({
     )
 }
 
-type ListMirrorMenuProps = {
-    boardID: string;
-    listID: string;
-    boardListID: string;
-    isRootBoardList: boolean;
-    onClose: () => void;
-    ref: RefObject<HTMLDivElement | null>;
-}
-
-const ListMirrorMenu = ({ boardID, listID, boardListID, isRootBoardList, onClose, ref }: ListMirrorMenuProps) => {
-    const navigate = useNavigate()
-    const workspaceId = useParams().workspaceId as string
-    const listActions = useListActionRegistry()
-    const [activeTab, setActiveTab] = useState<"instances" | "createMirror">("instances")
-    const [isLoading, setIsLoading] = useState(false)
-    const [updatingAccessModeByBoardListID, setUpdatingAccessModeByBoardListID] = useState<Record<string, boolean>>({})
-    const [data, setData] = useState<BoardListMirrorsResponse | null>(null)
-
-    const accessModeItems: MenuItem[] = [
-        { id: "editable", label: "Editable" },
-        { id: "readonly", label: "Readonly" },
-    ]
-
-    const fetchMirrors = async () => {
-        setIsLoading(true)
-        try {
-            const response = await api.get<BoardListMirrorsResponse>(`/boards/${boardID}/boardlists/${boardListID}/mirrors`)
-            setData(response.data)
-        } finally {
-            setIsLoading(false)
-        }
-    }
-
-    useEffect(() => {
-        void fetchMirrors()
-    }, [boardID, boardListID])
-
-    const handleMirrorSubmit = async (payload: MirrorBoardListRequest) => {
-        await listActions.mirrorBoardList(boardID, listID, payload)
-        setActiveTab("instances")
-        await fetchMirrors()
-    }
-
-    const handleSetMirrorAccessMode = async (targetBoardID: string, targetListID: string, targetBoardListID: string, accessMode: BoardListAccessMode) => {
-        setUpdatingAccessModeByBoardListID((prev) => ({ ...prev, [targetBoardListID]: true }))
-        try {
-            await listActions.setListAccessMode(targetBoardID, targetListID, accessMode)
-            setData((prev) => {
-                if (!prev) return prev
-                return {
-                    ...prev,
-                    Items: prev.Items.map((item) =>
-                        item.BoardList.ID === targetBoardListID
-                            ? { ...item, BoardList: { ...item.BoardList, AccessMode: accessMode } }
-                            : item
-                    )
-                }
-            })
-            await fetchMirrors()
-        } finally {
-            setUpdatingAccessModeByBoardListID((prev) => ({ ...prev, [targetBoardListID]: false }))
-        }
-    }
-
-    return (
-        <ActionMenuWrapper
-            ref={ref}
-            onBack={activeTab === "createMirror" ? () => setActiveTab("instances") : undefined}
-            width={330}
-            Title={activeTab === "instances" ? "Mirror Menu" : "Create Mirror"}
-            onClose={onClose}
-        >
-            {activeTab === "instances" && (
-                <div className="px-3 py-2 flex flex-col gap-2 max-h-[320px] overflow-y-auto scrollbar-hidden">
-                    <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs text-neutral-400">
-                            {isRootBoardList ? "Root list instances" : "Mirror list instances"}
-                        </span>
-                        <button
-                            className="w-6 h-6 rounded-md border border-neutral-600 text-neutral-300 hover:bg-neutral-700/40"
-                            onClick={() => setActiveTab("createMirror")}
-                            title="Create mirror"
-                        >
-                            +
-                        </button>
-                    </div>
-                    {isLoading && <span className="text-sm text-neutral-400">Loading...</span>}
-                    {!isLoading && (data?.Items?.length ?? 0) === 0 && (
-                        <span className="text-sm text-neutral-400">No mirror instances found.</span>
-                    )}
-                    {!isLoading && data?.Items?.map((item) => {
-                        const isCurrentBoard = item.Board.ID === boardID
-                        const itemAccessMode: BoardListAccessMode = item.BoardList.AccessMode === "readonly" ? "readonly" : "editable"
-                        const isUpdating = updatingAccessModeByBoardListID[item.BoardList.ID] === true
-                        return (
-                            <div
-                                key={item.BoardList.ID}
-                                className="w-full px-2 py-2 rounded-md hover:bg-neutral-700/40 transition-colors"
-                            >
-                                <div className="flex items-center justify-between gap-2">
-                                    <button
-                                        className="text-sm text-neutral-200 truncate text-left"
-                                        onClick={() => {
-                                            if (!isCurrentBoard) {
-                                                navigate(`/workspaces/${workspaceId}/boards/${item.Board.ID}`)
-                                            }
-                                            onClose()
-                                        }}
-                                    >
-                                        {item.Board.Name}
-                                    </button>
-                                    <div className="flex items-center gap-1">
-                                        {item.IsRoot && <span className="text-[10px] px-1.5 py-0.5 rounded border border-neutral-600 text-neutral-300">ROOT</span>}
-                                        {!item.IsRoot && <span className="text-[10px] px-1.5 py-0.5 rounded border border-neutral-600 text-neutral-300">MIRROR</span>}
-                                        {isCurrentBoard && <span className="text-[10px] px-1.5 py-0.5 rounded border border-neutral-600 text-neutral-300">CURRENT</span>}
-                                    </div>
-                                </div>
-
-                                <div className="mt-2" onClick={(e) => e.stopPropagation()}>
-                                    <CustomDropDown
-                                        btnId={`mirror-access-mode-${item.BoardList.ID}`}
-                                        items={accessModeItems}
-                                        activeId={itemAccessMode}
-                                        onClick={(id) => {
-                                            if (id !== "readonly" && id !== "editable") return
-                                            void handleSetMirrorAccessMode(item.Board.ID, item.BoardList.ListID, item.BoardList.ID, id)
-                                        }}
-                                        showChevron={true}
-                                        className="!h-9"
-                                        chevronClassName="w-4 h-4"
-                                        isLocked={isUpdating}
-                                    />
-                                </div>
-                            </div>
-                        )
-                    })}
-                </div>
-            )}
-
-            {activeTab === "createMirror" && (
-                <div className="text-neutral-300 h-[235px] transition-all duration-200">
-                    <MoveListTab
-                        sourceBoardID={boardID}
-                        sourceListID={listID}
-                        submitLabel="Mirror"
-                        mode="mirror"
-                        onSubmit={(payload) => handleMirrorSubmit(payload as MirrorBoardListRequest).then(() => onClose())}
-                    />
-                </div>
-            )}
-        </ActionMenuWrapper>
-    )
-}
 
 const hexToRgba = (hex: string, alpha: number) => {
     const normalized = hex.replace("#", "")

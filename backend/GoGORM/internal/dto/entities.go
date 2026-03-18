@@ -29,6 +29,7 @@ type ListResponse struct {
 	Props            datatypes.JSON `json:"Props,omitempty"`
 	CreatedByUserID  uuid.UUID      `json:"CreatedByUserID"`
 	CreatedInBoardID uuid.UUID      `json:"CreatedInBoardID"`
+	ExternalAccess   string         `json:"ExternalAccess"`
 	CreatedAt        time.Time      `json:"CreatedAt"`
 	UpdatedAt        time.Time      `json:"UpdatedAt"`
 	DeletedAt        *time.Time     `json:"DeletedAt,omitempty"`

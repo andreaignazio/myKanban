@@ -50,5 +50,6 @@ type PatchListPropsRequest struct {
 type ListProps map[string]any
 
 type PatchListDetailsRequest struct {
-	Title *string `json:"Title,omitempty"`
+	Title          *string `json:"Title,omitempty"`
+	ExternalAccess *string `json:"ExternalAccess,omitempty"`
 }

@@ -15,6 +15,7 @@ type ListDomain struct {
 	Props            datatypes.JSON
 	CreatedByUserID  uuid.UUID
 	CreatedInBoardID uuid.UUID
+	ExternalAccess   string
 	CreatedAt        time.Time
 	UpdatedAt        time.Time
 	DeletedAt        gorm.DeletedAt

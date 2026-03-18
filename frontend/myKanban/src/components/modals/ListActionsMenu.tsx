@@ -12,6 +12,7 @@ import { CustomDropDown } from "../menuElements/CustomDropDown";
 import { useBoardsStore } from "@/stores/boardsStore";
 import { useBoardDetailStore } from "@/stores/boardDetailStore";
 import { useUserWatchStore } from "@/stores/userWatchStore";
+import { useListsStore } from "@/stores/listsStore";
 import { useShallow } from "zustand/shallow";
 import { CheckIcon } from "@heroicons/react/24/solid";
 import { useAsyncRequestGroup } from "@/hooks/useAsyncRequestGroup";
@@ -45,13 +46,18 @@ export const ListActionsMenu = forwardRef<HTMLDivElement, ListActionsMenuProps>(
     const isReadonly = currentAccessMode === "readonly"
     const canPatchAccessMode = visibilityRole === "admin" || visibilityRole === "owner"
     // const { executeCopyListOptimistic } = useListCopyOptimistic(listID, boardID)
-    const [activeTab, setActiveTab] = useState<"main" | "copyList" | "moveList" | "mirrorList" | "moveAllCards" | "accessMode">("main")
+    const isRootBoardList = boardListRelation ? boardListRelation.RootID === boardListRelation.ID : false
+    const getListById = useListsStore((state) => state.getListById)
+    const currentExternalAccess = getListById(boardListRelation?.ListID ?? "")?.ExternalAccess ?? "open"
+
+    const [activeTab, setActiveTab] = useState<"main" | "copyList" | "moveList" | "mirrorList" | "moveAllCards" | "accessMode" | "externalAccess">("main")
 
     const asyncKeys = [
         useAsyncKey("list:copy:bulk", listID),
         useAsyncKey("list:move:crossboard", listID),
         useAsyncKey("list:mirror", listID),
         useAsyncKey("list:detach", listID),
+        useAsyncKey("list:edit:externalAccess", listID),
         useAsyncKey("list:edit:props", listID),
         useAsyncKey("list:edit:access", listID),
         useAsyncKey("card:detach:bulk", listID),
@@ -110,6 +116,11 @@ export const ListActionsMenu = forwardRef<HTMLDivElement, ListActionsMenuProps>(
         if (result !== null) scheduleClose(1200)
     }
 
+    const handleExternalAccess = async (value: "open" | "restricted") => {
+        const res = await useListsStore.getState().patchListExternalAccess(listID, boardID, value)
+        if (res !== null) scheduleClose(1200)
+    }
+
     const handleAddCard = async () => {
         const result = await listActions.addCard(boardID, listID)
         if (result !== null) scheduleClose(0)
@@ -122,13 +133,24 @@ export const ListActionsMenu = forwardRef<HTMLDivElement, ListActionsMenuProps>(
         { id: "moveList", label: "Move List", kind: "standard", height: h, onClick: () => setActiveTab("moveList") },
         { id: "mirrorList", label: "Mirror List", kind: "standard", height: h, onClick: () => setActiveTab("mirrorList") },
         { id: "moveAllCards", label: "Move All Cards in This List", kind: "standard", height: h, onClick: () => setActiveTab("moveAllCards") },
-        ...(canPatchAccessMode ? [{
+        {
             id: "accessMode",
             label: `Access Mode: ${currentAccessMode}`,
             kind: "standard" as const,
             height: h,
+            disabled: !canPatchAccessMode,
+            description: !canPatchAccessMode ? "Admin only" : undefined,
             onClick: () => setActiveTab("accessMode")
-        }] : []),
+        },
+        {
+            id: "externalAccess",
+            label: `External Access: ${currentExternalAccess}`,
+            kind: "standard" as const,
+            height: h,
+            disabled: !isRootBoardList || !canPatchAccessMode,
+            description: !isRootBoardList ? "Only available on root lists" : !canPatchAccessMode ? "Admin only" : undefined,
+            onClick: () => setActiveTab("externalAccess")
+        },
         { id: "sortby", label: "Sort By...", kind: "standard", height: h, disabled: true },
         {
             id: "watch",
@@ -150,7 +172,7 @@ export const ListActionsMenu = forwardRef<HTMLDivElement, ListActionsMenuProps>(
                 requestGroups={[
                     {
                         requestKey: ["list:copy:bulk", "list:mirror",
-                            "list:edit:props", "list:edit:access",
+                            "list:edit:externalAccess", "list:edit:props", "list:edit:access",
                             "card:detach:bulk", "card:move:bulk"],
                         minLoadingMs: 0, maxErrorMs: 3000, minSuccessMs: 1000, show: ["loading", "success", "error"]
                     },
@@ -190,6 +212,9 @@ export const ListActionsMenu = forwardRef<HTMLDivElement, ListActionsMenuProps>(
                 </div>
                 <div className={`text-neutral-300 ${activeTab !== "accessMode" ? "opacity-0 h-0 pointer-events-none" : "opacity-100 h-[125px]"} transition-all duration-200`}>
                     <AccessModeTab currentAccessMode={currentAccessMode} onSubmit={handleAccessMode} />
+                </div>
+                <div className={`text-neutral-300 ${activeTab !== "externalAccess" ? "opacity-0 h-0 pointer-events-none" : "opacity-100 h-[125px]"} transition-all duration-200`}>
+                    <ExternalAccessTab currentValue={currentExternalAccess} onSubmit={handleExternalAccess} />
                 </div>
             </ActionMenuWrapper>
         </>
@@ -250,6 +275,7 @@ const AccessModeTab = ({ currentAccessMode, onSubmit }: AccessModeTabProps) => {
                 items={accessModeItems}
                 activeId={accessMode}
                 onClick={(id) => setAccessMode(id as BoardListAccessMode)}
+                disableGlobalState={true}
                 showChevron={true}
                 className="!h-10"
                 chevronClassName="w-4 h-4"
@@ -259,6 +285,45 @@ const AccessModeTab = ({ currentAccessMode, onSubmit }: AccessModeTabProps) => {
                 className="w-fit !h-10 mt-4"
                 label="Save"
                 onClick={() => onSubmit?.(accessMode)}
+            />
+        </div>
+    )
+}
+
+type ExternalAccessTabProps = {
+    currentValue: "open" | "restricted";
+    onSubmit?: (value: "open" | "restricted") => void;
+}
+
+const ExternalAccessTab = ({ currentValue, onSubmit }: ExternalAccessTabProps) => {
+    const [value, setValue] = useState<"open" | "restricted">(currentValue)
+
+    useEffect(() => {
+        setValue(currentValue)
+    }, [currentValue])
+
+    const items: MenuItemExtended[] = [
+        { id: "open", label: "Open", description: "Mirror boards can edit cards in this list", kind: "standard" },
+        { id: "restricted", label: "Restricted", description: "Only this board's members can edit cards", kind: "standard" },
+    ]
+
+    return (
+        <div className="px-3 py-2 gap-0 flex flex-col mt-1">
+            <span className="text-sm font-medium text-neutral-400 mb-1">External Access</span>
+            <CustomDropDown
+                btnId={`list-external-access-${currentValue}`}
+                items={items}
+                activeId={value}
+                onClick={(id) => setValue(id as "open" | "restricted")}
+                disableGlobalState={true}
+                showChevron={true}
+                className="!h-10"
+                chevronClassName="w-4 h-4"
+            />
+            <LabeledButtonPresetBSubmit
+                className="w-fit !h-10 mt-4"
+                label="Save"
+                onClick={() => onSubmit?.(value)}
             />
         </div>
     )

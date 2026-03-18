@@ -118,7 +118,7 @@ export const CardDetailMenu = forwardRef<HTMLDivElement, CardDetailMenuProps>(({
         patchCardWatchActive(cardId, !isCardWatched);
     };
 
-    const { canEdit, hasRootBoardAccess } = useCardEditableContext({ cardContext, boardId, effectiveRootBoard });
+    const { canEdit, canEditReason, canEditBoardList, hasRootBoardAccess } = useCardEditableContext({ cardContext, boardId, effectiveRootBoard });
 
     const [asideActiveTab, setAsideActiveTab] = useState("activity");
     const isAsideCollapsedByWindow = useMediaQuery(`(max-width: ${ACTIVITY_COLUMN_COLLAPSE_WIDTH - 1}px)`);
@@ -366,13 +366,14 @@ export const CardDetailMenu = forwardRef<HTMLDivElement, CardDetailMenuProps>(({
                                 cardContext={cardContext}
                                 isMirrorCard={isMirrorCard}
                                 canEdit={canEdit}
+                                canEditReason={canEditReason}
                                 rootBoard={effectiveRootBoard}
                                 hasRootBoardAccess={hasRootBoardAccess}
                                 cardId={cardId}
                                 listId={listId}
                             />
 
-                            <CardMain cardId={cardId!} source={cardContext?.source} listCardId={listCardId} canEdit={canEdit} isAsideCollapsed={isAsideCollapsedByWindow} />
+                            <CardMain cardId={cardId!} source={cardContext?.source} listCardId={listCardId} canEdit={canEdit} canEditBoardList={canEditBoardList} isAsideCollapsed={isAsideCollapsedByWindow} />
 
                         </div>
 
@@ -415,9 +416,10 @@ type MirrorWarningsProps = {
     listId?: string;
 }
 
-const MirrorWarnings = ({ rootListName, cardContext, isMirrorCard, canEdit, hasRootBoardAccess, rootBoard, cardId, listId }: MirrorWarningsProps) => {
+const MirrorWarnings = ({ rootListName, cardContext, isMirrorCard, canEdit, canEditReason, hasRootBoardAccess, rootBoard, cardId, listId }: MirrorWarningsProps) => {
     const mirrorLabel = `This card is mirrored from the "${rootListName}" list. Changes made here will reflect on the original card and vice versa.`
     const cannotEditLabel = "This card is not editable in this view."
+    const cannotEditSublabel = canEditReason
     const inboxMirrorLabel = "You are viewing this card from the Inbox. To edit, please go to the original board where this card is located."
     const inboxLabel = "This card is in the Inbox. To get full functionality, please move it to a board and list."
     const isInboxMirror = cardContext?.source === "inbox-mirror";
@@ -487,9 +489,14 @@ const MirrorWarnings = ({ rootListName, cardContext, isMirrorCard, canEdit, hasR
         <div className="flex flex-row items-center gap-2 px-4 py-2 text-xs h-fit
                             border-b-2 border-neutral-300/20 bg-menusec justify-between
                             text-neutral-300/50">
-            <div className="flex flex-row items-center gap-1">
-                <ExclamationCircleIcon className={`w-5 h-5 ${markColor}`} />
-                <span>{resolvedLabel}</span>
+            <div className="flex flex-row items-center gap-2">
+                <ExclamationCircleIcon className={`w-5 h-5 ${markColor} shrink-0`} />
+                <div className="flex flex-col">
+                    <span>{resolvedLabel}</span>
+                    {!canEdit && cannotEditSublabel && (
+                        <span className="text-neutral-400/60">{cannotEditSublabel}</span>
+                    )}
+                </div>
             </div>
             {actionBtn}
         </div>
@@ -580,6 +587,7 @@ export type Buttons = {
     icon?: React.ReactNode;
     width?: number | string;
     shouldHideBtn?: () => boolean;
+    gate?: "canEdit" | "canEditBoardList";
 }
 export const PADDING_L = "35px"
 
@@ -587,12 +595,13 @@ type CardMainProps = {
     cardId: string;
     source?: CardContext["source"];
     listCardId?: string;
+    canEditBoardList?: boolean;
     isAsideCollapsed?: boolean;
     canEdit?: boolean;
 }
 
 
-export const CardMain = ({ cardId, source = "board", listCardId, canEdit, isAsideCollapsed }: CardMainProps) => {
+export const CardMain = ({ cardId, source = "board", listCardId, canEdit, canEditBoardList, isAsideCollapsed }: CardMainProps) => {
     const boardId = useParams().boardId!;
     const cardActions = useCardActionRegistry();
     const card = useCardsStore((state) => state.cardsById[cardId!]);
@@ -713,7 +722,8 @@ export const CardMain = ({ cardId, source = "board", listCardId, canEdit, isAsid
         { id: "add", label: "Add", icon: icon(PlusIcon), onClick: () => console.log("Add button clicked"), menuToOpen: ({ onClose, ref }) => <CardAddFields onClose={onClose} cardId={cardId} ref={ref} /> },
         {
             id: "labels", label: "Labels", icon: icon(TagIcon), onClick: () => console.log("Labels button clicked"),
-            menuToOpen: ({ onClose, ref }) => <CardLabelMenu onClose={onClose} ref={ref} />
+            menuToOpen: ({ onClose, ref }) => <CardLabelMenu onClose={onClose} ref={ref} />,
+            gate: "canEditBoardList",
         },
         {
             id: "dates", label: "Dates", icon: icon(ClockIcon), shouldHideBtn: () => hasDates,
@@ -756,17 +766,20 @@ export const CardMain = ({ cardId, source = "board", listCardId, canEdit, isAsid
                 </div>
                 <div
                     style={{ paddingLeft: PADDING_L }}
-                    className={`
-                        ${!canEdit ? "pointer-events-none opacity-30" : "opacity-100"}
-                    flex items-center mt-4 gap-2`}>
-                    {rowButtons.map((btn) => (
-                        <CardRowMenuBtn key={btn.id} cardID={cardId}
-                            menuComponent={({ onClose, ref }) => btn.menuToOpen ? btn.menuToOpen({ onClose, ref }) : null}
-                            label={btn.label}
-                            icon={btn.icon}
-                            shouldHideBtn={btn.shouldHideBtn} />
-
-                    ))}
+                    className="flex items-center mt-4 gap-2">
+                    {rowButtons.map((btn) => {
+                        const isDisabled = btn.gate === "canEditBoardList" ? !canEditBoardList : !canEdit
+                        return (
+                            <CardRowMenuBtn key={btn.id} cardID={cardId}
+                                disableClick={isDisabled}
+                                menuComponent={({ onClose, ref }) => btn.menuToOpen ? btn.menuToOpen({ onClose, ref }) : null}
+                                label={btn.label}
+                                icon={btn.icon}
+                                shouldHideBtn={btn.shouldHideBtn}
+                                className={isDisabled ? "pointer-events-none opacity-30" : "opacity-100"}
+                            />
+                        )
+                    })}
                 </div>
                 <div style={{ paddingLeft: PADDING_L }}
                     className={`

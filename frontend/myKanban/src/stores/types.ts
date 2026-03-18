@@ -207,6 +207,7 @@ export type List = {
     ID: string;
     Title: string;
     Props?: Record<string, unknown>;
+    ExternalAccess: "open" | "restricted";
     CreatedAt: string;
     UpdatedAt: string;
     DeletedAt: string | null;
@@ -275,6 +276,7 @@ export type BoardListMirrorItem = {
     Board: Board;
     BoardList: BoardList;
     IsRoot: boolean;
+    HasAccess: boolean;
 };
 
 export type BoardListMirrorsResponse = {

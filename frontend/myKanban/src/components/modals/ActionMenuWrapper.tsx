@@ -24,6 +24,7 @@ type ActionMenuWrapperProps = {
     onBack?: () => void
     width?: number
     titleStyle?: React.CSSProperties
+    titleClassName?: string;
     style?: React.CSSProperties
     requestKey?: AsyncRequestKey | AsyncRequestKey[];
     minLoadingMs?: number;
@@ -37,7 +38,7 @@ type ActionMenuWrapperProps = {
     isLoading?: boolean;
 }
 
-export const ActionMenuWrapper = forwardRef<HTMLDivElement, ActionMenuWrapperProps>(({ children, Title, onClose, onBack, width, titleStyle, style, requestKey, minLoadingMs, minSuccessMs, maxSuccessMs, maxErrorMs, show, maxWidth, requestGroups, hideX = false, isLoading = false }, ref) => {
+export const ActionMenuWrapper = forwardRef<HTMLDivElement, ActionMenuWrapperProps>(({ children, Title, onClose, onBack, width, titleStyle, titleClassName, style, requestKey, minLoadingMs, minSuccessMs, maxSuccessMs, maxErrorMs, show, maxWidth, requestGroups, hideX = false, isLoading = false }, ref) => {
 
     const resolvedStyle: React.CSSProperties = {
         ...style,
@@ -69,7 +70,7 @@ export const ActionMenuWrapper = forwardRef<HTMLDivElement, ActionMenuWrapperPro
                 <ChevronLeftIcon className="w-5 h-5 text-white" />
             </div>}
             <div className="text-center flex-row w-full mb-1 mt-1">
-                <span className="text-xs font-inter text-neutral-300 " style={titleStyle}>{Title}</span>
+                <span className={`text-xs font-inter text-neutral-300 ${titleClassName}`} style={titleStyle}>{Title}</span>
             </div>
             {children}
         </>

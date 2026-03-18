@@ -30,6 +30,7 @@ type ListsStore = {
     mirrorBoardList: (sourceBoardID: string, listID: string, payload: MirrorBoardListRequest) => Promise<MirrorBoardListResponse | null>
     detatchList: (listID: string, boardID: string) => Promise<void | null>
     patchListDetails: (listID: string, boardID: string, payload: { Title?: string }) => Promise<void | null>
+    patchListExternalAccess: (listID: string, boardID: string, value: "open" | "restricted") => Promise<void | null>
     patchListProps: (listID: string, boardID: string, payload: { Props: Record<string, unknown> }) => Promise<void | null>
     patchListAccessMode: (listID: string, boardID: string, payload: PatchListAccessModeRequest) => Promise<void | null>
     createListRaw: (payload: CreateListRequest, boardID: string) => Promise<CreateListInBoardResponse | null>
@@ -168,6 +169,13 @@ export const useListsStore = create<ListsStore>((set, get) => ({
         await useAsyncRequestStore.getState().execute(
             useAsyncKey("list:edit:title", listID),
             () => api.patch(`/boards/${boardID}/lists/${listID}`, payload),
+            { successResetDelayMs: 1500 }
+        )
+    },
+    patchListExternalAccess: async (listID: string, boardID: string, value: "open" | "restricted") => {
+        await useAsyncRequestStore.getState().execute(
+            useAsyncKey("list:edit:externalAccess", listID),
+            () => api.patch(`/boards/${boardID}/lists/${listID}`, { ExternalAccess: value }),
             { successResetDelayMs: 1500 }
         )
     },

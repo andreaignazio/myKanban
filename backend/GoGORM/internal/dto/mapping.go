@@ -127,6 +127,7 @@ func ListToResponse(list *models.List) ListResponse {
 		Props:            list.Props,
 		CreatedByUserID:  list.CreatedByUserID,
 		CreatedInBoardID: list.CreatedInBoardID,
+		ExternalAccess:   list.ExternalAccess,
 		CreatedAt:        list.CreatedAt,
 		UpdatedAt:        list.UpdatedAt,
 		DeletedAt:        DeletedAtPtr(list.DeletedAt),

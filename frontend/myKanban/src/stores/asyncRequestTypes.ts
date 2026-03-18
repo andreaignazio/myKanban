@@ -36,6 +36,7 @@ export const ASYNC_REQUEST_BASE_KEYS = [
     "list:mirror",
     "list:detach",
     "list:edit:title",
+    "list:edit:externalAccess",
     "list:edit:props",
     "list:edit:access",
     "listcard:rootboard:fetch",

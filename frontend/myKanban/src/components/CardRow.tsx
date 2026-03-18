@@ -124,7 +124,7 @@ export const CardRow = ({ boardID, listId, listCardID: listCardID, cardId, index
 
     const done = card?.Done
 
-    const { canEdit } = useCardEditableContext({ cardContext, boardId, effectiveRootBoard })
+    const { canEdit, canEditBoardList } = useCardEditableContext({ cardContext, boardId, effectiveRootBoard })
     const isPendingCopy = (listCardID?.startsWith("copy-temp-") ?? false)
 
 
@@ -192,7 +192,7 @@ export const CardRow = ({ boardID, listId, listCardID: listCardID, cardId, index
         const descriptor: OverlayDescriptor = {
             id: id,
             render: () => <CardEditMenu
-                ref={ActionsMenuRef} cardContext={cardContext} onClose={() => onMenuClose(id)} menuId={id} canEdit={canEdit} />,
+                ref={ActionsMenuRef} cardContext={cardContext} onClose={() => onMenuClose(id)} menuId={id} canEdit={canEdit} canEditBoardList={canEditBoardList} />,
             anchorRef: cardRowRef,
             panelRef: ActionsMenuRef,
             type: "modal",

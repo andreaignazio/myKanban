@@ -97,6 +97,7 @@ export const ListAdd = ({ boardID, setShouldAnimate }: ListAddProps) => {
             ID: tempID,
             Title: title,
             Props: {},
+            ExternalAccess: "open",
             CreatedAt: new Date().toISOString(),
             UpdatedAt: new Date().toISOString(),
             DeletedAt: null,

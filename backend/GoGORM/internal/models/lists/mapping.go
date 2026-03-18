@@ -12,6 +12,7 @@ func mappingListToListResponse(list *models.List) dto.ListResponse {
 		Props:            list.Props,
 		CreatedByUserID:  list.CreatedByUserID,
 		CreatedInBoardID: list.CreatedInBoardID,
+		ExternalAccess:   list.ExternalAccess,
 		CreatedAt:        list.CreatedAt,
 		UpdatedAt:        list.UpdatedAt,
 		DeletedAt:        deletedAtPtr(list.DeletedAt),

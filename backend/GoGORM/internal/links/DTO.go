@@ -39,6 +39,7 @@ type BoardListMirrorItem struct {
 	Board     dto.BoardResponse     `json:"Board"`
 	BoardList dto.BoardListResponse `json:"BoardList"`
 	IsRoot    bool                  `json:"IsRoot"`
+	HasAccess bool                  `json:"HasAccess"`
 }
 
 type BoardListMirrorsResponse struct {

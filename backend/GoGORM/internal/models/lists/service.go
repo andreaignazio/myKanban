@@ -71,6 +71,7 @@ func (s *ListsService) GetListMeta(ctx context.Context, userID, listID uuid.UUID
 		Props:            list.Props,
 		CreatedByUserID:  list.CreatedByUserID,
 		CreatedInBoardID: list.CreatedInBoardID,
+		ExternalAccess:   list.ExternalAccess,
 		CreatedAt:        list.CreatedAt,
 		UpdatedAt:        list.UpdatedAt,
 		DeletedAt:        list.DeletedAt,
@@ -194,17 +195,22 @@ func (s *ListsService) PatchListDetails(ctx context.Context, userID, workspaceID
 		return nil, err
 	}
 
-	allowedRoles := rbac.AllowedAtLeast(rbac.Member)
-	if ok, err := s.CapabilitiesRepo.CanAccessListInBoard(ctx, s.db,
-		userID, boardID, listID, allowedRoles, rbac.BoardListEditable.String(), s.IncludeDeleted); err != nil {
-		return nil, domainerr.MapRepoErr(err, false)
-	} else if !*ok {
-		return nil, domainerr.ErrForbidden
-	}
-
 	updateMap := map[string]any{}
 	if req.Title != nil {
+		allowedRoles := rbac.AllowedAtLeast(rbac.Member)
+		if ok, err := s.CapabilitiesRepo.CanAccessListInBoard(ctx, s.db,
+			userID, boardID, listID, allowedRoles, rbac.BoardListEditable.String(), s.IncludeDeleted); err != nil {
+			return nil, domainerr.MapRepoErr(err, false)
+		} else if !*ok {
+			return nil, domainerr.ErrForbidden
+		}
 		updateMap["title"] = *req.Title
+	}
+	if req.ExternalAccess != nil {
+		if err := guard.CheckUserMinRole(ctx, s.MembershipRepo, userID, boardID, rbac.Admin, s.IncludeDeleted); err != nil {
+			return nil, err
+		}
+		updateMap["external_access"] = *req.ExternalAccess
 	}
 
 	updatedList, err := s.ListsRepo.PatchListDetails(ctx, listID, updateMap)

@@ -42,6 +42,7 @@ export function useListCopyOptimistic(listID: string, boardID: string) {
         const tempList: List = {
             ID: tempListID,
             Title: title,
+            ExternalAccess: "open",
             CreatedAt: new Date().toISOString(),
             UpdatedAt: new Date().toISOString(),
             DeletedAt: null,

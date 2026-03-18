@@ -242,28 +242,27 @@ export const useCardMirrorsStore = create<CardMirrorsState>()((set, get) => ({
         const list = get().listsById[mirrorCardData.ListID];
         const boardList = get().boardListsByBoardListId[mirrorCardData.BoardListID];
         const listCard = get().listcardsById[mirrorCardData.ListCardID];
+        if (!board || !list || !boardList || !listCard) {
+            return null;
+        }
         const isRootListCard = listCard.ID === listCard.RootID
         const isRootBoardList = boardList.ID === boardList.RootID
         const isRootBoardCard = isRootListCard && isRootBoardList
         const boardLabels = resolveBoardLabelsForCard(get(), mirrorCardData.CardID, mirrorCardData.BoardID)
         const boardOwner = board ? get().usersById[board.CreatedByUserID] : undefined
-        if (board && list && boardList && listCard) {
-            const result: MirrorRenderData = {
-                mirrorCardId: boardListCardId,
-                board,
-                userBoard,
-                list,
-                boardList,
-                boardLabels,
-                boardOwner,
-                isRootListCard,
-                isRootBoardList,
-                isRootBoardCard
-            }
-            return result;
-        } else {
-            return null;
+        const result: MirrorRenderData = {
+            mirrorCardId: boardListCardId,
+            board,
+            userBoard,
+            list,
+            boardList,
+            boardLabels,
+            boardOwner,
+            isRootListCard,
+            isRootBoardList,
+            isRootBoardCard
         }
+        return result;
 
     },
 

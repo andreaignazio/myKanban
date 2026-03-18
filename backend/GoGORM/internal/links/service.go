@@ -1735,22 +1735,25 @@ func (s *LinksService) GetBoardListMirrors(ctx context.Context, userID, boardID,
 	items := make([]BoardListMirrorItem, 0, len(instances))
 	for i := range instances {
 		instance := instances[i]
-		role, roleErr := s.MembershipRepo.GetUserRole(ctx, userID, instance.BoardID, s.IncludeDeleted)
-		if roleErr != nil {
-			continue
-		}
-		if _, roleErr = domainerr.ParseAndCheckRole(role, rbac.Viewer); roleErr != nil {
-			continue
-		}
 
 		boardRow, ok := boardsByID[instance.BoardID]
 		if !ok {
 			continue
 		}
+
+		hasAccess := true
+		role, roleErr := s.MembershipRepo.GetUserRole(ctx, userID, instance.BoardID, s.IncludeDeleted)
+		if roleErr != nil {
+			hasAccess = false
+		} else if _, roleErr = domainerr.ParseAndCheckRole(role, rbac.Viewer); roleErr != nil {
+			hasAccess = false
+		}
+
 		items = append(items, BoardListMirrorItem{
 			Board:     dto.BoardToResponse(&boardRow),
 			BoardList: dto.BoardListToResponse(&instance),
 			IsRoot:    instance.ID == rootID,
+			HasAccess: hasAccess,
 		})
 	}
 
