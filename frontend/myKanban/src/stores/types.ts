@@ -1083,6 +1083,9 @@ export type CardMirrorsResponse = {
     Lists: List[]
     BoardLists: BoardList[]
     ListCards: ListCard[]
+    BoardLabels: BoardLabel[]
+    CardLabelLinks: CardLabelLink[]
+    Users: User[]
 }
 
 export type MirrorCardData = {

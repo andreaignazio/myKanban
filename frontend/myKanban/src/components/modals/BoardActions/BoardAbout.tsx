@@ -58,7 +58,7 @@ export const BoardAbout = ({ boardId }: BoardAboutProps) => {
                 onSave={(nextValue) => boardActions.setBoardDescription(boardId, nextValue)}
                 showHeading={false}
                 compactTopbar={true}
-                closedContainerClassName="!bg-neutral-500/20 min-h-[120px]"
+                closedContainerClassName="!bg-neutral-500/20 min-h-[120px] !cursor-pointer"
                 paddingLeft="0"
                 emptyPlaceholderText="Add a description to your board to let your team know what it's about."
             />

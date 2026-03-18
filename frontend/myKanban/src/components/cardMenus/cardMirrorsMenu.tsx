@@ -9,7 +9,7 @@ import { ImageColorRenderer } from "../menuElements/ImageColorRenderer";
 import { CardLabelsRenderer } from "../cardRowElements/CardLabelsRenderer";
 import type { BoardLabel, User } from "@/stores/types";
 import { MemberRow } from "../common/MemberRow";
-import { useListTheme } from "@/hooks/useListTheme";
+//import { useListTheme } from "@/hooks/useListTheme";
 import { useDateTimeParser } from "@/hooks/useDateTimeParser";
 import { DummyMirrorUI } from "../cardRowElements/CardMirrorsField";
 
@@ -74,9 +74,9 @@ const MirrorRow = ({ mirrorId, cardId }: MirrorRowProps) => {
         backgroundColorClassName: mirrorBoardBgColorClass,
         backgroundImageUrl: mirrorBoardBgImageUrl } = useBoardBackground({ board: mirrorData.board })
 
-    const { cardCoverURL } = useCardBackground({ cardId })
+    const { cardCoverURL, cardColor } = useCardBackground({ cardId })
 
-    const { listColor, listGradient } = useListTheme(mirrorData.list)
+    //const { listColor, listGradient } = useListTheme(mirrorData.list)
 
     const hoverClassMain = "mb-0 hover:mb-[13px] transition-all duration-300"
 
@@ -136,8 +136,9 @@ const MirrorRow = ({ mirrorId, cardId }: MirrorRowProps) => {
         DeletedAt: null,
     }
 
-    const formattedRole = mirrorData.userBoard.Role.slice(0, 1).toUpperCase() + mirrorData.userBoard.Role.slice(1).toLowerCase()
-    const formattedRoleDate = mirrorData.userBoard.CreatedAt ? new Date(mirrorData.userBoard.CreatedAt) : null
+    const role = mirrorData.userBoard?.Role ?? ""
+    const formattedRole = role.slice(0, 1).toUpperCase() + role.slice(1).toLowerCase()
+    const formattedRoleDate = mirrorData.userBoard?.CreatedAt ? new Date(mirrorData.userBoard.CreatedAt) : null
     const formattedRoleDateFormatted = formattedRoleDate ? useDateTimeParser().stringifyDatePretty(formattedRoleDate)?.date : null
     const formattedRoleWithDate = formattedRoleDateFormatted ? `since ${formattedRoleDateFormatted}` : formattedRole
 
@@ -169,6 +170,7 @@ const MirrorRow = ({ mirrorId, cardId }: MirrorRowProps) => {
                         fallbackGradient={{ className: "bg-gradient-to-r from-slate-500 to-slate-700" }}
                         backgroundType={mirrorBoardBgType}
                     >
+
                         <div className={` ${boardDetailMode ? "opacity-100" : "opacity-0"} transition-opacity duration-300 ease-in-out
                     flex flex-col items-start justify-start z-20 absolute inset-0
                     w-full h-full text-white text-center p-4 gap-2`}>
@@ -183,6 +185,7 @@ const MirrorRow = ({ mirrorId, cardId }: MirrorRowProps) => {
                                 {mirrorData.board.Props?.Description || "No description provided"}
                             </span>
                         </div>
+
                     </ImageColorRenderer>
 
 
@@ -203,8 +206,8 @@ const MirrorRow = ({ mirrorId, cardId }: MirrorRowProps) => {
                     <div
                         className="relative z-10 flex flex-col text-gray-100 bg-[#242528] rounded-lg min-h-[40px] justify-center !overflow-hidden shadow-md shadow-black/40 group ring-2 ring-white/0 mx-1 hover:ring-white/100"
                         style={{
-                            backgroundColor: listColor,
-                            backgroundImage: cardCoverURL ? `url(${cardCoverURL})` : listGradient,
+                            backgroundColor: cardColor,
+                            backgroundImage: cardCoverURL ? `url(${cardCoverURL})` : undefined,
                             backgroundSize: "cover",
                             backgroundPosition: "center",
                         }}

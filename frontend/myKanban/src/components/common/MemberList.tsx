@@ -6,15 +6,18 @@ type MemberListProps = {
     members?: UserWorkspace[] | UserBoard[];
     showPresence?: boolean;
     presenceByUserId?: Record<string, boolean>;
+    filterFn?: (member: UserWorkspace | UserBoard) => boolean;
 }
 
-export const MembersList = ({ members, showPresence, presenceByUserId }: MemberListProps) => {
+export const MembersList = ({ members, showPresence, presenceByUserId, filterFn }: MemberListProps) => {
     const userById = useUserStore(state => state.usersById)
+
+    const visibleMembers = filterFn ? members?.filter(filterFn) : members
 
     return (
         <>
-            {members && members.length > 0 ? (
-                members.map((member) => {
+            {visibleMembers && visibleMembers.length > 0 ? (
+                visibleMembers.map((member) => {
                     const user = userById[member?.UserID]
                     return (
                         <MemberRow key={member?.UserID} user={user as User} member={member} showPresence={showPresence} presence={showPresence && presenceByUserId?.[member?.UserID]} />
@@ -25,5 +28,4 @@ export const MembersList = ({ members, showPresence, presenceByUserId }: MemberL
             )}
         </>
     )
-
 }

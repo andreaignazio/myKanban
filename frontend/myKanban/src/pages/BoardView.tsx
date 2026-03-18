@@ -224,8 +224,19 @@ export default function BoardView() {
         { id: "divider1", label: "", type: "divider" },
         { id: "SwitchBoard", label: "Switch Board", type: "action", icon: <TableColumnsSplit className="w-4 h-4" />, onClick: () => handleOpenSwitchMenu() },
     ]
-    const [activeFloatingTab, setActiveFloatingTab] = useState("Board")
-    const isInboxActive = activeFloatingTab === "Inbox"
+    const [activePanels, setActivePanels] = useState<string[]>([])
+    const isInboxActive = activePanels.includes("Inbox")
+
+    function handleTabToggle(tabId: string) {
+        if (tabId === "Board") {
+            // Board = show only board, collapse all panels
+            setActivePanels([])
+            return
+        }
+        setActivePanels(prev =>
+            prev.includes(tabId) ? prev.filter(id => id !== tabId) : [...prev, tabId]
+        )
+    }
 
     const [inboxWidth, setInboxWidth] = useState(() => {
         const stored = localStorage.getItem("inboxPanelWidth")
@@ -539,21 +550,27 @@ export default function BoardView() {
                     {boardId && (
 
                         <div
-                            className={` flex flex-col items-start justify-start h-full min-h-0 flex-1 transition-all
+                            className={` flex flex-col items-start justify-start h-full min-h-0 flex-1 transition-all 
+                                 
+                                ${isInboxActive ? "pe-2" : ""} 
                                  relative pb-2 overflow-hidden`}
                         >
                             <div
-                                className=" flex h-fit min-h-0 w-full flex-col overflow-hidden "
+                                style={{ borderRadius: isInboxActive ? 20 : 0, width: isInboxActive ? "calc(100% - 8px)" : "100%", height: isInboxActive ? "calc(100% - 40px)" : "100%", }}
+                                className={`${isInboxActive ? "opacity-100" : "opacity-0"} transition-opacity duration-300 bg-transparent
+                                absolute inset-0 z-50  border border-gray-300/50 pointer-events-none antialiased `} />
+                            <div
+                                className=" flex h-fit min-h-0 w-full flex-col overflow-hidden  "
                                 style={{ borderRadius: isInboxActive ? "20px 20px 0px 0" : 0, overflow: "hidden" }}
                             >
                                 <BoardViewTopBar board={board} backgroundType={backgroundType} />
                             </div>
                             <div
                                 style={{
-                                    height: isInboxActive ? "calc(100% - 40px)" : "100%",
+                                    height: isInboxActive ? "calc(100% - 40px)" : "100%", width: isInboxActive ? "calc(100% - 8px)" : "100%",
                                     paddingBottom: isInboxActive ? 40 : 0, borderRadius: isInboxActive ? 20 : 0, overflow: "hidden"
                                 }}
-                                className={`absolute inset-0 transition-all w-full min-h-0 pointer-events-none  `}>
+                                className={`absolute inset-0 transition-all w-full min-h-0 pointer-events-none   `}>
                                 <BoardBackgroundTransition target={targetBackground} />
                             </div>
 
@@ -580,7 +597,11 @@ export default function BoardView() {
                 <Outlet />
             </div >
             <div className="absolute bottom-0 flex flex-row w-full  py-4 items-center justify-center ">
-                <FloatingTabSelector activeTab={activeFloatingTab} setActiveTab={setActiveFloatingTab} tabs={floatingTabs} />
+                <FloatingTabSelector
+                    activeTabs={["Board", ...activePanels]}
+                    onTabToggle={handleTabToggle}
+                    tabs={floatingTabs}
+                />
             </div>
         </>
 

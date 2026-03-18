@@ -8,7 +8,7 @@ import { useNavigate, useLocation, useParams } from "react-router-dom"
 import { useEffect, useRef, useState } from "react"
 
 import { useLabelsStore } from "@/stores/labelsStore"
-import { ArchiveIcon, SquarePenIcon } from "lucide-react"
+import { ArchiveIcon, PencilOff, SquarePenIcon } from "lucide-react"
 import { CardFieldsLabels } from "./cardRowElements/CardFieldsLabels"
 import { Mirrors } from "./cardRowElements/CardMirrorsField"
 import { CardRowTitle } from "./cardRowElements/CardRowTitle"
@@ -363,8 +363,8 @@ export const CardRow = ({ boardID, listId, listCardID: listCardID, cardId, index
                                 <CardRowFields cardID={cardID!} />
 
                                 <div className={`absolute top-[10px] right-[11px] 
-                            flex flex-row gap-2
-                             z-10 opacity-0 ${canEdit ? "group-hover:opacity-100" : ""} transition-all duration-200`}>
+                                flex flex-row gap-2
+                                 z-10 opacity-0 ${canEdit ? "group-hover:opacity-100" : ""} transition-all duration-200`}>
 
                                     <ArchiveIcon className="w-5 h-5 text-neutral-300 cursor-pointer "
                                         onClickCapture={(e) => {
@@ -386,6 +386,16 @@ export const CardRow = ({ boardID, listId, listCardID: listCardID, cardId, index
                                     />
 
 
+                                </div>
+
+                                <div className="absolute top-0 right-0 z-20">
+                                    {!canEdit && (
+                                        <SmallLabel
+                                            className="w-[87px]"
+                                            text="Read-only">
+                                            <PencilOff size={12} className="text-white/80 -translate-y-[1px]" />
+                                        </SmallLabel>
+                                    )}
                                 </div>
 
                             </CardRowCoverWrapper>
@@ -447,6 +457,7 @@ import type { CardSource } from "@/domain/cardContext"
 import { useCardEditableContext } from "@/hooks/useCardEditableContext"
 import { useUiStore, type DomainModalData } from "@/stores/uiStore"
 import { ConfirmDeletionPopover } from "./modals/ConfirmDeletion"
+import { SmallLabel } from "./common/smallLabel"
 
 
 

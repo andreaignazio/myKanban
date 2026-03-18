@@ -137,7 +137,7 @@ export const UserNotificationMenu = forwardRef<HTMLDivElement, UserNotificationM
                 <div className="border-t border-gray-600 my-2 mx-4" />
 
                 {false && <div className="fixed bottom-6 rounded-md bg-transparent w-full flex justify-center ">
-                    <FloatingTabSelector activeTab={activeTab} setActiveTab={setActiveTab} tabs={tabs} />
+                    <FloatingTabSelector activeTabs={[activeTab]} onTabToggle={setActiveTab} tabs={tabs} />
 
                 </div>}
 

@@ -20,6 +20,7 @@ export default {
         helvetica: ["Helvetica", "Arial", "ui-sans-serif", "system-ui"],
         inter: ["Inter", "ui-sans-serif", "system-ui"],
         manrope: ["Manrope", "ui-sans-serif", "system-ui"],
+        plex: ["'IBM Plex Sans'", "ui-sans-serif", "system-ui"],
       },
       colors: {
         main: "var(--color-main)",

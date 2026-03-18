@@ -43,7 +43,7 @@ export const MemberRow = ({ onClick, onClickCapture, user, member, showRole = tr
             onClickCapture={onClickCapture}
             style={{ height: avatarSize + 4, minWidth: avatarSize + 4 }}
             className={`${showRowHoverEffect ? "relative overflow-hidden" : ""}
-                ${cursorDefault ? "cursor-default" : "cursor-pointer"}
+                ${cursorDefault ? "!cursor-default" : "!cursor-pointer"}
                 group flex flex-row items-center w-full h-[56px] rounded-full bg-neutral-500/20 ${rowClassName ?? ""}`}
             animate={{
                 paddingTop: "2px",
@@ -136,12 +136,14 @@ type ResolvedAvatarProps = {
     avatarSize?: number;
     presence?: boolean;
     showPresence?: boolean;
+    cursorDefault?: boolean;
 }
-const ResolvedAvatar = ({ user, useDummyAvatar = true, avatarSize = 52, presence, showPresence }: ResolvedAvatarProps) => {
+const ResolvedAvatar = ({ user, useDummyAvatar = true, avatarSize = 52, presence, showPresence, cursorDefault = false }: ResolvedAvatarProps) => {
 
     return (
         <>
             {useDummyAvatar && <UserAvatarDummy
+                className={cursorDefault ? "!cursor-default" : "!cursor-pointer"}
                 disableHoverEffect={true}
                 user={user} size={avatarSize} presence={presence} showPresence={showPresence} />}
             {

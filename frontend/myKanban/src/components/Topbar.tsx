@@ -134,11 +134,12 @@ function UserHeader({ context }: { context: string | null }) {
                 <MemberRow
                     onClickCapture={() => { }}
                     compact={context === "board"}
-                    rowClassName="!w-fit"
+                    rowClassName="!w-fit "
                     avatarSize={context === "board" ? 32 : 38}
                     showEndRow={false}
                     user={user as User} showRole={false} flip={true}
                     showRowHoverEffect={true}
+                    cursorDefault={false}
                 />
             </CardRowMenuBtn>
 

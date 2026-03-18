@@ -89,9 +89,20 @@ export const WorkspaceIconEditor = forwardRef<HTMLDivElement, WorkspaceIconEdito
         }
     };
 
+    const [shouldBeHorizontal, setShouldBeHorizontal] = useState(false);
+    useEffect(() => {
+        const update = () => setShouldBeHorizontal(window.innerHeight < 800);
+        update();
+        window.addEventListener("resize", update);
+        return () => window.removeEventListener("resize", update);
+    }, []);
+
     return (
         <CommonMenuWrapper ref={ref}>
-            <div className="flex w-[360px] flex-col gap-3 p-4">
+            <div className={`flex ${shouldBeHorizontal
+                ? "flex-col w-[600px]"
+                : "flex-col w-[360px]"}  gap-3 p-4`}>
+
                 <span className="text-lg font-semibold text-neutral-300">Workspace icon</span>
 
                 <div className="
@@ -102,53 +113,59 @@ export const WorkspaceIconEditor = forwardRef<HTMLDivElement, WorkspaceIconEdito
                         <CatalogIcon id={selectedIconId} className="h-16 w-16 text-neutral-200" />
                     </div>
                 </div>
-                <div style={{ zIndex: 2000 }}
-                    className=" bg-zinc-900/30 border-zinc-400/20  p-3 py-4 rounded-xl shadow-md shadow-black/10" >
-                    <TokenizedColorSelector
-                        label="Icon background"
-                        menuId="workspace-icon-bg-selector"
-                        quickTokens={workspaceBgTokens}
-                        menuGradients={workspaceGradientColorTokens}
-                        menuColors={workspaceFlatColorTokens}
-                        selectedToken={resolveToken(iconBgToken)}
-                        onSelectToken={(color) => setIconBgToken(color.token)}
-                        className=" filter saturate-150 brightness-110"
-                    />
-                    <Separator className="my-6 mb-4" />
+                <div className={`w-full flex gap-4 ${shouldBeHorizontal ? "flex-row" : "flex-col"}`}>
+                    <div style={{ zIndex: 2000 }}
+                        className="flex flex-col w-full
+                         bg-zinc-900/30 border-zinc-400/20  p-3 py-4 rounded-xl
+                          shadow-md shadow-black/10" >
+                        <TokenizedColorSelector
+                            label="Icon background"
+                            menuId="workspace-icon-bg-selector"
+                            quickTokens={workspaceBgTokens}
+                            menuGradients={workspaceGradientColorTokens}
+                            menuColors={workspaceFlatColorTokens}
+                            selectedToken={resolveToken(iconBgToken)}
+                            onSelectToken={(color) => setIconBgToken(color.token)}
+                            className=" filter saturate-150 brightness-110"
+                        />
+                        <Separator className="my-6 mb-4" />
 
-                    <TokenizedColorSelector
-                        label="Icon border"
-                        menuId="workspace-icon-border-selector"
-                        quickTokens={workspaceBorderColorTokens}
-                        menuGradients={[]}
-                        menuColors={workspaceBorderColorTokens}
-                        selectedToken={resolveToken(iconBorderToken)}
-                        onSelectToken={(color) => setIconBorderToken(color.token)}
-                    />
-                </div>
-                <Separator className="my-1" />
-                <div className="grid grid-cols-6 gap-2">
-                    {iconIds.map((iconId) => {
-                        const isSelected = selectedIconId === iconId;
+                        <TokenizedColorSelector
+                            label="Icon border"
+                            menuId="workspace-icon-border-selector"
+                            quickTokens={workspaceBorderColorTokens}
+                            menuGradients={[]}
+                            menuColors={workspaceBorderColorTokens}
+                            selectedToken={resolveToken(iconBorderToken)}
+                            onSelectToken={(color) => setIconBorderToken(color.token)}
+                        />
+                    </div>
+                    {!shouldBeHorizontal && <Separator className="flex my-1" />}
+                    <div className="flex flex-col w-full">
+                        <div className={`grid ${shouldBeHorizontal ? "grid-cols-5" : "grid-cols-6"} gap-2`}>
+                            {iconIds.map((iconId) => {
+                                const isSelected = selectedIconId === iconId;
 
-                        return (
-                            <button
-                                key={iconId}
-                                type="button"
-                                onClick={() => setSelectedIconId(iconId)}
-                                disabled={isSaving}
-                                className={`flex h-12 aspect-square
+                                return (
+                                    <button
+                                        key={iconId}
+                                        type="button"
+                                        onClick={() => setSelectedIconId(iconId)}
+                                        disabled={isSaving}
+                                        className={`flex h-12 aspect-square
                                      w-12 items-center justify-center rounded-lg border transition ease-in-out
                                     ${isSelected
-                                        ? "border-zinc-200 bg-zinc-700/50"
-                                        : "border-neutral-500/0 bg-zinc-900/30 hover:bg-zinc-700/35"}
+                                                ? "border-zinc-200 bg-zinc-700/50"
+                                                : "border-neutral-500/0 bg-zinc-900/30 hover:bg-zinc-700/35"}
                                     ${isSaving ? "opacity-60" : ""}`}
-                                title={iconId}
-                            >
-                                <CatalogIcon id={iconId} className="h-6 w-6 text-neutral-200" />
-                            </button>
-                        );
-                    })}
+                                        title={iconId}
+                                    >
+                                        <CatalogIcon id={iconId} className="h-6 w-6 text-neutral-200" />
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
                 </div>
 
 
@@ -164,7 +181,7 @@ export const WorkspaceIconEditor = forwardRef<HTMLDivElement, WorkspaceIconEdito
                     isSaving={isSaving}
                     flipButtons={true}
                     className="!w-full !justify-end"
-                    buttonsClassName="!px-5 !rounded-lg !h-12 !w-full !px-8"
+                    buttonsClassName="!px-5 !rounded-lg !h-10 !w-full !px-8"
                 />
             </div>
         </CommonMenuWrapper>

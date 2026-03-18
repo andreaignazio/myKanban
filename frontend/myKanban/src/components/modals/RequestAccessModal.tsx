@@ -10,10 +10,11 @@ type RequestAccessModalProps = {
     targetType: "board" | "workspace"
     targetID: string
     onClose?: () => void
+    onSuccess?: () => void
 }
 
 export const RequestAccessModal = forwardRef<HTMLDivElement, RequestAccessModalProps>(
-    ({ targetType, targetID, onClose }, ref) => {
+    ({ targetType, targetID, onClose, onSuccess }, ref) => {
         const createBoardAccessRequest = useShareOffersStore((state) => state.createBoardAccessRequest)
         const createWorkspaceAccessRequest = useShareOffersStore((state) => state.createWorkspaceAccessRequest)
 
@@ -26,7 +27,10 @@ export const RequestAccessModal = forwardRef<HTMLDivElement, RequestAccessModalP
         const [submitted, setSubmitted] = useState(false)
 
         useEffect(() => {
-            if (submitted && displaySuccess) onClose?.()
+            if (submitted && displaySuccess) {
+                onSuccess?.()
+                onClose?.()
+            }
         }, [submitted, displaySuccess])
 
         // Backend accepts only "viewer" | "member" for both board and workspace access requests

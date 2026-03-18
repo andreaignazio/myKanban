@@ -395,8 +395,8 @@ export const CardDetailMenu = forwardRef<HTMLDivElement, CardDetailMenuProps>(({
             <div className={`absolute -bottom-16 transition-all duration-200 
                 ${isAsideCollapsedByWindow ? "opacity-0 pointer-events-none" : "opacity-100"}`}>
                 <FloatingTabSelector
-                    activeTab={asideActiveTab}
-                    setActiveTab={handleSetAsideActiveTab}
+                    activeTabs={asideActiveTab ? [asideActiveTab] : []}
+                    onTabToggle={handleSetAsideActiveTab}
                     tabs={floatingTabs} />
             </div>
         </>

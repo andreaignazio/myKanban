@@ -176,6 +176,9 @@ type MirrorCardsResponse struct {
 	Lists                  []dto.ListResponse             `json:"Lists"`
 	BoardLists             []dto.BoardListResponse        `json:"BoardLists"`
 	ListCards              []dto.ListCardResponse         `json:"ListCards"`
+	BoardLabels            []dto.BoardLabelResponse       `json:"BoardLabels"`
+	CardLabelLinks         []dto.CardLabelLinkResponse    `json:"CardLabelLinks"`
+	Users                  []dto.UserResponse             `json:"Users"`
 }
 
 type MirrorCardData struct {

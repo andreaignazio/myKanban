@@ -2526,6 +2526,51 @@ func (s *ListCardsService) GetWorkspaceCardMirrors(ctx context.Context, userID, 
 		}
 	}
 
+	boardLabels := make([]models.BoardLabel, 0)
+	if len(boardIDs) > 0 {
+		boardLabelsQuery := s.db.WithContext(ctx).Table("board_labels").
+			Where("board_id IN ?", boardIDs)
+		if s.IncludeDeleted {
+			boardLabelsQuery = boardLabelsQuery.Unscoped()
+		} else {
+			boardLabelsQuery = boardLabelsQuery.Where("deleted_at IS NULL")
+		}
+		if err := boardLabelsQuery.Find(&boardLabels).Error; err != nil {
+			return nil, domainerr.MapRepoErr(err, true)
+		}
+	}
+
+	cardLabelLinks := make([]models.CardLabelLink, 0)
+	if err := s.db.WithContext(ctx).Table("card_label_links").
+		Where("card_id = ?", cardID).
+		Where("deleted_at IS NULL").
+		Find(&cardLabelLinks).Error; err != nil {
+		return nil, domainerr.MapRepoErr(err, true)
+	}
+
+	ownerIDSet := make(map[uuid.UUID]struct{}, len(boards))
+	ownerIDs := make([]uuid.UUID, 0, len(boards))
+	for i := range boards {
+		id := boards[i].CreatedByUserID
+		if id == uuid.Nil {
+			continue
+		}
+		if _, exists := ownerIDSet[id]; exists {
+			continue
+		}
+		ownerIDSet[id] = struct{}{}
+		ownerIDs = append(ownerIDs, id)
+	}
+
+	users := make([]models.User, 0)
+	if len(ownerIDs) > 0 {
+		if err := s.db.WithContext(ctx).Table("users").
+			Where("id IN ?", ownerIDs).
+			Find(&users).Error; err != nil {
+			return nil, domainerr.MapRepoErr(err, true)
+		}
+	}
+
 	res := &MirrorCardsResponse{
 		MirrorDataByListCardID: make(map[uuid.UUID][]MirrorCardData, len(listCards)),
 		Boards:                 make([]dto.BoardResponse, 0, len(boards)),
@@ -2533,6 +2578,9 @@ func (s *ListCardsService) GetWorkspaceCardMirrors(ctx context.Context, userID, 
 		Lists:                  make([]dto.ListResponse, 0, len(lists)),
 		BoardLists:             make([]dto.BoardListResponse, 0, len(boardLists)),
 		ListCards:              make([]dto.ListCardResponse, 0, len(listCards)),
+		BoardLabels:            make([]dto.BoardLabelResponse, 0, len(boardLabels)),
+		CardLabelLinks:         make([]dto.CardLabelLinkResponse, 0, len(cardLabelLinks)),
+		Users:                  make([]dto.UserResponse, 0, len(users)),
 	}
 
 	userIDByBoardID := make(map[uuid.UUID]uuid.UUID, len(userBoards))
@@ -2557,6 +2605,15 @@ func (s *ListCardsService) GetWorkspaceCardMirrors(ctx context.Context, userID, 
 	}
 	for i := range boardLists {
 		res.BoardLists = append(res.BoardLists, dto.BoardListToResponse(&boardLists[i]))
+	}
+	for i := range boardLabels {
+		res.BoardLabels = append(res.BoardLabels, dto.BoardLabelToResponse(&boardLabels[i]))
+	}
+	for i := range cardLabelLinks {
+		res.CardLabelLinks = append(res.CardLabelLinks, dto.CardLabelLinkToResponse(&cardLabelLinks[i]))
+	}
+	for i := range users {
+		res.Users = append(res.Users, dto.UserToResponse(&users[i]))
 	}
 	for i := range listCards {
 		if listCards[i].RootID == uuid.Nil {

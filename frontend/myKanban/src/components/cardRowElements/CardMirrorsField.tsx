@@ -1,7 +1,7 @@
 import { ImageColorRenderer } from "@/components/menuElements/ImageColorRenderer"
 import type { CardRootBoardContextValue } from "@/hooks/useCardRootBoardContext"
 import { CardRowMenuBtn } from "../cardMenus/cardRowMenus"
-import { CardMirrorsMenu } from "../cardMenus/cardMirrorsMenu"
+import { CardMirrorsMenuV2 } from "../cardMenus/cardMirrorsMenuV2"
 import { useDateTimeParser } from "@/hooks/useDateTimeParser"
 import { useUiStore, type DomainModalData } from "@/stores/uiStore"
 import { ConfirmDeletionPopover } from "../modals/ConfirmDeletion"
@@ -94,7 +94,7 @@ export const Mirrors = ({ rootBoardContext, mode, placement = "default", cardId,
         <div className="z-50">
             {showWarning && mode === "inbox-mirror"
                 ? <div className="cursor-pointer" onClick={(e) => { e.stopPropagation(); handleConvertToInboxOnly() }}>{mirrorUI}</div>
-                : <CardRowMenuBtn menuComponent={({ onClose, ref }) => <CardMirrorsMenu cardId={cardId} listCardId={listCardId} ref={ref} onClose={onClose} />}>
+                : <CardRowMenuBtn menuComponent={({ onClose, ref }) => <CardMirrorsMenuV2 cardId={cardId} listCardId={listCardId} ref={ref} onClose={onClose} />}>
                     {mirrorUI}
                 </CardRowMenuBtn>
             }
