@@ -148,6 +148,7 @@ func (h *WorkspacesHandler) SearchPublicWorkspaces(c *gin.Context) {
 		Limit:                  limit,
 		Sort:                   sort,
 		Total:                  total,
+		HasMore:                int64(page*limit) < total,
 	}
 
 	c.JSON(http.StatusOK, response)

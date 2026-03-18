@@ -270,7 +270,7 @@ func main() {
 	shareLinksHandler := sharelinks.NewShareLinksHandler(shareLinksService)
 
 	userWatchRepo := userWatch.NewGormRepo(db)
-	userWatchService := userWatch.NewUserWatchService(db, userWatchRepo, boardsRepo, listsRepo, cardsRepo)
+	userWatchService := userWatch.NewUserWatchService(db, userWatchRepo, boardsRepo, listsRepo, cardsRepo, workspacesRepo)
 	userWatchHandler := userWatch.NewUserWatchHandler(userWatchService)
 
 	userNotificationRepo := userNotification.NewGormNotificationRepo(db)

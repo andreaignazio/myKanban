@@ -13,12 +13,13 @@ import (
 )
 
 type UserWatchService struct {
-	db         *gorm.DB
-	repo       UserWatchRepository
-	BoardsRepo BoardsRepo
-	ListsRepo  ListsRepo
-	CardsRepo  CardsRepo
-	generator  *rank.RankGenerator
+	db              *gorm.DB
+	repo            UserWatchRepository
+	BoardsRepo      BoardsRepo
+	ListsRepo       ListsRepo
+	CardsRepo       CardsRepo
+	WorkspacesRepo  WorkspacesRepo
+	generator       *rank.RankGenerator
 }
 
 type UserWatchRepository interface {
@@ -50,6 +51,10 @@ type BoardsRepo interface {
 	GetBoardsByIDs(ctx context.Context, boardIDs []uuid.UUID, includeDeleted bool) ([]models.Board, error)
 }
 
+type WorkspacesRepo interface {
+	GetWorkspacesByIDs(ctx context.Context, workspaceIDs []uuid.UUID, includeDeleted bool) ([]models.Workspace, error)
+}
+
 // WatchCreationResult is a single return envelope for handlers.
 // Exactly one of BoardWatch/ListWatch/CardWatch is expected to be non-nil.
 type WatchCreationResult struct {
@@ -66,14 +71,15 @@ type WatchCreationResultResponse struct {
 	CardWatch  dto.CardWatchResponse  `json:"CardWatch,omitempty"`
 }
 
-func NewUserWatchService(db *gorm.DB, repo UserWatchRepository, boardsRepo BoardsRepo, listsRepo ListsRepo, cardsRepo CardsRepo) *UserWatchService {
+func NewUserWatchService(db *gorm.DB, repo UserWatchRepository, boardsRepo BoardsRepo, listsRepo ListsRepo, cardsRepo CardsRepo, workspacesRepo WorkspacesRepo) *UserWatchService {
 	return &UserWatchService{
-		db:         db,
-		repo:       repo,
-		BoardsRepo: boardsRepo,
-		ListsRepo:  listsRepo,
-		CardsRepo:  cardsRepo,
-		generator:  rank.NewRankGenerator(),
+		db:             db,
+		repo:           repo,
+		BoardsRepo:     boardsRepo,
+		ListsRepo:      listsRepo,
+		CardsRepo:      cardsRepo,
+		WorkspacesRepo: workspacesRepo,
+		generator:      rank.NewRankGenerator(),
 	}
 }
 
@@ -211,6 +217,32 @@ func (s *UserWatchService) GetAllUserWatches(ctx context.Context, userID uuid.UU
 		}
 	}
 
+	// Collect unique workspace IDs from all watches
+	workspaceIDSet := make(map[uuid.UUID]struct{})
+	for _, w := range boardWatches {
+		workspaceIDSet[w.WorkspaceID] = struct{}{}
+	}
+	for _, w := range listWatches {
+		workspaceIDSet[w.WorkspaceID] = struct{}{}
+	}
+	for _, w := range cardWatches {
+		workspaceIDSet[w.WorkspaceID] = struct{}{}
+	}
+	workspaceResponses := make([]dto.WorkspaceResponse, 0, len(workspaceIDSet))
+	if len(workspaceIDSet) > 0 {
+		workspaceIDs := make([]uuid.UUID, 0, len(workspaceIDSet))
+		for id := range workspaceIDSet {
+			workspaceIDs = append(workspaceIDs, id)
+		}
+		workspaces, err := s.WorkspacesRepo.GetWorkspacesByIDs(ctx, workspaceIDs, false)
+		if err != nil {
+			return nil, err
+		}
+		for i := range workspaces {
+			workspaceResponses = append(workspaceResponses, dto.WorkspaceToResponse(&workspaces[i]))
+		}
+	}
+
 	return &UserWatchResponses{
 		BoardWatches: boardWatchResponses,
 		Boards:       boardResponses,
@@ -218,6 +250,7 @@ func (s *UserWatchService) GetAllUserWatches(ctx context.Context, userID uuid.UU
 		Lists:        listResponses,
 		CardWatches:  cardWatchResponses,
 		Cards:        cardResponses,
+		Workspaces:   workspaceResponses,
 	}, nil
 }
 

@@ -397,6 +397,7 @@ export type UserWatchResponse = {
     Lists: List[];
     BoardWatches: BoardWatch[];
     Boards: Board[];
+    Workspaces?: Workspace[];
 }
 
 export type UserWatchPatchResponse = {

@@ -236,10 +236,11 @@ const MainHeader = ({ context }: MainHeaderProps) => {
 
     const toggleSidebarHidden = useUiStore((state) => state.toggleSidebarHidden)
     const navigate = useNavigate()
+    const { workspaceId } = useParams<{ workspaceId: string }>()
 
     const handleClick = () => {
         if (context === "board") {
-            navigate("/workspaces")
+            navigate(workspaceId ? `/workspaces/${workspaceId}/boards` : "/workspaces")
 
         }
         else {

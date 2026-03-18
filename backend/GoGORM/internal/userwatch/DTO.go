@@ -13,6 +13,7 @@ type UserWatchResponses struct {
 	Lists        []dto.ListResponse       `json:"Lists,omitempty"`
 	CardWatches  []dto.CardWatchResponse  `json:"CardWatches,omitempty"`
 	Cards        []dto.CardResponse       `json:"Cards,omitempty"`
+	Workspaces   []dto.WorkspaceResponse  `json:"Workspaces,omitempty"`
 }
 
 type MoveWatchRequest struct {

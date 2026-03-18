@@ -18,6 +18,7 @@ import { headerStyle } from "../cardMenus/cardMenuStyle";
 import { useDateTimeParser } from "@/hooks/useDateTimeParser";
 import { LabeledButtonPresetA, LabeledButtonPresetB } from "../buttons/labeledButton";
 import { ChevronDown, ChevronDownIcon, ExternalLink, EyeIcon, TextAlignEndIcon, XIcon } from "lucide-react";
+import { IconButtonAsync } from "../buttons/IconButtonAsync";
 import { CardComments } from "../cardMenus/CardDetailActivityTabs/CardComments";
 import { EntityDescriptionEditor } from "../common/EntityDescriptionEditor";
 import { useCardMembersStore } from "@/stores/CardMembersStore";
@@ -214,12 +215,11 @@ export const CardDetailMenu = forwardRef<HTMLDivElement, CardDetailMenuProps>(({
             show: ["error"]
         },
         {
-            requestKey: ["watch:add:card", "watch:patch:card"],
+            requestKey: ["card:member:add", "card:member:remove"],
             minLoadingMs: 0,
-            minSuccessMs: 3000,
-            maxSuccessMs: 1000,
+            minSuccessMs: 1000,
             maxErrorMs: 3000,
-            show: ["error", "loading", "success"]
+            show: ["error"]
         }
     ]
 
@@ -258,8 +258,14 @@ export const CardDetailMenu = forwardRef<HTMLDivElement, CardDetailMenuProps>(({
                         className={``}>
                         <div className=" absolute top-4 right-0 flex items-center gap-1 px-4">
                             {isCardWatched && (
-                                <RoundButton>
-                                    <EyeIcon className={iconBtnClass} onClick={toggleCardWatch} />
+                                <RoundButton onClick={toggleCardWatch}>
+                                    <IconButtonAsync
+                                        asyncKey={[useAsyncKey("watch:patch:card", cardId ?? ""), useAsyncKey("watch:add:card", cardId ?? "")]}
+                                        icon={EyeIcon}
+                                        size={20}
+                                        idleColorClass="text-white"
+                                        className="pointer-events-none"
+                                    />
                                 </RoundButton>
                             )}
 

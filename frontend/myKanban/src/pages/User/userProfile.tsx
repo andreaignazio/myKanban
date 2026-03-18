@@ -39,9 +39,12 @@ export const UserProfilePage = () => {
         userActions.updateMyProfileDetails(payload);
     }
 
-
+    const description = "Manage your profile information, such as your username and bio. This information is visible to others and helps personalize your experience on the platform."
     return (
-        <UserPagesWrapper Title="Profile">
+        <UserPagesWrapper Title="Profile"
+            iconId="profile"
+            description={description}
+        >
 
 
             <UserHeaderCard user={user} />

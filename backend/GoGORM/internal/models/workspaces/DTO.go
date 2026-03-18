@@ -62,6 +62,7 @@ type SearchPublicWorkspacesResponse struct {
 	Limit                  int                        `json:"Limit"`
 	Sort                   string                     `json:"Sort"`
 	Total                  int64                      `json:"Total"`
+	HasMore                bool                       `json:"HasMore"`
 }
 
 type WorkspacesWithSubscriptionsResponse struct {

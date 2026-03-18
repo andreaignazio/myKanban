@@ -1,7 +1,7 @@
 import { forwardRef, useEffect, useState } from "react";
 import { CommonMenuWrapper } from "../menuElements/menuWrapper"
 import { CustomInput } from "../menuElements/CustomInput";
-import { useWorkspaceStore, type SearchPublicWorkspacesParams } from "@/stores/workspaceStore";
+import { useWorkspaceStore } from "@/stores/workspaceStore";
 import { useShallow } from "zustand/shallow";
 import { EntityCoverCard } from "./entityCoverCard";
 import { WorkspaceAvatar } from "@/pages/WorkspaceSettings/WorkspaceAvatar";
@@ -16,18 +16,25 @@ type SearchWorkspaceOverlayProps = {
 }
 
 
+const SEARCH_LIMIT = 10
+
 export const SearchWorkspaceOverlay = forwardRef<HTMLDivElement, SearchWorkspaceOverlayProps>((props, ref) => {
     const searchPublicWorkspaces = useWorkspaceStore(useShallow((state) => state.searchPublicWorkspaces))
     const workspaceIds = useWorkspaceStore(useShallow((state) => state.searchedWorkspacesIds))
+    const hasMore = useWorkspaceStore((state) => state.searchedWorkspacesHasMore)
     const [searchTerm, setSearchTerm] = useState("")
-    const query: SearchPublicWorkspacesParams = {
-        query: searchTerm,
-        limit: 10,
-    }
+    const [page, setPage] = useState(1)
 
     useEffect(() => {
-        void searchPublicWorkspaces(query)
+        setPage(1)
+        void searchPublicWorkspaces({ query: searchTerm, limit: SEARCH_LIMIT, page: 1 })
     }, [searchPublicWorkspaces, searchTerm])
+
+    const handleLoadMore = () => {
+        const nextPage = page + 1
+        setPage(nextPage)
+        void searchPublicWorkspaces({ query: searchTerm, limit: SEARCH_LIMIT, page: nextPage })
+    }
 
     return (
         <CommonMenuWrapper
@@ -52,6 +59,16 @@ export const SearchWorkspaceOverlay = forwardRef<HTMLDivElement, SearchWorkspace
                             <RequestableWorkspaceCard key={id} workspaceId={id} />
                         ))}
                     </div>
+                    {hasMore && (
+                        <div className="flex justify-center mt-4">
+                            <button
+                                onClick={handleLoadMore}
+                                className="text-xs text-neutral-400 hover:text-neutral-200 transition-colors duration-150 px-4 py-2 rounded hover:bg-neutral-700/50"
+                            >
+                                Load more
+                            </button>
+                        </div>
+                    )}
                 </div>
             </div>
         </CommonMenuWrapper >

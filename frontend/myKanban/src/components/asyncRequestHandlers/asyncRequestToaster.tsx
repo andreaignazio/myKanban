@@ -49,8 +49,7 @@ export const AsyncRequestToasterController = () => {
     const keysLSE: AsyncRequestKey[] = [
         "card:copy", "card:move", "card:mirror", "card:create", "card:edit:title:inline", "card:edit:dates:add:editmodal",
         "card:delete", "list:detach", "board:archive:list:purge", "board:archive:card:purge",
-        "watch:add:board", "watch:add:list", "watch:patch:board", "watch:patch:list", "list:create",
-        "board:sharelink:revoke", "workspace:sharelink:revoke", "workspace:member:role:update", "list:move:crossboard"
+        "list:create", "board:sharelink:revoke", "workspace:sharelink:revoke", "workspace:member:role:update", "list:move:crossboard"
     ]
     const keysLS: AsyncRequestKey[] = ["list:detach", "card:move:bulk", "card:edit:dates:editmodal"]
     const keysLE: AsyncRequestKey[] = ["card:create", "workspace:create", "list:move:dnd", "card:move:dnd"]

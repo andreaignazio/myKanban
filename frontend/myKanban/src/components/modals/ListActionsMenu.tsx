@@ -169,6 +169,7 @@ export const ListActionsMenu = forwardRef<HTMLDivElement, ListActionsMenuProps>(
     return (
         <>
             <ActionMenuWrapper
+                titleClassName="!font-grotesk !text-sm font-normal !text-neutral-400"
                 requestGroups={[
                     {
                         requestKey: ["list:copy:bulk", "list:mirror",
@@ -180,7 +181,7 @@ export const ListActionsMenu = forwardRef<HTMLDivElement, ListActionsMenuProps>(
                 ]} isLoading={isLoading} onBack={activeTab !== "main" ? () => setActiveTab("main") : undefined}
                 width={300}
                 Title={Title} onClose={onClose}>
-                <div className={`text-neutral-300 ${activeTab !== "main" ? "opacity-0 h-0 pointer-events-none" : "opacity-100 h-[455px]"} transition-all duration-200`}>
+                <div className={`text-neutral-300 ${activeTab !== "main" ? "opacity-0 h-0 pointer-events-none" : "opacity-100 h-[485px]"} transition-all duration-200`}>
                     <DropDown items={menuItems} onClick={() => { }} />
                 </div>
                 <div className={`text-neutral-300 ${activeTab !== "copyList" ? "opacity-0 h-0 pointer-events-none" : "opacity-100 h-[146px]"} transition-all duration-200`}>

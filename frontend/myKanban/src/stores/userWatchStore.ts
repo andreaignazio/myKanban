@@ -4,6 +4,7 @@ import { api } from "@/api/api";
 import { useBoardsStore } from "./boardsStore";
 import { useListsStore } from "./listsStore";
 import { useCardsStore } from "./cardsStore";
+import { useWorkspaceStore } from "./workspaceStore";
 import { useAsyncKey, useAsyncRequestStore } from "./asyncRequestStore";
 
 
@@ -24,8 +25,12 @@ type UserWatchState = {
     patchCardWatchActive: (cardId: string, active: boolean) => Promise<void>;
     patchListWatchActive: (listId: string, active: boolean) => Promise<void>;
     patchBoardWatchActive: (boardId: string, active: boolean) => Promise<void>;
+    deleteListWatch: (listId: string) => Promise<void>;
+    deleteCardWatch: (cardId: string) => Promise<void>;
+    deleteBoardWatch: (boardId: string) => Promise<void>;
     applyPatchResponse: (data: UserWatchPatchResponse) => void;
     applyAddWatch: (data: UserWatchPatchResponse) => void;
+    applyDeleteWatch: (entityType: string, entityId: string) => void;
     isListWatched: (listId: string) => boolean;
     isCardWatched: (cardId: string) => boolean;
     isBoardWatched: (boardId: string) => boolean;
@@ -49,7 +54,7 @@ export const useUserWatchStore = create<UserWatchState>((set, get) => ({
             {
                 onSuccess(data) {
                     const { ListWatches, CardWatches, BoardWatches } = data
-                    const { Cards, Lists, Boards } = data
+                    const { Cards, Lists, Boards, Workspaces } = data
 
                     const listWatchByListId: Record<string, ListWatch> = (ListWatches && ListWatches.length > 0) ? ListWatches.reduce((acc, watch) => {
                         acc[watch.ListID] = watch
@@ -84,6 +89,9 @@ export const useUserWatchStore = create<UserWatchState>((set, get) => ({
                     useCardsStore.getState().mergeCardsPatch(cardPatch)
                     useListsStore.getState().mergeListsPatch(listPatch)
                     useBoardsStore.getState().mergeBoardsPatch(boardPatch)
+                    if (Workspaces && Workspaces.length > 0) {
+                        useWorkspaceStore.getState().mergeWorkspaces(Workspaces)
+                    }
 
                     set({
                         listWatchByListId,
@@ -248,6 +256,84 @@ export const useUserWatchStore = create<UserWatchState>((set, get) => ({
                 },
                 cardWatchIds: [...state.cardWatchIds, CardWatch.CardID],
             }))
+        }
+    },
+    deleteListWatch: async (listId: string) => {
+        const id = get().listWatchByListId[listId]?.ID
+        if (!id) return
+
+        await useAsyncRequestStore.getState().execute<void>(
+            useAsyncKey("watch:delete:list", listId),
+            async () => {
+                await api.delete(`watches/lists/${id}`)
+            },
+            {
+                onSuccess() {
+                    get().applyDeleteWatch("list", listId)
+                },
+                successResetDelayMs: 1500,
+            }
+        )
+    },
+    deleteCardWatch: async (cardId: string) => {
+        const id = get().cardWatchByCardId[cardId]?.ID
+        if (!id) return
+
+        await useAsyncRequestStore.getState().execute<void>(
+            useAsyncKey("watch:delete:card", cardId),
+            async () => {
+                await api.delete(`watches/cards/${id}`)
+            },
+            {
+                onSuccess() {
+                    get().applyDeleteWatch("card", cardId)
+                },
+                successResetDelayMs: 1500,
+            }
+        )
+    },
+    deleteBoardWatch: async (boardId: string) => {
+        const id = get().boardWatchByBoardId[boardId]?.ID
+        if (!id) return
+
+        await useAsyncRequestStore.getState().execute<void>(
+            useAsyncKey("watch:delete:board", boardId),
+            async () => {
+                await api.delete(`watches/boards/${id}`)
+            },
+            {
+                onSuccess() {
+                    get().applyDeleteWatch("board", boardId)
+                },
+                successResetDelayMs: 1500,
+            }
+        )
+    },
+    applyDeleteWatch: (entityType: string, entityId: string) => {
+        if (entityType === "list") {
+            set((state) => {
+                const { [entityId]: _, ...rest } = state.listWatchByListId
+                return {
+                    listWatchByListId: rest,
+                    listWatchIds: state.listWatchIds.filter((id) => id !== entityId),
+                }
+            })
+        } else if (entityType === "card") {
+            set((state) => {
+                const { [entityId]: _, ...rest } = state.cardWatchByCardId
+                return {
+                    cardWatchByCardId: rest,
+                    cardWatchIds: state.cardWatchIds.filter((id) => id !== entityId),
+                }
+            })
+        } else if (entityType === "board") {
+            set((state) => {
+                const { [entityId]: _, ...rest } = state.boardWatchByBoardId
+                return {
+                    boardWatchByBoardId: rest,
+                    boardWatchIds: state.boardWatchIds.filter((id) => id !== entityId),
+                }
+            })
         }
     },
     isListWatched: (listId: string): boolean => {

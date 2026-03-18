@@ -47,6 +47,7 @@ export type SearchPublicWorkspacesResponse = WorkspaceData & {
     Limit: number;
     Sort: "name" | "updated";
     Total: number;
+    HasMore: boolean;
 }
 
 
@@ -59,6 +60,7 @@ export type WorkspaceStore = {
     pendingRequestedWorkspaceIds: string[];
     offerIdByWorkspaceId: Record<string, string>;
     searchedWorkspacesIds: string[];
+    searchedWorkspacesHasMore: boolean;
     wSubscriptionsById: Record<string, WorkspaceSubscription>;
     fetchWorkspaces: () => Promise<void>;
     searchPublicWorkspaces: (params?: SearchPublicWorkspacesParams) => Promise<SearchPublicWorkspacesResponse>;
@@ -96,6 +98,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     hasHydratedWorkspaces: false,
     wSubscriptionsById: {},
     searchedWorkspacesIds: [],
+    searchedWorkspacesHasMore: false,
     pendingOfferedWorkspaceIds: [],
     pendingRequestedWorkspaceIds: [],
     offerIdByWorkspaceId: {},
@@ -168,12 +171,12 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
                 nextSubscriptionsById[subscription.WorkspaceID] = subscription;
             });
 
-            const nextWorkspaceIds = new Set(state.searchedWorkspacesIds);
-            data.Workspaces.forEach((workspace) => nextWorkspaceIds.add(workspace.ID));
-
+            const newIds = data.Workspaces.map((workspace) => workspace.ID);
+            const isFirstPage = (params.page ?? 1) === 1;
             return {
                 workspacesById: nextWorkspacesById,
-                searchedWorkspacesIds: Array.from(nextWorkspaceIds),
+                searchedWorkspacesIds: isFirstPage ? newIds : [...state.searchedWorkspacesIds, ...newIds],
+                searchedWorkspacesHasMore: data.HasMore,
                 wSubscriptionsById: nextSubscriptionsById,
             };
         });

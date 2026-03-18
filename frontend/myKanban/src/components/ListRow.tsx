@@ -13,8 +13,8 @@ import type { List } from "@/stores/types"
 import { ListMirrorMenuV2 } from "./listMenus/ListMirrorMenuV2"
 
 import { Draggable, Droppable } from "@hello-pangea/dnd"
-import { LabeledButtonPresetB } from "./buttons/labeledButton"
 import { EllipsisIcon, EyeIcon, Lock, LockOpen } from "lucide-react"
+import { IconButtonAsync } from "./buttons/IconButtonAsync"
 import { CardRowMenuBtn } from "./cardMenus/cardRowMenus"
 import { useOverlayStore } from "@/overlays/overlayStore"
 import { useUserWatchStore } from "@/stores/userWatchStore"
@@ -244,7 +244,6 @@ const ListHeader = ({
 
 
     const [isMenuActive, setIsMenuActive] = useState(false)
-    const [isEyeHovered, setIsEyeHovered] = useState(false)
     const [isEllipsisHovered, setIsEllipsisHovered] = useState(false)
 
 
@@ -289,7 +288,6 @@ const ListHeader = ({
     const ellipsisActiveBg = hasListTheme ? hexToRgba(listTextColor, 0.3) : "#d4d4d4"
     const ellipsisBg = isMenuActive ? ellipsisActiveBg : isEllipsisHovered ? ellipsisHoverBg : "transparent"
     const ellipsisColor = isMenuActive ? "#000000" : listTextColor
-    const eyeBg = isEyeHovered ? ellipsisHoverBg : "transparent"
 
     const pointerStartRef = useRef<{ x: number; y: number } | null>(null)
 
@@ -367,27 +365,23 @@ const ListHeader = ({
                 </CardRowMenuBtn>
 
 
-                <LabeledButtonPresetB label=""
-                    onClick={() => { }}
-                    onClickCapture={(e) => {
+                <div
+                    onClick={(e) => {
                         e.stopPropagation()
                         void handleWatchListToggle()
                     }}
                     onPointerDownCapture={(e) => e.stopPropagation()}
-                    style={{ backgroundColor: eyeBg }}
-                    className={`h-full rounded-md px-2 bg-transparent !m-0 
-            cursor-pointer transition-colors duration-150
-            flex items-center justify-center  !gap-0
-            ${isListWatched ? "opacity-100" : "opacity-0 group-hover/list-header:opacity-100"} `}>
-
-                    <div
-                        className="w-full h-full flex items-center justify-center"
-                        onMouseEnter={() => setIsEyeHovered(true)}
-                        onMouseLeave={() => setIsEyeHovered(false)}
-                    >
-                        <EyeIcon className="w-4 h-4" />
-                    </div>
-                </LabeledButtonPresetB>
+                    className={`h-full flex items-center justify-center cursor-pointer
+            ${isListWatched ? "opacity-100" : "opacity-0 group-hover/list-header:opacity-100"}`}
+                >
+                    <IconButtonAsync
+                        asyncKey={[useAsyncKey("watch:patch:list", listID), useAsyncKey("watch:add:list", listID)]}
+                        icon={EyeIcon}
+                        size={16}
+                        idleColorClass={isListWatched ? "text-neutral-300" : "text-neutral-400"}
+                        className="px-2 py-1 rounded-md hover:bg-white/10 pointer-events-none"
+                    />
+                </div>
 
 
                 <CardRowMenuBtn

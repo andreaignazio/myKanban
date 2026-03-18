@@ -18,6 +18,7 @@ import { CardFilterMenu, type CardFilterShowCategory, type CardFilterState } fro
 import { useWorkspaceFilter } from "@/hooks/useWorkspaceFilter"
 import { ShareOfferDetails } from "../modals/shareOfferDetails"
 import { NoAccessibleWorkspaceState } from "./NoAccessibleWorkspaceState"
+import { Separator } from "../common/Separator"
 
 
 
@@ -78,6 +79,48 @@ export default function Sidebar({ isSingleMode }: SidebarProps) {
 
 export type WorkspaceFilterState = Partial<Pick<CardFilterState, "statusFilter" | "searchQuery">>
 
+
+type WorkspaceDropDownProps = {
+    onClose: () => void;
+    ref: React.RefObject<HTMLDivElement | null>;
+    anchorRef?: React.RefObject<HTMLDivElement | null>;
+    ids: string[];
+}
+const WorkspaceDropDown = ({
+    onClose,
+    ref,
+    anchorRef,
+    ids = []
+}: WorkspaceDropDownProps) => {
+    const anchorWidth = anchorRef?.current?.offsetWidth ?? 280
+
+    const radius = 10
+    const padding = 4
+    const innerRadius = radius - padding
+    return (
+        <CommonMenuWrapper
+
+            className="!bg-[rgba(36,40,45,1)] backdrop-blur-md
+                  p-2 shadow-lg shadow-black/30"
+            style={{ width: `${anchorWidth}px`, padding: padding, borderRadius: radius }}>
+            <div className="flex flex-col gap-0 w-full">
+                {ids.map((id) => {
+                    const isLastOfList = id === ids[ids.length - 1]
+                    return (
+                        <div className="flex flex-col w-full" key={`simple-row-${id}`}>
+                            <SimpleWorkspaceRow
+                                radius={innerRadius}
+                                workspaceId={id} onClick={onClose} />
+                            {!isLastOfList && <Separator className="my-1 w-[95%] place-self-center" />}
+                        </div>
+                    )
+                })}
+            </div>
+        </CommonMenuWrapper>
+    )
+}
+
+
 const WorkspaceList = ({ isSingleMode, isCollapsed, toggleCollapsed }: { isSingleMode?: boolean, isCollapsed?: boolean, toggleCollapsed?: () => void }) => {
 
     const [filterState, setFilterState] = useState<WorkspaceFilterState>({ statusFilter: null, searchQuery: "" })
@@ -102,22 +145,7 @@ const WorkspaceList = ({ isSingleMode, isCollapsed, toggleCollapsed }: { isSingl
     const accessibleWorkspaceIds = workspaceIds.filter((id) => isWorkspaceAccessible(id))
 
 
-    const dropDown = (
-        onClose: () => void,
-        ref: React.RefObject<HTMLDivElement | null>,
-        anchorRef?: React.RefObject<HTMLDivElement | null>
-    ) => {
-        const anchorWidth = anchorRef?.current?.offsetWidth ?? 280
-        return (
-            <CommonMenuWrapper style={{ width: `${anchorWidth}px` }}>
-                <div className="flex flex-col w-full">
-                    {filteredIds.map((id) => (
-                        <SimpleWorkspaceRow key={`simple-row-${id}`} workspaceId={id} onClick={onClose} />
-                    ))}
-                </div>
-            </CommonMenuWrapper>
-        )
-    }
+
     const rowRef = useRef<HTMLDivElement | null>(null);
 
     const currentWorkspaceId = useParams().workspaceId as string | undefined
@@ -289,7 +317,7 @@ const WorkspaceList = ({ isSingleMode, isCollapsed, toggleCollapsed }: { isSingl
 
                                 <CardRowMenuBtn
                                     disableClick={disableRowMenuClick}
-                                    offset={[0, 0]}
+                                    offset={status === "offered" || status === "requested" ? [0, 0] : [4, 0]}
                                     key={`menu-btn-${id}`}
                                     menuComponent={({ onClose, ref, anchorRef }) => {
                                         if (status === "offered" || status === "requested") {
@@ -298,7 +326,7 @@ const WorkspaceList = ({ isSingleMode, isCollapsed, toggleCollapsed }: { isSingl
                                                     workspaceId={id} />
                                             )
                                         } else {
-                                            return dropDown(onClose, ref, anchorRef)
+                                            return <WorkspaceDropDown onClose={onClose} ref={ref} anchorRef={anchorRef} ids={accessibleWorkspaceIds} />
                                         }
                                     }}
                                     desiredBackdropOpacity={0}

@@ -23,6 +23,7 @@ import React, { useState } from "react";
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useShallow } from "zustand/shallow";
+import { UserPagesWrapper } from "./userPagesWrapper";
 
 
 
@@ -182,8 +183,11 @@ export const UserCardsPage = () => {
     })
 
     return (
-        <div className="w-full h-full  pt-12 px-14 flex flex-col gap-1 overflow-y-auto scrollbar-hidden">
-            <div className="text-lg font-bold mb-12 ">Cards</div>
+        <UserPagesWrapper Title="Cards"
+            iconId="cards"
+            description="View and manage your cards across different workspaces. This includes actions such as creating, updating, and deleting tasks, as well as other interactions within your workspaces."
+        >
+
             <div className="flex flex-row h-12 itmes-center justify-end w-full">
                 <CustomDropDown
                     className="!w-[200px] !h-10 rounded-md "
@@ -218,7 +222,7 @@ export const UserCardsPage = () => {
                     )
                 }
             </div>
-        </div >
+        </UserPagesWrapper>
     );
 }
 

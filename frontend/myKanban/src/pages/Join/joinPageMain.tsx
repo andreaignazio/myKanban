@@ -6,7 +6,7 @@ import { useJoinByToken } from "@/hooks/useJoinByToken";
 import { useShareOffersStore } from "@/stores/shareOffersStore";
 import { useShareLinksStore } from "@/stores/shareLinksStore";
 import type { PublicShareLink, ShareLinkAccessMode, ShareLinkTokenEntityData, User } from "@/stores/types";
-import { Handshake, LockIcon, LockKeyholeOpen, CalendarDays, UserRound, CircleArrowRight } from "lucide-react";
+import { Handshake, LockIcon, LockKeyholeOpen, CalendarDays, UserRound, CircleArrowRight, ShieldX } from "lucide-react";
 import { useDateTimeParser } from "@/hooks/useDateTimeParser";
 import { useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
@@ -24,10 +24,13 @@ export const JoinPageMain = () => {
 
     const { isAuthenticated, currentUser } = useHydrateAuth();
     const token = useParams().shareID as string;
-    const { entityData, shareLink } = useJoinByToken(token, isAuthenticated);
+    const { entityData, shareLink, error, isLoading: isDataLoading } = useJoinByToken(token, isAuthenticated);
 
     const { isSignedIn, isLoaded: clerkIsLoaded } = useAuth()
 
+    const isLoading = !clerkIsLoaded || isDataLoading
+
+    const effectiveTab = (!isLoading && error) ? "join" : activeTab
 
     return (
         <div className="theme-dark w-full h-screen bg-main flex flex-col">
@@ -36,19 +39,18 @@ export const JoinPageMain = () => {
             <div className="flex-1 w-full flex flex-col items-center justify-center gap-6">
                 <AnimatePresence mode="wait">
                     <motion.div
-                        key={activeTab}
+                        key={effectiveTab}
                         initial={{ opacity: 0, y: 12 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -12 }}
                         transition={{ duration: 0.22, ease: "easeInOut" }}
                     >
-                        {activeTab === "welcome" && (
+                        {effectiveTab === "welcome" ? (
                             <WelcomeTab entityData={entityData} isAuthenticated={isSignedIn ?? false}
-                                isLoading={!clerkIsLoaded}
+                                isLoading={isLoading}
                                 setActiveTab={setActiveTab} />
-                        )}
-                        {activeTab === "join" && (
-                            <JoinTab User={currentUser as User} shareLink={shareLink} token={token} />
+                        ) : (
+                            <JoinTab User={currentUser as User} shareLink={shareLink} token={token} error={error} />
                         )}
                     </motion.div>
                 </AnimatePresence>
@@ -58,13 +60,13 @@ export const JoinPageMain = () => {
 }
 
 type JoinTabProps = {
-    // You can add props related to the joining process here, such as callbacks or data needed for joining
     User: User
     shareLink: PublicShareLink | null
     token: string;
+    error?: string | null;
 }
 
-const JoinTab = ({ User, shareLink, token }: JoinTabProps) => {
+const JoinTab = ({ User, shareLink, token, error }: JoinTabProps) => {
 
     const navigate = useNavigate();
     const claimShareLinkByToken = useShareLinksStore((state) => state.claimShareLinkByToken);
@@ -142,55 +144,64 @@ const JoinTab = ({ User, shareLink, token }: JoinTabProps) => {
 
 
     return (
-        <div className=" relative flex flex-col items-center 
+        <div className=" relative flex flex-col items-center
         gap-4 rounded-2xl bg-menusec shadow-lg shadow-black/20 p-6 overflow-hidden">
             <AsyncRequestHandler
                 onError={createRequestOnError}
                 onSuccess={createRequestOnSuccess}
                 ref={asycHandlerRef} />
 
-            <Header mode={mode} />
+            <Header mode={mode} error={error} />
 
-            <TokenDescription mode={mode} type={entityType} />
-            <div className="h-px w-full bg-neutral-700" />
+            {!error && <>
+                <TokenDescription mode={mode} type={entityType} />
+                <div className="h-px w-full bg-neutral-700" />
 
-            <UserLoggedInInfo user={User} />
+                <UserLoggedInInfo user={User} />
 
-            <span className="text-xs max-w-[400px] text-neutral-600 mt-1">
-                Requesting access to the {entityType === "workspace" ? "workspace" : "board"} you accept to share your name and email
-                with the {entityType === "workspace" ? "workspace" : "board"} admins.
-                Admins will be able to see your profile picture,
-                name and email when they review your request.
-            </span>
-            {mode === "sendrequest" && <LabeledButtonPresetBSubmit className="!w-full !h-10 !rounded-lg"
-                label={isRequestingAccess ? "Sending Request..." : isRequestSent ? requestSuccessLabel : "Request Access"}
-                disabled={isRequestingAccess || isRequestSent}
-                onClick={handleRequestAccess} />}
+                <span className="text-xs max-w-[400px] text-neutral-600 mt-1">
+                    Requesting access to the {entityType === "workspace" ? "workspace" : "board"} you accept to share your name and email
+                    with the {entityType === "workspace" ? "workspace" : "board"} admins.
+                    Admins will be able to see your profile picture,
+                    name and email when they review your request.
+                </span>
+                {mode === "sendrequest" && <LabeledButtonPresetBSubmit className="!w-full !h-10 !rounded-lg"
+                    label={isRequestingAccess ? "Sending Request..." : isRequestSent ? requestSuccessLabel : "Request Access"}
+                    disabled={isRequestingAccess || isRequestSent}
+                    onClick={handleRequestAccess} />}
 
-            {mode === "autojoin" && <LabeledButtonPresetBSubmit className="!w-full !h-10 !rounded-lg"
-                label={isClaiming ? "Claiming..." : isClaimed ? "Access Claimed" : "Claim Access"}
-                disabled={isClaiming || isClaimed}
-                onClick={handleClaimAccess} />}
+                {mode === "autojoin" && <LabeledButtonPresetBSubmit className="!w-full !h-10 !rounded-lg"
+                    label={isClaiming ? "Claiming..." : isClaimed ? "Access Claimed" : "Claim Access"}
+                    disabled={isClaiming || isClaimed}
+                    onClick={handleClaimAccess} />}
 
-            {claimError && <span className="text-xs text-red-400">{claimError}</span>}
-            {requestError && <span className="text-xs text-red-400">{requestError}</span>}
+                {claimError && <span className="text-xs text-red-400">{claimError}</span>}
+                {requestError && <span className="text-xs text-red-400">{requestError}</span>}
+            </>}
         </div>
     )
 }
 
 type HeaderProps = {
     mode: ShareLinkAccessMode | undefined;
+    error?: string | null;
 }
 
-const Header = ({ mode }: HeaderProps) => {
+const Header = ({ mode, error }: HeaderProps) => {
     return (
         <div className="flex flex-col items-center gap-4">
-            {mode === "autojoin" && <LockKeyholeOpen size={120}
-                className="animate-pulse text-green-400" />}
-            {mode === "sendrequest" && <LockIcon size={120}
-                className="animate-pulse text-gray-200" />}
+            {error ? (
+                <ShieldX size={120} className="text-red-400 opacity-70 animate-pulse" />
+            ) : (
+                <>
+                    {mode === "autojoin" && <LockKeyholeOpen size={120}
+                        className="animate-pulse text-green-400" />}
+                    {mode === "sendrequest" && <LockIcon size={120}
+                        className="animate-pulse text-gray-200" />}
+                </>
+            )}
             <span className="text-md text-neutral-400 font-bold">
-                The token you used is valid!
+                {error ? "Token is not valid or is expired" : "The token you used is valid!"}
             </span>
         </div>
     )

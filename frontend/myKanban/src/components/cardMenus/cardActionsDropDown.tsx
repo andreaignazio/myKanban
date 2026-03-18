@@ -1,7 +1,9 @@
 import { forwardRef, useState, type ComponentType, type SVGProps } from "react"
 import type { MenuItemExtended } from "@/types/uiTypes"
 import { DropDown } from "../menuElements/DropDown"
-import { ArchiveIcon, ArrowBigRight, ArrowRight, Clock10Icon, CopyIcon, EyeIcon, TagIcon, User2, UserMinus } from "lucide-react"
+import { ArchiveIcon, ArrowBigRight, ArrowRight, Check, Clock10Icon, CopyIcon, EyeIcon, TagIcon, User2, UserMinus } from "lucide-react"
+import { IconButtonAsync } from "../buttons/IconButtonAsync"
+import { useAsyncKey } from "@/stores/asyncRequestStore"
 import { ActionMenuWrapper } from "../modals/ListActionsMenu"
 import { CardMoveMenu } from "./cardMoveMenu"
 import { CardLabelMenu } from "./cardLabelMenu"
@@ -10,7 +12,6 @@ import { CardDatesMenu } from "./cardDatesMenu"
 import { useBoardDetailStore } from "@/stores/boardDetailStore"
 import { useObservedHeight } from "@/hooks/useObservedHeight"
 import { useUserWatchStore } from "@/stores/userWatchStore"
-import { CheckIcon } from "@heroicons/react/24/solid"
 import { useCardsStore } from "@/stores/cardsStore"
 import { useParams } from "react-router"
 import { useAuthStore } from "@/stores/auth"
@@ -147,7 +148,13 @@ export const CardActionsDropDown = forwardRef<HTMLDivElement, CardActionsDropDow
             id: "watch", label: "Watch", kind: "standard",
             height: h,
             icon: icon(EyeIcon),
-            endIcon: isWatched ? <CheckIcon className="w-4 h-4" /> : undefined,
+            endIcon: <IconButtonAsync
+                asyncKey={[useAsyncKey("watch:patch:card", cardId), useAsyncKey("watch:add:card", cardId)]}
+                icon={Check}
+                size={16}
+                idleColorClass={isWatched ? "text-neutral-300" : "text-transparent"}
+                className="pointer-events-none"
+            />,
             onClick: () => { void toggleCardWatch(); }
         },
         { id: "divider1", label: "", kind: "divider" },

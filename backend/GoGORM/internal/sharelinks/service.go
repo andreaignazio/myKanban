@@ -491,6 +491,12 @@ func (s *ShareLinkService) GetPublicShareLinkByToken(ctx context.Context, token 
 	if err != nil {
 		return nil, domainerr.MapRepoErr(err, true)
 	}
+	if shareLink.RevokedAt != nil {
+		return nil, domainerr.ErrForbidden
+	}
+	if shareLink.ExpiresAt != nil && !shareLink.ExpiresAt.IsZero() && shareLink.ExpiresAt.Before(time.Now()) {
+		return nil, domainerr.ErrForbidden
+	}
 
 	target := ShareLinkTargetLiteResponse{EntityType: shareLink.TargetType}
 	var ownerUserID uuid.UUID
@@ -535,6 +541,12 @@ func (s *ShareLinkService) GetAuthenticatedShareLinkByToken(ctx context.Context,
 	shareLink, err := s.repo.GetShareLinkByToken(ctx, token)
 	if err != nil {
 		return nil, domainerr.MapRepoErr(err, true)
+	}
+	if shareLink.RevokedAt != nil {
+		return nil, domainerr.ErrForbidden
+	}
+	if shareLink.ExpiresAt != nil && !shareLink.ExpiresAt.IsZero() && shareLink.ExpiresAt.Before(time.Now()) {
+		return nil, domainerr.ErrForbidden
 	}
 
 	response := &AuthenticatedShareLinkResponse{

@@ -4,6 +4,9 @@ import { ActionMenuWrapper } from "./ListActionsMenu";
 import type { MenuItemExtended } from "@/types/uiTypes";
 import { DropDown } from "../menuElements/DropDown";
 import { CheckIcon, EllipsisHorizontalIcon } from "@heroicons/react/24/solid";
+import { Check } from "lucide-react";
+import { IconButtonAsync } from "../buttons/IconButtonAsync";
+import { useAsyncKey } from "@/stores/asyncRequestStore";
 import {
     ArchiveBoxIcon,
     ArchiveBoxXMarkIcon,
@@ -328,7 +331,13 @@ export const BoardActionsMenu = forwardRef<HTMLDivElement, BoardActionsMenuProps
             kind: "standard",
             height: h,
             icon: icon(EyeIcon),
-            endIcon: isWatched ? <CheckIcon className="w-4 h-4" /> : undefined,
+            endIcon: <IconButtonAsync
+                asyncKey={[useAsyncKey("watch:patch:board", boardID), useAsyncKey("watch:add:board", boardID)]}
+                icon={Check}
+                size={16}
+                idleColorClass={isWatched ? "text-neutral-300" : "text-transparent"}
+                className="pointer-events-none"
+            />,
             onClick: () => { void toggleBoardWatch(); }
         },
         { id: "collapseAll", label: "Collapse all lists", kind: "standard", height: h, icon: icon(ArrowsPointingInIcon) },
