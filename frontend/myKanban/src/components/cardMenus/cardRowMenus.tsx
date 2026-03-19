@@ -27,12 +27,13 @@ export type CardRowMenuBtnProps = {
     exclusiveGroup?: string;
     wrapperClassName?: string;
     enableOwnBackdrop?: boolean;
+    active?: boolean;
 }
 
 export const CardRowMenuBtn = forwardRef<HTMLDivElement, CardRowMenuBtnProps>(({ cardID, menuComponent, renderType = "anchored",
     label, icon, showLabelWhenCompact, customId, btnVariant = "default", className, style,
     shouldHideBtn, children, onButtonClick, placement,
-    customAnchorRef, offset, disableClick, desiredBackdropOpacity, exclusiveGroup, wrapperClassName, enableOwnBackdrop }, ref) => {
+    customAnchorRef, offset, disableClick, desiredBackdropOpacity, exclusiveGroup, wrapperClassName, enableOwnBackdrop, active }, ref) => {
     const openOverlay = useOverlayStore((state) => state.open);
     const onMenuClose = useOverlayStore((state) => state.close);
 
@@ -44,17 +45,16 @@ export const CardRowMenuBtn = forwardRef<HTMLDivElement, CardRowMenuBtnProps>(({
     menuComponentRef.current = menuComponent;
 
     function handleOpenCardActionModal() {
-        if (customAnchorRef) {
-            if (!customAnchorRef.current) {
-                return;
-            }
-        }
+        const resolvedAnchorEl = customAnchorRef?.current || btnRef.current;
+        if (customAnchorRef && !customAnchorRef.current) return;
 
-        // console.log("Opening respond modal for share offer");
+        const frozenAnchorRect = resolvedAnchorEl?.getBoundingClientRect() as DOMRect | undefined;
+
         const descriptor: OverlayDescriptor = {
             id: resolvedId,
             render: () => menuComponentRef.current ? menuComponentRef.current({ onClose: () => onMenuClose(resolvedId), ref: cardActionsMenuRef, anchorRef: customAnchorRef || btnRef }) : null,
             anchorRef: customAnchorRef || btnRef,
+            frozenAnchorRect,
             panelRef: cardActionsMenuRef,
             type: "modal",
             renderType: renderType,
@@ -74,7 +74,6 @@ export const CardRowMenuBtn = forwardRef<HTMLDivElement, CardRowMenuBtnProps>(({
             desiredBackdropOpacity,
         }
         openOverlay(descriptor);
-
     }
 
     if (shouldHideBtn && shouldHideBtn()) return null;
@@ -111,9 +110,9 @@ export const CardRowMenuBtn = forwardRef<HTMLDivElement, CardRowMenuBtnProps>(({
                     showLabelWhenCompact ? "rounded-full gap-1 text-nowrap" : "rounded-full aspect-square"} 
                     border border-gray-500/30 px-2
                     p-1 flex items-center justify-center
-                    hover:bg-neutral-700/25 cursor-pointer
+                    hover:bg-neutral-700/25 cursor-pointer transition-all duration-300 ease-in-out
                     text-neutral-300 ${wrapperClassName}
-                     ${className}`}>
+                     ${className} ${active ? "bg-neutral-300/80 text-neutral-900" : ""}`}>
                 {icon ? icon : <PhotoIcon className="w-4 aspect-square text-white" />}
 
                 {label && btnVariant === "default" && <span className="text-sm ml-2">{label}</span>}

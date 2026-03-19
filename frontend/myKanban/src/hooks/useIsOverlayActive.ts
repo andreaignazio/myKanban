@@ -22,3 +22,8 @@ export function useIsOverlayActive(id: string) {
         { isMenuActive }
     )
 }
+
+export function useIsOverlayActiveDumb() {
+
+    return useIsOverlayActive
+}

@@ -1,4 +1,4 @@
-﻿import { forwardRef, useState } from "react";
+﻿import { forwardRef, useEffect, useRef, useState } from "react";
 import type { MenuItemExtended } from "@/types/uiTypes";
 import { useCardActionRegistry } from "@/actionRegistry/cardActionRegistry";
 import { useParams } from "react-router";
@@ -21,7 +21,7 @@ export const CardChecklistMenu = forwardRef<HTMLDivElement, CardChecklistMenuPro
     const cardID = useParams().cardId as string;
     const cardActions = useCardActionRegistry();
 
-    const [titleInput, setTitleInput] = useState("");
+    const [titleInput, setTitleInput] = useState("Checklist");
     const [selectedChecklistSourceId, setSelectedChecklistSourceId] = useState<string | null>(null)
     const resolvedTitle = titleInput.trim()
     const isSubmitDisabled = resolvedTitle.length === 0
@@ -76,7 +76,18 @@ export const CardChecklistMenu = forwardRef<HTMLDivElement, CardChecklistMenuPro
         onClose()
     }
 
-    const handleAddOrCopyChecklist = async () => {
+    const handleAddOrCopyChecklistRef = useRef(handleAddOrCopyChecklist)
+    handleAddOrCopyChecklistRef.current = handleAddOrCopyChecklist
+
+    useEffect(() => {
+        const handler = (e: KeyboardEvent) => {
+            if (e.key === "Enter") void handleAddOrCopyChecklistRef.current()
+        }
+        document.addEventListener("keydown", handler)
+        return () => document.removeEventListener("keydown", handler)
+    }, [])
+
+    async function handleAddOrCopyChecklist() {
         if (isSubmitDisabled) return
         if (selectedChecklistSourceId) {
             await cardActions.cloneChecklistToCardAtEnd(boardID, cardID, resolvedTitle, selectedChecklistSourceId)

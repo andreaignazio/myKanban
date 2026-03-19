@@ -96,7 +96,7 @@ const CommentEditor = forwardRef<MainCommentEditorHandle, CommentEditorProps>(({
     const addCommentToCard = useCardActionRegistry().addCommentToCard
 
     const addComment = () => {
-        const content = commentDraft
+        const content = commentDraft;
         if (content) {
             addCommentToCard(boardId, cardId, commentDraft);
             setCommentDraft("")
@@ -136,10 +136,36 @@ const CommentEditor = forwardRef<MainCommentEditorHandle, CommentEditorProps>(({
         }));
     }, [searchUser, mergeUsers]);
 
+    const editorRef = useRef<HTMLDivElement>(null)
+    useEffect(() => {
+        if (isEditing) {
+            requestAnimationFrame(() => {
+                editorRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" })
+            })
+        } else {
+            requestAnimationFrame(() => requestAnimationFrame(() => (document.activeElement as HTMLElement)?.blur()))
+        }
+    }, [isEditing])
+
+    const addCommentRef = useRef(addComment)
+    addCommentRef.current = addComment
+    useEffect(() => {
+        if (!isEditing) return
+        const handler = (e: KeyboardEvent) => {
+            if (e.key === "Enter" && e.shiftKey) {
+                e.preventDefault()
+                e.stopPropagation()
+                addCommentRef.current()
+            }
+        }
+        document.addEventListener("keydown", handler, true)
+        return () => document.removeEventListener("keydown", handler, true)
+    }, [isEditing])
+
     const isEmpty = commentDraft.trim().length === 0;
     return (
         <>
-            <div className=" relative w-full flex flex-col items-center justify-start">
+            <div ref={editorRef} className=" relative w-full flex flex-col items-center justify-start">
 
                 <CardDescriptionMdEditor
                     style={{ height: isEditing ? "min-content" : "38px" }}

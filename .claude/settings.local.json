@@ -11,7 +11,8 @@
       "Bash(go build:*)",
       "Bash(npx tsc:*)",
       "Bash(grep -rn \"InboxCard\\\\b.*Pos\\\\b\\\\|\\\\.Pos\\\\b\" d:/SoftwareDevelopment/MYTRELLO/frontend/myKanban/src/ --include=*.ts --include=*.tsx)",
-      "Bash(grep -rn \"\\\\.Position\\\\b\\\\|: Position\\\\b\" d:/SoftwareDevelopment/MYTRELLO/frontend/myKanban/src/ --include=*.ts --include=*.tsx)"
+      "Bash(grep -rn \"\\\\.Position\\\\b\\\\|: Position\\\\b\" d:/SoftwareDevelopment/MYTRELLO/frontend/myKanban/src/ --include=*.ts --include=*.tsx)",
+      "Bash(grep -l \"mirror\" /d/SoftwareDevelopment/MYTRELLO/frontend/myKanban/src/hooks/*.ts*)"
     ]
   }
 }

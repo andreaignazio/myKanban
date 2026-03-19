@@ -34,7 +34,16 @@ function pickActiveState(
             const prefix = `${key}:`;
             for (const [storeKey, s] of Object.entries(requestsByKey)) {
                 if (storeKey === key || storeKey.startsWith(prefix)) {
-                    consider(s);
+                    // Skip if a more specific base key also claims this store key.
+                    // e.g. "card:mirror" should not match "card:mirror:fetch:{id}"
+                    // because "card:mirror:fetch" is its own registered base key.
+                    const claimedByMoreSpecific = Array.from(BASE_KEYS_SET).some(
+                        (other) =>
+                            other !== key &&
+                            other.startsWith(prefix) &&
+                            (storeKey === other || storeKey.startsWith(`${other}:`))
+                    );
+                    if (!claimedByMoreSpecific) consider(s);
                 }
             }
         } else {

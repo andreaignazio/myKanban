@@ -5,7 +5,7 @@ import { CardCoverTabSelector } from "./CardCoverMenu";
 import { useCardsStore } from "@/stores/cardsStore";
 import { useCardActionRegistry } from "@/actionRegistry/cardActionRegistry";
 import { useParams } from "react-router";
-import { CheckIcon, ExclamationCircleIcon, } from "@heroicons/react/24/solid";
+import { ExclamationCircleIcon, } from "@heroicons/react/24/solid";
 import { PlusIcon, TagIcon, CheckCircleIcon, UserPlusIcon, PhotoIcon } from "@heroicons/react/24/outline";
 import { CardRowMenuBtn } from "../cardMenus/cardRowMenus";
 import { CardAddFields } from "../cardMenus/cardAddFieldsMenu";
@@ -17,7 +17,7 @@ import { CardDatesMenu } from "../cardMenus/cardDatesMenu";
 import { headerStyle } from "../cardMenus/cardMenuStyle";
 import { useDateTimeParser } from "@/hooks/useDateTimeParser";
 import { LabeledButtonPresetA, LabeledButtonPresetB } from "../buttons/labeledButton";
-import { ChevronDown, ChevronDownIcon, ExternalLink, EyeIcon, TextAlignEndIcon, XIcon } from "lucide-react";
+import { ChevronDown, ChevronDownIcon, CreditCard, ExternalLink, EyeIcon, ListTodo, MessagesSquare, TextAlignEndIcon, XIcon } from "lucide-react";
 import { IconButtonAsync } from "../buttons/IconButtonAsync";
 import { CardComments } from "../cardMenus/CardDetailActivityTabs/CardComments";
 import { EntityDescriptionEditor } from "../common/EntityDescriptionEditor";
@@ -36,7 +36,7 @@ import { useListTheme } from "@/hooks/useListTheme";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { LAYOUT_BREAKPOINTS } from "@/constants/layout";
 import { CardActionsDropDown } from "../cardMenus/cardActionsDropDown";
-import { useIsOverlayActive } from "@/hooks/useIsOverlayActive";
+import { useIsOverlayActive, useIsOverlayActiveDumb } from "@/hooks/useIsOverlayActive";
 import { RoundButton } from "../buttons/RoundButton";
 import { useDeferredContentVisibility } from "@/hooks/useDeferredContentVisibility";
 import { useAuditStore } from "@/stores/auditStore";
@@ -56,6 +56,9 @@ import { DummyMirrorUI } from "../cardRowElements/CardMirrorsField";
 import { CardMirrorDetailPanel } from "./CardMirrorDetailPanel";
 import type { Board } from "@/stores/types";
 import { InboxBadge } from "../common/InboxBadge";
+
+import { CardDoneToggle } from "../common/CardDoneToggle";
+
 
 type CardDetailMenuProps = {
     cardContext?: CardContext;
@@ -122,6 +125,7 @@ export const CardDetailMenu = forwardRef<HTMLDivElement, CardDetailMenuProps>(({
     const { canEdit, canEditReason, canEditBoardList, hasRootBoardAccess } = useCardEditableContext({ cardContext, boardId, effectiveRootBoard });
 
     const [asideActiveTab, setAsideActiveTab] = useState("activity");
+    const [inlineInteractionsOpen, setInlineInteractionsOpen] = useState(false);
     const isAsideCollapsedByWindow = useMediaQuery(`(max-width: ${ACTIVITY_COLUMN_COLLAPSE_WIDTH - 1}px)`);
 
     const isAsideCollapsed = isAsideCollapsedByWindow || asideActiveTab === "";
@@ -140,14 +144,27 @@ export const CardDetailMenu = forwardRef<HTMLDivElement, CardDetailMenuProps>(({
         handleAsideTransitionEnd(event);
     }
 
-    const maxWith = isAsideCollapsedAnimated ? 700 : 1100;
-    const resolvedWidth = `clamp(700px, ${maxWith}px, ${maxWith}px)`;
-
+    const resolvedWidth = isAsideCollapsedAnimated ? "min(80vw, 700px)" : "1100px";
+    const iconClass = "w-5 h-5"
     const floatingTabs: Tab[] = [
-        { id: "card", label: "Card", type: "fixed" },
+        {
+            id: "card", label: "Card", type: "fixed",
+            icon: <CreditCard className={iconClass} />
+        },
         { id: "divider1", label: "", type: "divider" },
-        { id: "activity", label: "Activity", },
-        { id: "comments", label: "Comments", },
+        ...(isAsideCollapsedByWindow
+            ? [{
+                id: "interactions", label: "Interactions",
+                icon: <MessagesSquare className={iconClass} />
+            }]
+            : [{
+                id: "activity", label: "Activity",
+                icon: <ListTodo className={iconClass} />
+            }, {
+                id: "comments", label: "Comments",
+                icon: <MessagesSquare className={iconClass} />
+            }]
+        ),
     ]
 
     const getRootListIdForCardId = useBoardDetailStore((state) => state.getRootListIdForCardId);
@@ -379,7 +396,7 @@ export const CardDetailMenu = forwardRef<HTMLDivElement, CardDetailMenuProps>(({
                                 listId={listId}
                             />
 
-                            <CardMain cardId={cardId!} source={cardContext?.source} listCardId={listCardId} canEdit={canEdit} canEditBoardList={canEditBoardList} isAsideCollapsed={isAsideCollapsedByWindow} />
+                            <CardMain cardId={cardId!} source={cardContext?.source} listCardId={listCardId} canEdit={canEdit} canEditBoardList={canEditBoardList} isAsideCollapsed={isAsideCollapsedByWindow && inlineInteractionsOpen} />
 
                         </div>
 
@@ -399,11 +416,14 @@ export const CardDetailMenu = forwardRef<HTMLDivElement, CardDetailMenuProps>(({
                     </div>
                 </div>
             </CardMenuWrapper>
-            <div className={`absolute -bottom-16 transition-all duration-200 
-                ${isAsideCollapsedByWindow ? "opacity-0 pointer-events-none" : "opacity-100"}`}>
+            <div className="absolute -bottom-16 transition-all duration-200 opacity-100">
                 <FloatingTabSelector
-                    activeTabs={asideActiveTab ? [asideActiveTab] : []}
-                    onTabToggle={handleSetAsideActiveTab}
+                    activeTabs={isAsideCollapsedByWindow
+                        ? (inlineInteractionsOpen ? ["interactions"] : [])
+                        : (asideActiveTab ? [asideActiveTab] : [])}
+                    onTabToggle={isAsideCollapsedByWindow
+                        ? () => setInlineInteractionsOpen(v => !v)
+                        : handleSetAsideActiveTab}
                     tabs={floatingTabs} />
             </div>
         </>
@@ -548,7 +568,6 @@ export const CardMenuWrapper = forwardRef<HTMLDivElement, CardMenuWrapperProps>(
         : null;
     return (
         <motion.div className="relative w-fit h-fit overflow-visible" {...menuMotionProps}>
-            {indicators}
             {showBackdrop && (
                 <div
                     style={{
@@ -557,7 +576,7 @@ export const CardMenuWrapper = forwardRef<HTMLDivElement, CardMenuWrapperProps>(
                         height: `calc(100% + ${backdropOffset * 2}px)`,
                         borderRadius: radius + backdropOffset
                     }}
-                    className="absolute overflow-hidden">
+                    className="absolute overflow-hidden -z-10">
                     <ImageColorRenderer
                         overrideClassName
                         className="h-full w-full"
@@ -567,7 +586,10 @@ export const CardMenuWrapper = forwardRef<HTMLDivElement, CardMenuWrapperProps>(
                     />
                 </div>
             )}
-            <div className={`${!canEdit ? "opacity-100 pointer-events-none " : "pointer-events-none opacity-0"}} 
+            <div className="relative z-[1]">
+                {indicators}
+            </div>
+            <div className={`${!canEdit ? "opacity-100 pointer-events-none " : "pointer-events-none opacity-0"}}
             ${!canEdit ? "ring-inset ring-4 ring-gray-500/70" : ""}
             absolute rounded-xl inset-0 bg-black z-20 bg-gray-800/10`} />
             <div ref={ref}
@@ -575,8 +597,7 @@ export const CardMenuWrapper = forwardRef<HTMLDivElement, CardMenuWrapperProps>(
                 onTransitionEnd={onTransitionEnd}
                 className={`flex justify-start items-start theme-dark bg-menu transition-[width] duration-300
              h-[80vh] rounded-xl ${isInboxMode ? "ring-4 ring-white/50" : ""}
-             
-            shadow-lg shadow-black relative
+            shadow-lg shadow-black relative z-[2]
          text-white overflow-hidden`} >
                 {children}
             </div>
@@ -587,6 +608,7 @@ export const CardMenuWrapper = forwardRef<HTMLDivElement, CardMenuWrapperProps>(
 
 export type Buttons = {
     id: string;
+    menuId?: string;
     label: string;
     menuToOpen?: (props: { onClose: () => void, ref: RefObject<HTMLDivElement | null> }) => React.ReactNode;
     onClick?: () => void;
@@ -622,6 +644,23 @@ export const CardMain = ({ cardId, source = "board", listCardId, canEdit, canEdi
     const cardActionsRef = useRef(cardActions);
     const cardEntityIdRef = useRef(card?.ID);
     const [done, setDone] = useState(card?.Done || false);
+    const [isTitleInView, setIsTitleInView] = useState(true);
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
+    const titleSentinelRef = useRef<HTMLDivElement>(null);
+
+
+
+    useEffect(() => {
+        const el = titleSentinelRef.current;
+        const root = scrollContainerRef.current;
+        if (!el || !root) return;
+        const observer = new IntersectionObserver(
+            ([entry]) => setIsTitleInView(entry.isIntersecting),
+            { root, threshold: 0 }
+        );
+        observer.observe(el);
+        return () => observer.disconnect();
+    }, []);
 
     useEffect(() => {
         pendingTitleRef.current = title;
@@ -721,40 +760,83 @@ export const CardMain = ({ cardId, source = "board", listCardId, canEdit, canEdi
         cardActions.setCardDone(boardId, card.ID, newDone, listCardId);
     }
     const ICON_SIZE_CLASS = "w-4 h-4";
-    const iconClassName = `${ICON_SIZE_CLASS} text-neutral-300`;
+    const iconClassName = `${ICON_SIZE_CLASS}
+    transition-all duration-300 ease-in-out
+    text-inherit`;
     const icon = (Icon: ComponentType<SVGProps<SVGSVGElement>>) => <Icon className={iconClassName} />;
 
     const rowButtons: Buttons[] = [
-        { id: "add", label: "Add", icon: icon(PlusIcon), onClick: () => console.log("Add button clicked"), menuToOpen: ({ onClose, ref }) => <CardAddFields onClose={onClose} cardId={cardId} ref={ref} /> },
         {
-            id: "labels", label: "Labels", icon: icon(TagIcon), onClick: () => console.log("Labels button clicked"),
+            id: "add", menuId: "add-btn-menu",
+            label: "Add", icon: icon(PlusIcon), onClick: () => console.log("Add button clicked"), menuToOpen: ({ onClose, ref }) => <CardAddFields onClose={onClose} cardId={cardId} ref={ref} />
+        },
+        {
+            id: "labels",
+            menuId: "labels-btn-menu",
+            label: "Labels", icon: icon(TagIcon), onClick: () => console.log("Labels button clicked"),
             menuToOpen: ({ onClose, ref }) => <CardLabelMenu onClose={onClose} ref={ref} />,
             gate: "canEditBoardList",
         },
         {
-            id: "dates", label: "Dates", icon: icon(ClockIcon), shouldHideBtn: () => hasDates,
+            id: "dates",
+            menuId: "dates-btn-menu",
+            label: "Dates", icon: icon(ClockIcon), shouldHideBtn: () => hasDates,
             onClick: () => console.log("Labels button clicked"), menuToOpen: ({ onClose, ref }) => <CardDatesMenu onClose={onClose} ref={ref} contextKey="cardmenu" listCardId={listCardId} />
         },
-        { id: "members", label: "Members", icon: icon(UserPlusIcon), onClick: () => console.log("Members button clicked"), menuToOpen: ({ onClose, ref }) => <CardMembersMenu onClose={onClose} ref={ref} boardId={boardId} cardId={cardId} /> },
-        { id: "checklist", label: "Checklist", icon: icon(CheckCircleIcon), onClick: () => console.log("Checklist button clicked"), menuToOpen: ({ onClose, ref }) => <CardChecklistMenu onClose={onClose} ref={ref} /> },
+        { id: "members", menuId: "members-btn-menu", label: "Members", icon: icon(UserPlusIcon), onClick: () => console.log("Members button clicked"), menuToOpen: ({ onClose, ref }) => <CardMembersMenu onClose={onClose} ref={ref} boardId={boardId} cardId={cardId} /> },
+        { id: "checklist", menuId: "checklist-btn-menu", label: "Checklist", icon: icon(CheckCircleIcon), onClick: () => console.log("Checklist button clicked"), menuToOpen: ({ onClose, ref }) => <CardChecklistMenu onClose={onClose} ref={ref} /> },
 
     ]
+
+    const isOverlayActive = useIsOverlayActiveDumb();
+
+    const isMenuActive = (menuId?: string) => {
+        if (!menuId) return false;
+        return isOverlayActive(menuId).isMenuActive;
+    }
+
+
+    const addBtn = rowButtons.find(btn => btn.id === "add")!;
     return (
-        <div className="relative bg-[rgba(36,37,40,1)] w-full h-full min-h-0 pt-4 px-4 flex flex-col">
+        <div className="relative bg-[rgba(36,37,40,1)] w-full h-full min-h-0 px-4 flex flex-col overflow-hidden">
+
+            <div className={`absolute top-0 left-0 z-20 bg-[rgba(36,37,40,1)] w-full h-12 flex
+            flex-row items-center justify-between
+            transition-all duration-200 ps-4 pe-4
+            ${isTitleInView ? "opacity-0 -translate-y-full pointer-events-none" : "opacity-100 translate-y-0 delay-100"}`}>
+                <div className="flex flex-row items-center gap-2">
+                    <CardDoneToggle done={done} handleDoneToggle={handleDoneToggle} />
+                    <span className="text-md font-semibold text-neutral-300">{title}</span>
+                </div>
+
+
+                <CardRowMenuBtn key={addBtn.id} cardID={cardId}
+                    customId={addBtn.menuId}
+                    disableClick={!canEdit}
+                    menuComponent={({ onClose, ref }) => addBtn.menuToOpen ? addBtn.menuToOpen({ onClose, ref }) : null}
+                    label={addBtn.label}
+                    icon={addBtn.icon}
+                    shouldHideBtn={addBtn.shouldHideBtn}
+                    className={!canEdit ? "pointer-events-none opacity-30" : "opacity-100"}
+                    placement="bottom-start"
+                    offset={[8, 0]}
+                    active={isMenuActive(addBtn.menuId)}
+                />
+
+            </div>
 
             <div
-
+                ref={scrollContainerRef}
                 className={`
-                   
             ${!canEdit ? "opacity-90 " : "opacity-100"}
-            flex flex-col gap-2 w-full flex-1 min-h-0 
-            items-start justify-start scrollbar-hidden pb-4 overflow-y-auto`}>
+            flex flex-col gap-2 w-full flex-1 min-h-0
+            items-start justify-start scrollbar-hidden pt-4 pb-4 overflow-y-auto`}>
 
-                <div className="relative flex flex-row mt-2 ">
-                    <div className={`absolute  h-full flex items-center justify-center ${!canEdit ? "pointer-events-none opacity-90" : "opacity-100"}`}>
-                        <div className={`w-5 p-[0.2px] aspect-square rounded-full border-2 ${done ? "border-done bg-done" : "border-gray-500"} cursor-pointer`} onClick={handleDoneToggle}>
-                            {done && <CheckIcon className="w-full h-full text-menu" />}
-                        </div>
+                <div ref={titleSentinelRef} className=" relative flex flex-row mt-2  ">
+                    <div className={`absolute  h-full flex items-center justify-center 
+                        ${!canEdit ? "pointer-events-none opacity-90" : "opacity-100"}`}>
+                        <CardDoneToggle done={done} handleDoneToggle={handleDoneToggle} />
+
                     </div>
                     <div
                         style={{ paddingLeft: PADDING_L }}
@@ -777,12 +859,16 @@ export const CardMain = ({ cardId, source = "board", listCardId, canEdit, canEdi
                         const isDisabled = btn.gate === "canEditBoardList" ? !canEditBoardList : !canEdit
                         return (
                             <CardRowMenuBtn key={btn.id} cardID={cardId}
+                                customId={btn.menuId}
                                 disableClick={isDisabled}
                                 menuComponent={({ onClose, ref }) => btn.menuToOpen ? btn.menuToOpen({ onClose, ref }) : null}
                                 label={btn.label}
                                 icon={btn.icon}
                                 shouldHideBtn={btn.shouldHideBtn}
                                 className={isDisabled ? "pointer-events-none opacity-30" : "opacity-100"}
+                                placement="bottom-start"
+                                offset={[8, 0]}
+                                active={isMenuActive(btn.menuId)}
                             />
                         )
                     })}

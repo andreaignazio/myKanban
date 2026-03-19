@@ -30,7 +30,7 @@ export const MenuStateIndicator = ({ requestKey, minLoadingMs, minSuccessMs, max
         ? "bg-yellow-500" : (showSuccess && displaySuccess)
             ? "bg-green-500" : (showError && displayError) ? "bg-red-500" : "bg-gray-500";
 
-    let offsetClass = isActive ? "-top-5" : "-top-0";
+    let offsetClass = isActive ? "-top-5" : "top-3";
     if (showError && displayError && errorMessage) {
         const length = errorMessage?.length ?? 0
         offsetClass = length > 30 ? "-top-[65px]" : "-top-[40px]"
@@ -41,12 +41,12 @@ export const MenuStateIndicator = ({ requestKey, minLoadingMs, minSuccessMs, max
         }
     }
 
-
     return (
         <div
             className={`transition-all duration-300 ease-in-out flex flex-col items-center justify-center
-            absolute ${colorClass} left-1/2 text-center 
-            -translate-x-1/2 ${offsetClass} w-[98%] h-[100px] rounded-2xl`}>
+            absolute ${colorClass} left-1/2 text-center
+            -translate-x-1/2 ${offsetClass} w-[98%] h-[100px] rounded-2xl
+            ${isActive ? "opacity-100" : "opacity-0"}`}>
             <div className="absolute top-2">
                 {showError && displayError && errorMessage ? (
                     <span className="text-white text-wrap  w-full

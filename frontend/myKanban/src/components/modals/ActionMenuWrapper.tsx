@@ -1,4 +1,4 @@
-import { forwardRef } from "react";
+import { forwardRef, useLayoutEffect, useRef, useState } from "react";
 import { ChevronLeftIcon } from "@heroicons/react/24/solid";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import { motion } from "motion/react";
@@ -76,6 +76,22 @@ export const ActionMenuWrapper = forwardRef<HTMLDivElement, ActionMenuWrapperPro
         </>
     );
 
+    const contentRef = useRef<HTMLDivElement>(null);
+    const [height, setHeight] = useState<number | undefined>(undefined);
+    const canTransition = useRef(false);
+
+    useLayoutEffect(() => {
+        if (!contentRef.current) return;
+        const el = contentRef.current;
+        const raf = requestAnimationFrame(() => { canTransition.current = true })
+        const observer = new ResizeObserver(() => setHeight(el.offsetHeight + 32))
+        observer.observe(el)
+        canTransition.current = false;
+        //const raf = requestAnimationFrame(() => { canTransition.current = true })
+        return () => { observer.disconnect(); cancelAnimationFrame(raf) }
+
+    }, [children]);
+
     if (!indicators) return (
         <motion.div
             ref={ref}
@@ -89,14 +105,27 @@ export const ActionMenuWrapper = forwardRef<HTMLDivElement, ActionMenuWrapperPro
     );
 
     return (
-        <motion.div className="relative overflow-visible w-fit" {...menuMotionProps}>
+        <motion.div className="relative 
+        
+        overflow-visible w-fit"
+
+            {...menuMotionProps}>
             {indicators}
             <div
                 ref={ref}
-                className={`theme-dark bg-menu rounded-xl shadow-lg shadow-black relative text-white py-2 pb-4`}
-                style={resolvedStyle}
+
+                className={`theme-dark 
+                    overflow-hidden
+                    bg-menu rounded-xl shadow-lg shadow-black 
+                    relative text-white py-2 pb-4`}
+                style={{
+                    ...resolvedStyle, height: height,
+                    transition: canTransition.current ? 'height 0.3s ease-in-out' : 'none',
+                }}
             >
-                {menuInner}
+                <div ref={contentRef}>
+                    {menuInner}
+                </div>
             </div>
         </motion.div>
     );

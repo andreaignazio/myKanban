@@ -12,6 +12,7 @@ type CustomInputProps = {
     useTextArea?: boolean;
     textAreaClassName?: string;
     onFocus?: () => void;
+    onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
     danger?: boolean;
     focusColorClass?: string;
     focusClassName?: string;
@@ -24,7 +25,7 @@ export type CustomInputHandle = {
     getElement: () => HTMLInputElement | HTMLTextAreaElement | null;
 }
 
-export const CustomInput = forwardRef<CustomInputHandle, CustomInputProps>(({ danger, children, onInputChange, className, placeholder, value, onBlur, isDisabled, paddingLeft, useTextArea, textAreaClassName, onFocus, focusColorClass, focusClassName, nonFocusClassName }, ref) => {
+export const CustomInput = forwardRef<CustomInputHandle, CustomInputProps>(({ danger, children, onInputChange, className, placeholder, value, onBlur, isDisabled, paddingLeft, useTextArea, textAreaClassName, onFocus, onKeyDown, focusColorClass, focusClassName, nonFocusClassName }, ref) => {
     const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
     const [isFocused, setIsFocused] = useState(false);
 
@@ -87,8 +88,8 @@ export const CustomInput = forwardRef<CustomInputHandle, CustomInputProps>(({ da
                 className={`w-full min-h-8 bg-transparent cursor-text ${textAreaClassName ?? ""} text-sm font-inter font-medium`}
                 onFocus={handleFocus}
                 onBlur={() => { handleBlur(); onBlur?.(); }}
+                onKeyDown={onKeyDown}
                 placeholder={placeholder ?? "Search..."}
-
                 disabled={isDisabled}
                 style={{ display: useTextArea ? "none" : "block", }}
             />}

@@ -12,7 +12,7 @@ export const ChecklistProgress = ({ doneEntriesPercentage }: ChecklistProgressPr
                 {doneEntriesPercentage}%
             </div>
             <div className="w-full" style={{ paddingLeft: PADDING_L }}>
-                <ProgressBar percentage={doneEntriesPercentage} />
+                <ProgressBar percentage={doneEntriesPercentage} barClassName={doneEntriesPercentage === 100 ? "!bg-lime-500" : undefined} />
             </div>
         </div>
     )

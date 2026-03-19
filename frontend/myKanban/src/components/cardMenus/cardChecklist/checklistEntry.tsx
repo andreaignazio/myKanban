@@ -163,6 +163,7 @@ export const ChecklistEntry = ({ entryId, checklistId, index, ref, addEntity, hi
                                 checklistId={checklistId}
                                 entryId={entryId}
                                 isEditing={isEditing}
+                                done={done}
                                 isUnsaved={isUnsaved}
                                 entryTitle={entryTitle}
                                 entryContainerRef={entryContainerRef}
@@ -193,6 +194,7 @@ type ChecklistEntryContentProps = {
     checklistId: string;
     entryId: string;
     isEditing: boolean;
+    done: boolean;
     isUnsaved: boolean;
     entryTitle: string;
     entryContainerRef: React.RefObject<HTMLDivElement | null>;
@@ -209,6 +211,7 @@ const ChecklistEntryContent = ({
     checklistId,
     entryId,
     isEditing,
+    done,
     isUnsaved,
     entryTitle,
     entryContainerRef,
@@ -272,7 +275,7 @@ const ChecklistEntryContent = ({
                             e.currentTarget.blur()
                             setIsEditing(false);
                         }}
-                        className="bg-transparent w-full h-full cursor-pointer focus:cursor-text focus:outline-none"
+                        className={`bg-transparent w-full h-full cursor-pointer focus:cursor-text focus:outline-none transition-all duration-200 ${done && !isEditing ? "line-through text-neutral-500" : ""}`}
                         onFocus={() => { }}
                         onBlur={() => { }}
                         onChange={(e) => onEntryTitleChange(e.target.value)}

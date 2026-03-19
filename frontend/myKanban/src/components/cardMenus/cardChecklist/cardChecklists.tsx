@@ -9,9 +9,25 @@ import { ChecklistEntry } from "./checklistEntry";
 import { DragDropContext, Draggable, Droppable, type DragStart, type DropResult } from "@hello-pangea/dnd";
 import { createPortal } from "react-dom";
 import { AddFormOnEdit } from "@/components/common/AddForm";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 
+
+function scrollIntoViewWithPadding(el: HTMLElement | null, padding = 40) {
+    if (!el) return
+    let parent = el.parentElement
+    while (parent) {
+        const style = getComputedStyle(parent)
+        if (parent.scrollHeight > parent.clientHeight && style.overflowY !== "visible") {
+            const rect = el.getBoundingClientRect()
+            const parentRect = parent.getBoundingClientRect()
+            const needed = rect.bottom - parentRect.bottom + padding
+            if (needed > 0) parent.scrollBy({ top: needed, behavior: "smooth" })
+            return
+        }
+        parent = parent.parentElement
+    }
+}
 
 export const CardChecklists = () => {
     const boardID = useParams().boardId as string;
@@ -20,6 +36,18 @@ export const CardChecklists = () => {
     const moveChecklistInCard = useCardActionRegistry().moveChecklistInCard;
     const moveChecklistEntry = useCardActionRegistry().moveChecklistEntry;
     const crossMoveChecklistEntry = useCardActionRegistry().crossMoveChecklistEntry;
+
+    const checklistContainerRef = useRef<HTMLDivElement>(null)
+    const prevChecklistCountRef = useRef(checklistsIdsForCard.length)
+    useEffect(() => {
+        if (checklistsIdsForCard.length > prevChecklistCountRef.current) {
+            const t = setTimeout(() => {
+                scrollIntoViewWithPadding(checklistContainerRef.current, 48)
+            }, 150)
+            return () => clearTimeout(t)
+        }
+        prevChecklistCountRef.current = checklistsIdsForCard.length
+    }, [checklistsIdsForCard.length])
 
     const setEntryDragHoverDisabled = (disabled: boolean) => {
         if (disabled) {
@@ -124,7 +152,7 @@ export const CardChecklists = () => {
                 {(provided) => (
                     <div
                         className=" col-start-2 flex flex-col gap-4"
-                        ref={provided.innerRef}
+                        ref={(el) => { provided.innerRef(el); checklistContainerRef.current = el; }}
                         {...provided.droppableProps}
                     >
                         {checklistsIdsForCard.map((checklistId: string, index: number) => {
@@ -155,6 +183,24 @@ const Checklist = ({ checklistId, index }: ChecklistProps) => {
     const [isAddingEntry, setIsAddingEntry] = useState(false);
     const [pendingEntryTitle, setPendingEntryTitle] = useState("");
     const [hideCheckedItems, setHideCheckedItems] = useState(false);
+    const addFormRef = useRef<HTMLDivElement>(null)
+    useEffect(() => {
+        if (isAddingEntry) {
+            const t = setTimeout(() => {
+                scrollIntoViewWithPadding(addFormRef.current, 10)
+            }, 200)
+            return () => clearTimeout(t)
+        }
+    }, [isAddingEntry])
+    const prevEntryCountRef = useRef(entriesIds.length)
+    useEffect(() => {
+        if (entriesIds.length > prevEntryCountRef.current) {
+            requestAnimationFrame(() => {
+                scrollIntoViewWithPadding(addFormRef.current, 10)
+            })
+        }
+        prevEntryCountRef.current = entriesIds.length
+    }, [entriesIds.length])
 
     const doneEntries = useChecklistStore(useShallow((state) => state.getDoneEntriesForChecklist(checklistId)));
     const doneEntriesPercentage = entriesIds.length > 0 ? Math.round((doneEntries.length / entriesIds.length) * 100) : 0;
@@ -216,7 +262,7 @@ const Checklist = ({ checklistId, index }: ChecklistProps) => {
                                     </div>
                                 )}
                             </Droppable>
-                            <div className={`flex-shrink-0 ${isAddingEntry ? "ps-6" : "ps-10"}`} >
+                            <div ref={addFormRef} className={`flex-shrink-0 ${isAddingEntry ? "ps-6" : "ps-10"}`} >
                                 <AddFormOnEdit
                                     onCancel={() => setIsAddingEntry(false)}
                                     onBlurCancelEdit={() => setIsAddingEntry(false)}

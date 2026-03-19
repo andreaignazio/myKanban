@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { OverlayDescriptor } from "./overlayStore";
 import { autoUpdate, flip, offset, shift, useFloating } from "@floating-ui/react";
 
@@ -26,7 +26,8 @@ export function AnchoredOverlay(ov: AnchoredOverlayProps) {
                 crossAxis: true,
             }),
         ],
-        whileElementsMounted: autoUpdate,
+        whileElementsMounted: (reference, floating, update) =>
+            autoUpdate(reference, floating, update, { elementResize: false }),
     })
 
     useEffect(() => {
@@ -42,15 +43,46 @@ export function AnchoredOverlay(ov: AnchoredOverlayProps) {
         }
     }, [ov.anchorRef, ov.frozenAnchorRect, refs, update])
 
-    const setFloating = (el: HTMLDivElement | null) => {
+    // After initial positioning, enable a smooth CSS transition on transform so that
+    // any subsequent position corrections (e.g. after a height animation) are fluid
+    // instead of snapping.
+    const [canTransition, setCanTransition] = useState(false)
+    const floatingElRef = useRef<HTMLDivElement | null>(null)
+    const debounceRef = useRef<number | undefined>(undefined)
+    const lastSizeRef = useRef<{ w: number; h: number } | null>(null)
+
+    // Debounced ResizeObserver: fires a single update() after the height animation
+    // settles, but only when the size delta is significant enough to warrant a
+    // repositioning (avoids jarring micro-adjustments for small changes).
+    useLayoutEffect(() => {
+        const el = floatingElRef.current
+        if (!el) return
+        const THRESHOLD = 16
+        const observer = new ResizeObserver((entries) => {
+            const { inlineSize: w, blockSize: h } = entries[0].borderBoxSize[0]
+            const prev = lastSizeRef.current
+            const delta = prev ? Math.max(Math.abs(w - prev.w), Math.abs(h - prev.h)) : Infinity
+            lastSizeRef.current = { w, h }
+            if (delta < THRESHOLD) return
+            clearTimeout(debounceRef.current)
+            debounceRef.current = setTimeout(() => update(), 10)
+        })
+        observer.observe(el)
+        return () => { observer.disconnect(); clearTimeout(debounceRef.current) }
+    }, [update])
+
+    const setFloating = useCallback((el: HTMLDivElement | null) => {
+        floatingElRef.current = el
         if (ov.panelRef) {
             ov.panelRef.current = el
         }
         refs.setFloating(el)
         if (el) {
             update()
+            // Enable position transition after the initial position has been painted
+            requestAnimationFrame(() => requestAnimationFrame(() => setCanTransition(true)))
         }
-    }
+    }, [refs, update, ov.panelRef])
 
 
 
@@ -68,7 +100,11 @@ export function AnchoredOverlay(ov: AnchoredOverlayProps) {
             <div
                 ref={setFloating}
                 className=" bg-transparent rounded-full flex items-center justify-center"
-                style={{ ...floatingStyles, pointerEvents: ov.isInteractive === false ? "none" : "auto" }}
+                style={{
+                    ...floatingStyles,
+                    transition: canTransition ? "transform 300ms ease-in-out" : undefined,
+                    pointerEvents: ov.isInteractive === false ? "none" : "auto",
+                }}
                 aria-hidden={ov.isInteractive === false}
             >
                 {ov.render()}
