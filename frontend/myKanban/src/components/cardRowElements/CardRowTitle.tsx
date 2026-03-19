@@ -8,9 +8,11 @@ type CardRowTitleProps = {
     setDone?: () => void
     minHeight?: number
     canEdit?: boolean
+    textColor?: string
+    bgColor?: string
 }
 
-export const CardRowTitle = ({ title, editMode, done, setDone, minHeight = 36, canEdit }: CardRowTitleProps) => {
+export const CardRowTitle = ({ title, editMode, done, setDone, minHeight = 36, canEdit, textColor, bgColor }: CardRowTitleProps) => {
 
 
 
@@ -23,15 +25,16 @@ export const CardRowTitle = ({ title, editMode, done, setDone, minHeight = 36, c
 
 
 
-                    <CardDoneIconDummy done={done} size={17} handleDoneToggle={setDone} />
+                    <CardDoneIconDummy done={done} size={17} handleDoneToggle={setDone} coverColor={textColor} bgColor={bgColor} />
                 </div>
 
 
-                <span className={`flex-1 text-base  
-                !text-[14px] font-normal
-                ${done ? " text-gray-500" : "text-gray-100"}
-                 ${editMode ? "text-gray-400" : ""} 
-                 transition-colors duration-200 ease-in-out break-all`}>
+                <span className={`flex-1 text-base
+                !text-[14px] font-normal pb-1
+                ${done ? " text-gray-400" : "text-gray-100"}
+                 ${editMode ? "text-gray-400" : ""}
+                 transition-colors duration-200 ease-in-out break-all`}
+                    style={textColor ? { color: textColor } : undefined}>
                     {title}
                 </span>
 
@@ -44,27 +47,30 @@ export const CardRowTitle = ({ title, editMode, done, setDone, minHeight = 36, c
 type CardDoneIconProps = {
     done: boolean;
     handleDoneToggle?: () => void;
-    size?: number
-
+    size?: number;
+    coverColor?: string;
+    bgColor?: string;
 }
 
 
-const CardDoneIconDummy = ({ done, handleDoneToggle, size = 5 }: CardDoneIconProps) => {
-
+const CardDoneIconDummy = ({ done, handleDoneToggle, size = 5, coverColor, bgColor }: CardDoneIconProps) => {
     return (
         <div className={`
-         transition-all duration-300 p-[0.2px] 
-         aspect-square rounded-full border-2 
-         ${done ? "border-done bg-done" : "border-gray-500"} 
+         transition-all duration-300 p-[0.2px]
+         aspect-square rounded-full border-2
+         ${done && !coverColor ? "border-done bg-done" : "border-gray-500"}
          `}
-            style={{ height: size }}
+            style={{
+                height: size,
+                ...(done && coverColor ? { borderColor: coverColor, backgroundColor: coverColor, opacity: 0.6 } : {})
+            }}
             onClickCapture={(e) => {
                 e.stopPropagation();
                 handleDoneToggle?.()
-            }
-
-            }>
-            {done && <CheckIcon className="w-full h-full text-menu" strokeWidth={3} />}
+            }}>
+            {done && <CheckIcon
+                style={{ color: bgColor ? bgColor : undefined }}
+                className={`w-full h-full ${coverColor ? "text-white" : "text-menu"}`} strokeWidth={3} />}
         </div>
     )
 }

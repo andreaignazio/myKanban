@@ -82,7 +82,7 @@ export const CardRow = ({ boardID, listId, listCardID: listCardID, cardId, index
     }
 
 
-    const { cardColor, cardCoverURL, hasCover, isDetailed } = useCardBackground({ card })
+    const { cardColor, cardCoverURL, hasCover, isDetailed, cardTextColor } = useCardBackground({ card })
 
     const cardHasLabels = useLabelsStore((state) => {
         if (!cardID) return false;
@@ -345,7 +345,9 @@ export const CardRow = ({ boardID, listId, listCardID: listCardID, cardId, index
                                             canEdit={canEdit}
                                             minHeight={rowHeight}
                                             title={title || ""} done={done}
-                                            editMode={editMode} setDone={handleDoneToggle} />}
+                                            editMode={editMode} setDone={handleDoneToggle}
+                                            bgColor={hasCover && !isDetailed ? cardColor : undefined}
+                                            textColor={hasCover && !isDetailed ? cardTextColor : undefined} />}
 
                                     {editMode && canEdit &&
                                         <div style={{ minHeight: rowHeight }}
@@ -360,7 +362,7 @@ export const CardRow = ({ boardID, listId, listCardID: listCardID, cardId, index
                                         </div>}
                                 </div>
 
-                                <CardRowFields cardID={cardID!} />
+                                <CardRowFields cardID={cardID!} textColor={hasCover && !isDetailed ? cardTextColor : undefined} />
 
                                 <div className={`absolute top-[10px] right-[11px] 
                                 flex flex-row gap-2

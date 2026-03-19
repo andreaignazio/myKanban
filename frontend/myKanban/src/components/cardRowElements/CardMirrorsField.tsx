@@ -55,7 +55,7 @@ export const Mirrors = ({ rootBoardContext, mode, placement = "default", cardId,
     }
 
     const wrapperClassName = placement === "cover"
-        ? "absolute top-1 left-2 z-20 text-white"
+        ? "absolute top-1.5 left-2 z-20 text-white"
         : "bg-transparent text-white pt-3 px-3"
 
     const boardCreatedAt = board ? new Date(board.CreatedAt) : null

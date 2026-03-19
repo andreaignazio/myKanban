@@ -1,4 +1,5 @@
 import { useCardsStore } from "@/stores/cardsStore";
+import { getListCoverTheme } from "@/domain/colorTokens";
 import type { Card } from "@/stores/types";
 
 type useCardBackgroundParams = {
@@ -17,11 +18,15 @@ export function useCardBackground({ cardId, card: cardParam }: useCardBackground
     const coverSize = card?.Props?.Props?.Display?.Size
     const isDetailed = hasCover && coverSize === "large"
 
+    const cardTheme = cardColor ? getListCoverTheme(cardColor) : undefined
+    const cardTextColor = cardTheme?.text ?? (cardCoverURL ? "#ffffff" : undefined)
+
     return {
         cardColor,
         cardCoverURL,
         hasCover,
         coverSize,
         isDetailed,
+        cardTextColor,
     }
 }

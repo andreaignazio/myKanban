@@ -36,11 +36,11 @@ export const CardDatesField = ({ card, rowHeight, cardHasDates, className, dataT
         defaultTextColorClass } = dataTextClasses || {}
 
 
-    isDoneColorClass = isDoneColorClass || "bg-[#94c748]"
+    isDoneColorClass = isDoneColorClass || "bg-lime-400/80"
     isOverdueColorClass = isOverdueColorClass || "bg-[#5d1f1a]"
     isDueSoonColorClass = isDueSoonColorClass || "bg-[#fbc828]"
     defaultColorClass = defaultColorClass || "transparent"
-    isDoneTextColorClass = isDoneTextColorClass || "text-neutral-900"
+    isDoneTextColorClass = isDoneTextColorClass || "text-zinc-900"
     isOverdueTextColorClass = isOverdueTextColorClass || "text-rose-200"
     isDueSoonTextColorClass = isDueSoonTextColorClass || "text-neutral-900"
     defaultTextColorClass = defaultTextColorClass || "text-inherit"

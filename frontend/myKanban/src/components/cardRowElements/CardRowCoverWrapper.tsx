@@ -79,7 +79,7 @@ export const CardRowCoverWrapper = forwardRef<HTMLDivElement, CardRowCoverWrappe
                         backgroundImage: mode === "detailed" ? (cardCoverURL ? `url(${cardCoverURL})` : undefined) : undefined,
                         backgroundSize: "cover", backgroundPosition: "center"
                     }}
-                    className="flex flex-row bg-blue-400 h-9">
+                    className={`flex flex-row bg-blue-400 ${showMirrorBackdrop ? "h-11" : "h-9"}`}>
 
                 </div>}
                 {children}
